@@ -1,0 +1,35 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <script src="lib/asyncorm.util.js" type="application/javascript">
+        </script>
+        <script src="lib/asyncorm.lldb.js" type="application/javascript">
+        </script>
+        <script src="lib/asyncorm.db.js" type="application/javascript">
+        </script>
+    </head>
+    <body>
+        <script type="application/javascript">
+            asyncorm.connect('testdb', 'My test db', 5 * 1024 * 1024);
+            asyncorm.define('Task', {
+                name: "TEXT",
+                description: "TEXT",
+                done: "BOOL"
+            });
+            //asyncorm.reset();
+            var Task = asyncorm.entity('Task');
+            var t = Task.create();
+            t.name = 'My task';
+            t.done = false;
+            t.save();
+            Task.all(function(results){
+                console.log(results);
+                for (var i = 0; i < results.length; i++) {
+                    var r = results[i];
+                    r.remove();
+                }
+            });
+        </script>
+    </body>
+</html>

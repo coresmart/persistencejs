@@ -1,29 +1,36 @@
 asyncorm.connect('testdb', 'My test db', 5 * 1024 * 1024);
 
-var Task = asyncorm.define('Task', {
+var task = asyncorm.define('Task', {
     name: "TEXT",
     description: "TEXT",
     done: "BOOL"
 });
+var category = asyncorm.define('Category', {
+    name: "TEXT"
+});
+category.hasMany('tasks', task, 'category');
 
-asyncorm.transaction(function (tx) {
+asyncorm.schemaSync(function (tx) {
+    var c = category({name: "Main category"});
+    asyncorm.add(c);
     for ( var i = 0; i < 5; i++) {
-        var task = new Task();
-        task.name = 'Task ' + i;
-        task.done = i % 2 == 0;
-        console.log(task._dirtyProperties)
-        asyncorm.add(task);
+        var t = task();
+        t.name = 'Task ' + i;
+        t.done = i % 2 == 0;
+        t.category = c;
+        asyncorm.add(t);
     }
 
     asyncorm.flush(tx, function () {
-        var allTasks = Task.all().filter("done", '=', true).order(
-                "name", false);
+        var allTasks = task.all().filter("done", '=', true).prefetch("category")
+                .order("name", false);
+
         allTasks.list(tx, function (results) {
             results.forEach(function (r) {
                 console.log(r.name)
-                r.done = !r.done;
+                window.task = r;
             });
-            asyncorm.reset(tx);
+            //asyncorm.reset(tx);
         });
     });
 });

@@ -1,38 +1,45 @@
 persistence.connect('testdb', 'My test db', 5 * 1024 * 1024);
 
-var task = persistence.define('Task', {
+var Task = persistence.define('Task', {
     name: "TEXT",
     description: "TEXT",
     done: "BOOL"
 });
-var category = persistence.define('Category', {
+var Category = persistence.define('Category', {
     name: "TEXT"
 });
-category.hasMany('tasks', task, 'category');
+Task.hasMany('subTasks', Task, 'parentTask');
+Category.hasMany('tasks', Task, 'category');
+//Task.hasMany('categories', Category, 'tasks');
 
 persistence.schemaSync(function (tx) {
-    /*var c = category( {
+    var c = new Category( {
         name: "Main category"
     });
     persistence.add(c);
+    var superTask = new Task({name: "Super task"});
     for ( var i = 0; i < 5; i++) {
-        var t = task();
+        var t = new Task();
         t.name = 'Task ' + i;
         t.done = i % 2 == 0;
-        t.category = c;
-        persistence.add(t);
-    }*/
+        t.parentTask = superTask;
+        c.tasks.add(t);
+        //c.tasks.remove(t);
+        /*t.category = c;
+        persistence.add(t);*/
+    }
 
     persistence.flush(tx, function () {
-        var allTasks = task.all().filter("done", '=', true)
-                /*.prefetch("category")*/.order("name", false);
+        var allTasks = c.tasks.prefetch('parentTask');
+            /*Task.all().filter("done", '=', true)
+                .prefetch("parentTask").order("name", false);*/
 
         allTasks.list(tx, function (results) {
             results.forEach(function (r) {
-                console.log('[' + r.category.name + '] ' + r.name)
+                console.log('[' + r.parentTask.name + '] ' + r.name)
                 window.task = r;
             });
-            //persistence.reset(tx);
+            persistence.reset(tx);
         });
     });
 });

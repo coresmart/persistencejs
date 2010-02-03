@@ -11,7 +11,7 @@ var category = persistence.define('Category', {
 category.hasMany('tasks', task, 'category');
 
 persistence.schemaSync(function (tx) {
-    var c = category( {
+    /*var c = category( {
         name: "Main category"
     });
     persistence.add(c);
@@ -21,18 +21,18 @@ persistence.schemaSync(function (tx) {
         t.done = i % 2 == 0;
         t.category = c;
         persistence.add(t);
-    }
+    }*/
 
     persistence.flush(tx, function () {
         var allTasks = task.all().filter("done", '=', true)
-                .prefetch("category").order("name", false);
+                /*.prefetch("category")*/.order("name", false);
 
         allTasks.list(tx, function (results) {
             results.forEach(function (r) {
                 console.log('[' + r.category.name + '] ' + r.name)
                 window.task = r;
             });
-            persistence.reset(tx);
+            //persistence.reset(tx);
         });
     });
 });

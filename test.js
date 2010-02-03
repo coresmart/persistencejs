@@ -1,27 +1,27 @@
-asyncorm.connect('testdb', 'My test db', 5 * 1024 * 1024);
+persistence.connect('testdb', 'My test db', 5 * 1024 * 1024);
 
-var task = asyncorm.define('Task', {
+var task = persistence.define('Task', {
     name: "TEXT",
     description: "TEXT",
     done: "BOOL"
 });
-var category = asyncorm.define('Category', {
+var category = persistence.define('Category', {
     name: "TEXT"
 });
 category.hasMany('tasks', task, 'category');
 
-asyncorm.schemaSync(function (tx) {
+persistence.schemaSync(function (tx) {
     var c = category({name: "Main category"});
-    asyncorm.add(c);
+    persistence.add(c);
     for ( var i = 0; i < 5; i++) {
         var t = task();
         t.name = 'Task ' + i;
         t.done = i % 2 == 0;
         t.category = c;
-        asyncorm.add(t);
+        persistence.add(t);
     }
 
-    asyncorm.flush(tx, function () {
+    persistence.flush(tx, function () {
         var allTasks = task.all().filter("done", '=', true).prefetch("category")
                 .order("name", false);
 
@@ -30,7 +30,7 @@ asyncorm.schemaSync(function (tx) {
                 console.log(r.name)
                 window.task = r;
             });
-            //asyncorm.reset(tx);
+            //persistence.reset(tx);
         });
     });
 });

@@ -213,29 +213,15 @@ Example:
         });
     });
 
-Limitations
------------
+Limitations/Plans
+-----------------
 
 `persistence.js` is still in its early development stages and not
 extensively tested so there may be many bugs. If you find a bug,
-please report it to [me by mail](mailto:zef@zef.me), or fork the
-project, fix the problem and send me a pull request.
-
-Known issues:
-
-* Google Gears has a synchronous database API, it is possible to
-  create an asynchronous wrapper around it, but this is currently not
-  part of `persistence.js`, therefore calls are currently performed
-  synchronously, which may not have the best performance
-  characteristics. This can possibly be fixed by using e.g.
-  [WSPL](http://code.google.com/p/webstorageportabilitylayer/).
-
-Plans:
-
-* Implement non-persisted `QueryCollection`s, e.g. as a wrapper around
-  regular Javascript arrays to provide similar functionality to other
-  collections.
-* Synchronization with (views on) remote databases.
+please [report it](http://github.com/zefhemel/persistencejs/issues),
+or fork the project, fix the problem and send me a pull request.  For
+a list of planned features and open issues, have a look at the [issue
+tracker](http://github.com/zefhemel/persistencejs/issues).
 
 License
 -------

@@ -117,15 +117,15 @@ be persisted to the datase. All objects retrieved from the database
 are automatically tracked for changes. New entities can be tracked to
 be persisted using the `persistence.add` function:
         
-        var c = new Category({name: "Main category"});
-        persistence.add(c);
-        for ( var i = 0; i < 5; i++) {
-          var t = new Task();
-          t.name = 'Task ' + i;
-          t.done = i % 2 == 0;
-          t.category = c;
-          persistence.add(t);
-        }
+    var c = new Category({name: "Main category"});
+    persistence.add(c);
+    for ( var i = 0; i < 5; i++) {
+      var t = new Task();
+      t.name = 'Task ' + i;
+      t.done = i % 2 == 0;
+      t.category = c;
+      persistence.add(t);
+    }
 
 All changes made to tracked objects can be flushed to the database by
 using `persistence.flush`, which takes a transaction object and

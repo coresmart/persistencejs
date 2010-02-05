@@ -63,6 +63,7 @@ var persistence = window.persistence || {};
       return getEntity(entityName);
     };
 
+    var generatedTables = {}; // set
     /**
      * Synchronize the data model with the database, creates table that had not
      * been defined before
@@ -73,7 +74,6 @@ var persistence = window.persistence || {};
      */
     persistence.schemaSync = function (callback) {
       var queries = [];
-      var generatedTables = {}; // set
       for ( var entityName in entityMeta) {
         if (entityMeta.hasOwnProperty(entityName)) {
           var meta = entityMeta[entityName];
@@ -98,16 +98,16 @@ var persistence = window.persistence || {};
               if (!generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
-                    "CREATE TABLE IF NOT EXISTS `" + tableName + "` (`" + meta.name + "_" + rel
-                    + "` VARCHAR(32), `" + otherMeta.name + '_'
-                    + meta.hasMany[rel].inverseProperty + "` VARCHAR(32))", null ]);
-                queries.push( [
                     "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
                     + tableName + "` (`" + meta.name + "_" + rel + "`)", null ]);
                 queries.push( [
                     "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + otherMeta.name + "_"
                     + meta.hasMany[rel].inverseProperty + "` ON `" + tableName + "` (`"
                     + otherMeta.name + "_" + meta.hasMany[rel].inverseProperty + "`)", null ]);
+                queries.push( [
+                    "CREATE TABLE IF NOT EXISTS `" + tableName + "` (`" + meta.name + "_" + rel
+                    + "` VARCHAR(32), `" + otherMeta.name + '_'
+                    + meta.hasMany[rel].inverseProperty + "` VARCHAR(32))", null ]);
                 generatedTables[tableName] = true;
               }
             }
@@ -131,8 +131,8 @@ var persistence = window.persistence || {};
      *            the object to be tracked
      */
     persistence.add = function (obj) {
-      if (!trackedObjects[obj._id]) {
-        trackedObjects[obj._id] = obj;
+      if (!trackedObjects[obj.id]) {
+        trackedObjects[obj.id] = obj;
       }
     };
 
@@ -145,6 +145,10 @@ var persistence = window.persistence || {};
      *            function to be called when done
      */
     persistence.flush = function (tx, callback) {
+      if(!tx) {
+        persistence.transaction(function(tx) { persistence.flush(tx, callback); });
+        return;
+      }
       var objArray = [];
       for ( var id in trackedObjects) {
         if (trackedObjects.hasOwnProperty(id)) {
@@ -172,7 +176,7 @@ var persistence = window.persistence || {};
      * Clean the persistence context of cached entities and such.
      */
     persistence.clean = function () {
-      persistence.trackedObjects = {};
+      trackedObjects = {};
     }
 
     /**
@@ -180,8 +184,8 @@ var persistence = window.persistence || {};
      */
     persistence.reset = function (tx) {
       var tableArray = [];
-      for (p in entityMeta) {
-        if (entityMeta.hasOwnProperty(p)) {
+      for (p in generatedTables) {
+        if (generatedTables.hasOwnProperty(p)) {
           tableArray.push(p);
         }
       }
@@ -194,6 +198,8 @@ var persistence = window.persistence || {};
           });
       }
       dropOneTable();
+      persistence.clean();
+      generatedTables = {};
     }
 
     /**
@@ -207,7 +213,7 @@ var persistence = window.persistence || {};
       var rowMeta = entityMeta[entityName];
       var ent = getEntity(entityName);
       var o = new ent();
-      o._id = row[prefix + 'id'];
+      o.id = row[prefix + 'id'];
       o._new = false;
       for ( var p in row) {
         if (row.hasOwnProperty(p)) {
@@ -243,8 +249,8 @@ var persistence = window.persistence || {};
     persistence.entityValToDbVal = function (val, type) {
       if (val === undefined) {
         return null;
-      } else if (val._id) {
-        return val._id;
+      } else if (val.id) {
+        return val.id;
       } else if (type === 'BOOL') {
         return val ? 1 : 0;
       } else {
@@ -264,7 +270,7 @@ var persistence = window.persistence || {};
      */
     function getEntity (entityName) {
       if (entityClassCache[entityName]) {
-        return persistence._entityClassCache[entityName];
+        return entityClassCache[entityName];
       }
       var meta = entityMeta[entityName];
 
@@ -273,7 +279,7 @@ var persistence = window.persistence || {};
        */
       function Entity (obj) {
         var that = this;
-        this._id = createUUID();
+        this.id = createUUID();
         this._new = true;
         this._type = entityName;
         this._dirtyProperties = {};
@@ -303,8 +309,8 @@ var persistence = window.persistence || {};
                     if (val == null) {
                       that._data[ref] = null;
                       that._data_obj[ref] = undefined;
-                    } else if (val._id) {
-                      that._data[ref] = val._id;
+                    } else if (val.id) {
+                      that._data[ref] = val.id;
                       that._data_obj[ref] = val;
                       persistence.add(val);
                     } else { // let's assume it's an id
@@ -339,14 +345,14 @@ var persistence = window.persistence || {};
                       } else {
                         var inverseMeta = meta.hasMany[coll].type.meta;
 
-                        var queryColl = new ManyToManyDbQueryCollection(
-                          meta.hasMany[coll].type.meta.name);
+                        var queryColl = new ManyToManyDbQueryCollection(inverseMeta.name);
+                        queryColl.initManyToMany(that, coll);
                         queryColl._additionalJoinSqls.push("LEFT JOIN `"
                           + meta.hasMany[coll].tableName + "` AS mtm ON mtm.`"
                           + inverseMeta.name + '_' + meta.hasMany[coll].inverseProperty
                           + "` = `" + inverseMeta.name + "`.`id` ");
                         queryColl._additionalWhereSqls.push("mtm.`" + meta.name + '_' + coll
-                          + "` = '" + that._id + "'");
+                          + "` = '" + that.id + "'");
                         that._data[coll] = queryColl;
                         return queryColl;
                       }
@@ -383,6 +389,10 @@ var persistence = window.persistence || {};
         } // Entity
 
         Entity.meta = meta;
+
+        Entity.prototype.equals = function(other) {
+          return this.id == other.id;
+        }
 
         /**
          * Returns a QueryCollection implementation matching all instances
@@ -453,7 +463,7 @@ var persistence = window.persistence || {};
        * this function is invoked by persistence.flush()
        */
       function save (obj, tx, callback) {
-        var rowMeta = entityMeta[obj._type];
+        var meta = entityMeta[obj._type];
         var properties = [];
         var values = [];
         var qs = [];
@@ -466,26 +476,34 @@ var persistence = window.persistence || {};
             propertyPairs.push("`" + p + "` = ?");
           }
         }
-        if (properties.length === 0) { // Nothing changed
-          callback();
-          return;
+        var additionalQueries = [];
+        for(var p in meta.hasMany) {
+          if(meta.hasMany.hasOwnProperty(p)) {
+            additionalQueries = additionalQueries.concat(obj[p].persistQueries());
+          }
         }
-        obj._dirtyProperties = {};
-        if (obj._new) {
-          properties.push('id');
-          values.push(obj._id);
-          qs.push('?');
-          var sql = "INSERT INTO `" + obj._type + "` (" + properties.join(", ") + ") VALUES (" + qs.join(', ') + ")";
-          obj._new = false;
-          tx.executeSql(sql, values, callback);
-        } else {
-          var sql = "UPDATE `" + obj._type + "` SET " + propertyPairs.join(',') + " WHERE id = '" + obj._id + "'";
-          tx.executeSql(sql, values, callback);
-        }
+        executeQueriesSeq(tx, additionalQueries, function() {
+          if (properties.length === 0) { // Nothing changed
+            callback();
+            return;
+          }
+          obj._dirtyProperties = {};
+          if (obj._new) {
+            properties.push('id');
+            values.push(obj.id);
+            qs.push('?');
+            var sql = "INSERT INTO `" + obj._type + "` (" + properties.join(", ") + ") VALUES (" + qs.join(', ') + ")";
+            obj._new = false;
+            tx.executeSql(sql, values, callback);
+          } else {
+            var sql = "UPDATE `" + obj._type + "` SET " + propertyPairs.join(',') + " WHERE id = '" + obj.id + "'";
+            tx.executeSql(sql, values, callback);
+          }
+        });
       }
 
       function remove (obj, tx, callback) {
-        var sql = "DELETE FROM `" + obj._type + "` WHERE id = '" + obj._id + "'";
+        var sql = "DELETE FROM `" + obj._type + "` WHERE id = '" + obj.id + "'";
         tx.executeSql(sql, null, callback);
       }
 
@@ -661,6 +679,12 @@ var persistence = window.persistence || {};
       }
 
       /**
+       * Function called when session is flushed, returns list of SQL queries to execute 
+       * (as [query, arg] tuples)
+       */
+      QueryCollection.prototype.persistQueries = function() { return []; };
+
+      /**
        * Invoked by sub-classes to initialize the query collection
        */
       QueryCollection.prototype.init = function (entityName, constructor) {
@@ -729,7 +753,7 @@ var persistence = window.persistence || {};
        * @param obj the object to add
        */
       QueryCollection.prototype.add = function(obj) {
-        if(!obj._id || !obj._type) {
+        if(!obj.id || !obj._type) {
           throw "Cannot add object of non-entity type onto collection.";
         }
         persistence.add(obj);
@@ -741,7 +765,7 @@ var persistence = window.persistence || {};
        * @param obj the object to remove from the collection
        */
       QueryCollection.prototype.remove = function(obj) {
-        if(!obj._id || !obj._type) {
+        if(!obj.id || !obj._type) {
           throw "Cannot remove object of non-entity type from collection.";
         }
         persistence.add(obj);
@@ -846,20 +870,62 @@ var persistence = window.persistence || {};
        */
       function ManyToManyDbQueryCollection (entityName) {
         this.init(entityName, ManyToManyDbQueryCollection);
+        this._localAdded = [];
+        this._localRemoved = [];
       }
 
       ManyToManyDbQueryCollection.prototype = new DbQueryCollection();
 
+      ManyToManyDbQueryCollection.prototype.initManyToMany = function(obj, coll) {
+        this._obj = obj;
+        this._coll = coll;
+      }
+
       ManyToManyDbQueryCollection.prototype.add = function(obj) {
-        throw "Not yet implemented";
+        if(!this._localAdded.contains(obj)) {
+          persistence.add(obj);
+          this._localAdded.push(obj);
+        }
+      }
+
+      ManyToManyDbQueryCollection.prototype.clone = function() {
+        var c = DbQueryCollection.prototype.clone.call(this);
+        c._localAdded = this._localAdded;
+        c._localRemoved = this._localRemoved;
+        c._obj = this._obj;
+        c._coll = this._coll;
+        return c;
       }
 
       ManyToManyDbQueryCollection.prototype.remove = function(obj) {
-        throw "Not yet implemented";
+        if(this._localAdded.contains(obj)) { // added locally, can just remove it from there
+          this._localAdded.remove(obj);
+        } else if(!this._localRemoved.contains(obj)) {
+          this._localRemoved.push(obj);
+        }
       }
 
-      ManyToManyDbQueryCollection.prototype.persist = function() {
-        console.log("Called persist!");
+      ManyToManyDbQueryCollection.prototype.persistQueries = function() {
+        var queries = [];
+        var meta = persistence.getMeta(this._obj._type);
+        var inverseMeta = meta.hasMany[this._coll].type.meta;
+        // Added
+        for(var i = 0; i < this._localAdded.length; i++) {
+          queries.push(["INSERT INTO " + meta.hasMany[this._coll].tableName + 
+                " (`" + meta.name + "_" + this._coll + "`, `" + 
+                inverseMeta.name + '_' + meta.hasMany[this._coll].inverseProperty +
+                "`) VALUES (?, ?)", [this._obj.id, this._localAdded[i].id]]);
+        }
+        this._localAdded = [];
+        // Removed
+        for(var i = 0; i < this._localRemoved.length; i++) {
+          queries.push(["DELETE FROM  " + meta.hasMany[this._coll].tableName + 
+                " WHERE `" + meta.name + "_" + this._coll + "` = ? AND `" + 
+                inverseMeta.name + '_' + meta.hasMany[this._coll].inverseProperty +
+                "` = ?", [this._obj.id, this._localRemoved[i].id]]);
+        }
+        this._localRemoved = [];
+        return queries;
       }
 
       ////////// Low-level database interface, abstracting from HTML5 and Gears databases \\\\
@@ -979,3 +1045,21 @@ Array.prototype.equals = function(other) {
   return true;
 }
 
+Array.prototype.contains = function(el) {
+  var l = this.length;
+  for(var i = 0; i < l; i++) {
+    if(this[i].equals(el)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+Array.prototype.remove = function(el) {
+  var l = this.length;
+  for(var i = 0; i < l; i++) {
+    if(this[i].equals(el)) {
+      this.splice(i, 1);
+    }
+  }
+}

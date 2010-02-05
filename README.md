@@ -170,26 +170,32 @@ by [Google AppEngine's Query class](http://code.google.com/appengine/docs/python
 A `QueryCollection` has the following methods:
 
 * `filter(property, operator, value)`  
-  returns a new `QueryCollection` that adds a filter, filtering a
+  Returns a new `QueryCollection` that adds a filter, filtering a
   certain property based on an operator and value. Supported operators
   are '=', '!=', '<', '<=', '>' and '>='. Example: `.filter('done',
   '=', true)`
 * `order(property, ascending)`  
-  returns a new `QueryCollection` that will order its results by the
+  Returns a new `QueryCollection` that will order its results by the
   property specified in either an ascending (ascending === true) or
   descending (ascending === false) order.
+* `limit(n)`  
+  Returns a new `QueryCollection` that limits the size of the result
+  set to `n` items. Useful for pagination.
+* `skip(n)`  
+  Returns a new `QueryCollection` that skips the first `n` results.
+  Useful for pagination.
 * `prefetch(rel)`  
-  returns a new `QueryCollection` that prefetches entities linked
+  Returns a new `QueryCollection` that prefetches entities linked
   through relationship `rel`, note that this only works for one-to-one
   and many-to-one relationships.
 * `list(tx, callback)`  
-  asynchronously fetches the results matching the formulated query.
+  Asynchronously fetches the results matching the formulated query.
   Once retrieved, the callback function is invoked with an array of
   entity objects as argument.
 * `add(obj)`  
-  adds object `obj` to the collection.
+  Adds object `obj` to the collection.
 * `remove(obj)`  
-  removes object `obj` from the collection.
+  Removes object `obj` from the collection.
 
 Query collections are returned by:
 
@@ -198,7 +204,7 @@ Query collections are returned by:
 
 Example:
 
-    var allTasks = Task.all().filter("done", '=', true).prefetch("category").order("name", false);
+    var allTasks = Task.all().filter("done", '=', true).prefetch("category").order("name", false).limit(10);
         
     allTasks.list(null, function (results) {
         results.forEach(function (r) {
@@ -223,6 +229,13 @@ Known issues:
   synchronously, which may not have the best performance
   characteristics. This can possibly be fixed by using e.g.
   [WSPL](http://code.google.com/p/webstorageportabilitylayer/).
+
+Plans:
+
+* Implement non-persisted `QueryCollection`s, e.g. as a wrapper around
+  regular Javascript arrays to provide similar functionality to other
+  collections.
+* Synchronization with (views on) remote databases.
 
 License
 -------

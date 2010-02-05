@@ -720,6 +720,8 @@ var persistence = window.persistence || {};
         this._additionalWhereSqls = [];
         this._entityName = entityName;
         this._constructor = constructor;
+        this._limit = -1;
+        this._skip = 0;
       }
 
       /**
@@ -731,6 +733,8 @@ var persistence = window.persistence || {};
         c._filter = this._filter;
         c._prefetchFields = this._prefetchFields.slice(0); // clone
         c._orderColumns = this._orderColumns.slice(0);
+        c._limit = this._limit;
+        c._skip = this._skip;
         return c;
       };
 
@@ -758,6 +762,28 @@ var persistence = window.persistence || {};
         ascending = ascending || true;
         var c = this.clone();
         c._orderColumns.push( [ property, ascending ]);
+        return c;
+      };
+
+      /**
+       * Returns a new query collection will limit its size to n items
+       * @param n the number of items to limit it to
+       * @return the limited query collection
+       */
+      QueryCollection.prototype.limit = function(n) {
+        var c = this.clone();
+        c._limit = n;
+        return c;
+      };
+
+      /**
+       * Returns a new query collection which will skip the first n results
+       * @param n the number of results to skip
+       * @return the query collection that will skip n items
+       */
+      QueryCollection.prototype.skip = function(n) {
+        var c = this.clone();
+        c._skip = n;
         return c;
       };
 
@@ -874,6 +900,12 @@ var persistence = window.persistence || {};
               return "`" + mainPrefix + c[0] + "` "
               + (c[1] ? "ASC" : "DESC");
             }).join(", ");
+        }
+        if(this._limit >= 0) {
+          sql += " LIMIT " + this._limit;
+        }
+        if(this._skip > 0) {
+          sql += " OFFSET " + this._skip;
         }
         persistence.flush(tx, function () {
             tx.executeSql(sql, args, function (rows) {

@@ -33,7 +33,7 @@ persistence.schemaSync(function (tx) {
             results.forEach(function (r) {
                 console.log('[' + r.category.name + '] ' + r.name)
               });
-            persistence.reset(tx);
+            //persistence.reset(tx);
           });
       });
 });

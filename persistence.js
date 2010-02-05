@@ -29,6 +29,7 @@ var persistence = window.persistence || {};
     var conn = null;
     var entityMeta = {};
     var trackedObjects = {};
+    var objectsToRemove = {};
 
     persistence.trackedObjects = trackedObjects;
 
@@ -99,16 +100,16 @@ var persistence = window.persistence || {};
      */
     persistence.schemaSync = function (callback) {
       var queries = [];
-      for ( var entityName in entityMeta) {
+      for (var entityName in entityMeta) {
         if (entityMeta.hasOwnProperty(entityName)) {
           var meta = entityMeta[entityName];
           var rowDef = '';
-          for ( var prop in meta.fields) {
+          for (var prop in meta.fields) {
             if (meta.fields.hasOwnProperty(prop)) {
               rowDef += prop + " " + meta.fields[prop] + ", ";
             }
           }
-          for ( var rel in meta.hasOne) {
+          for (var rel in meta.hasOne) {
             if (meta.hasOne.hasOwnProperty(rel)) {
               var otherMeta = meta.hasOne[rel].type.meta;
               rowDef += rel + " VARCHAR(255), ";
@@ -117,7 +118,7 @@ var persistence = window.persistence || {};
                   + "` ON `" + meta.name + "` (`" + rel + "`)", null ]);
             }
           }
-          for ( var rel in meta.hasMany) {
+          for (var rel in meta.hasMany) {
             if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
               var tableName = meta.hasMany[rel].tableName;
               if (!generatedTables[tableName]) {
@@ -162,6 +163,16 @@ var persistence = window.persistence || {};
     };
 
     /**
+     * Marks the object to be removed (on next flush)
+     * @param obj object to be removed
+     */
+    persistence.remove = function(obj) {
+      if (!objectsToRemove[obj.id]) {
+        objectsToRemove[obj.id] = obj;
+      }
+    };
+
+    /**
      * Persists all changes to the database
      * 
      * @param tx
@@ -174,24 +185,45 @@ var persistence = window.persistence || {};
         persistence.transaction(function(tx) { persistence.flush(tx, callback); });
         return;
       }
-      var objArray = [];
-      for ( var id in trackedObjects) {
+      var persistObjArray = [];
+      for (var id in trackedObjects) {
         if (trackedObjects.hasOwnProperty(id)) {
-          objArray.push(trackedObjects[id]);
+          persistObjArray.push(trackedObjects[id]);
         }
       }
-      function persistOneEntity () {
-        var obj = objArray.pop();
-        save(obj, tx, function () {
-            if (objArray.length > 0) {
-              persistOneEntity();
+      var removeObjArray = [];
+      for (var id in objectsToRemove) {
+        if (objectsToRemove.hasOwnProperty(id)) {
+          removeObjArray.push(objectsToRemove[id]);
+          delete trackedObjects[id]; // Stop tracking
+        }
+      }
+      function removeOneObject() {
+        var obj = removeObjArray.pop();
+        remove(obj, tx, function () {
+            if (removeObjArray.length > 0) {
+              removeOneObject();
             } else if (callback) {
               callback();
             }
           });
       }
-      if (objArray.length > 0) {
-        persistOneEntity();
+      function persistOneObject () {
+        var obj = persistObjArray.pop();
+        save(obj, tx, function () {
+            if (persistObjArray.length > 0) {
+              persistOneObject();
+            } else if(removeObjArray.length > 0) {
+              removeOneObject();
+            } else if (callback) {
+              callback();
+            }
+          });
+      }
+      if (persistObjArray.length > 0) {
+        persistOneObject();
+      } else if(removeObjArray.length > 0) {
+        removeOneObject();
       } else if(callback) {
         callback();
       }
@@ -528,8 +560,16 @@ var persistence = window.persistence || {};
       }
 
       function remove (obj, tx, callback) {
-        var sql = "DELETE FROM `" + obj._type + "` WHERE id = '" + obj.id + "'";
-        tx.executeSql(sql, null, callback);
+        var queries = [["DELETE FROM `" + obj._type + "` WHERE id = '" + obj.id + "'", null]];
+        var meta = persistence.getMeta(obj._type);
+        for (var rel in meta.hasMany) {
+          if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
+            var tableName = meta.hasMany[rel].tableName;
+            //var inverseProperty = meta.hasMany[rel].inverseProperty;
+            queries.push(["DELETE FROM `" + tableName + "` WHERE `" + meta.name + '_' + rel + "` = '" + obj.id + "'", null]);
+          }
+        }
+        executeQueriesSeq(tx, queries, callback);
       }
 
       /**
@@ -552,7 +592,7 @@ var persistence = window.persistence || {};
               } else if (callback) {
                 callback.apply(this, callbackArgs);
               }
-            });
+            }, function(_, err) { console.log(err); });
         }
         if (queries.length > 0) {
           executeOne();

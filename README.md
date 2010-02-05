@@ -108,7 +108,7 @@ through the `QueryCollection` API that will be discussed later:
     tasks.tags.remove(tag)l
     tasks.tags.list(tx, function(allTags) { console.log(allTags); });
 
-Persisting objects
+Persisting/removing objects
 ------------------
 
 Similar to [hibernate](http://www.hibernate.org), `persistence.js`
@@ -126,6 +126,10 @@ be persisted using the `persistence.add` function:
       t.category = c;
       persistence.add(t);
     }
+
+Objects can also be removed from the database:
+
+    persistence.remove(c);
 
 All changes made to tracked objects can be flushed to the database by
 using `persistence.flush`, which takes a transaction object and

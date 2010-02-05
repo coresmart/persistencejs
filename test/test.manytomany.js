@@ -1,4 +1,4 @@
-persistence.connect('manytomanytest', 'My test db', 5 * 1024 * 1024);
+persistence.connect('manytomany', 'My test db', 5 * 1024 * 1024);
 
 var Task = persistence.define('Task', {
     name: "TEXT",
@@ -37,13 +37,14 @@ persistence.schemaSync(function (tx) {
 
     persistence.flush(tx, function () {
         var allTasks = c.tasks.prefetch('category').filter("done", "=", true);
+        console.log('here');
 
         allTasks.list(tx, function (results) {
             results.forEach(function (r) {
                 console.log('[' + r.category.name + '] ' + r.name)
                 window.task = r;
             });
-            persistence.reset(tx);
+            //persistence.reset(tx);
         });
     });
 });

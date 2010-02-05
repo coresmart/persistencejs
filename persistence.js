@@ -198,8 +198,6 @@ var persistence = window.persistence || {};
 
     /**
      * Converts a database row into an entity object
-     * 
-     * @internal
      */
     persistence.rowToEntity = function (entityName, row, prefix) {
       prefix = prefix || '';
@@ -227,8 +225,6 @@ var persistence = window.persistence || {};
     /**
      * Converts a value from the database to a value suitable for the entity
      * (also does type conversions, if necessary)
-     * 
-     * @internal
      */
     persistence.dbValToEntityVal = function (val, type) {
       switch (type) {
@@ -242,9 +238,7 @@ var persistence = window.persistence || {};
 
     /**
      * Converts an entity value to a database value (inverse of
-       * dbValToEntityVal)
-     * 
-     * @internal
+     *   dbValToEntityVal)
      */
     persistence.entityValToDbVal = function (val, type) {
       if (val === undefined) {
@@ -274,6 +268,9 @@ var persistence = window.persistence || {};
       }
       var meta = entityMeta[entityName];
 
+      /**
+       * @constructor
+       */
       function Entity (obj) {
         var that = this;
         this._id = createUUID();
@@ -658,6 +655,7 @@ var persistence = window.persistence || {};
       /**
        * The constructor function of the _abstract_ QueryCollection
        * DO NOT INSTANTIATE THIS
+       * @constructor
        */
       function QueryCollection () {
       }
@@ -754,6 +752,7 @@ var persistence = window.persistence || {};
       /**
        * A database implementation of the QueryCollection
        * @param entityName the name of the entity to create the collection for
+       * @constructor
        */
       function DbQueryCollection (entityName) {
         this.init(entityName, DbQueryCollection);
@@ -843,6 +842,7 @@ var persistence = window.persistence || {};
 
       /**
        * A ManyToMany implementation of QueryCollection 
+       * @constructor
        */
       function ManyToManyDbQueryCollection (entityName) {
         this.init(entityName, ManyToManyDbQueryCollection);

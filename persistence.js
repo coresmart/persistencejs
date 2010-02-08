@@ -1084,6 +1084,61 @@ var persistence = window.persistence || {};
         return queries;
       }
 
+      ////////// Local implementation of QueryCollection \\\\\\\\\\\\\\\\
+
+      function LocalQueryCollection(entityName, initialArray) {
+        this.init(entityName, LocalQueryCollection);
+        this._data = {};
+        if(initialArray) {
+          for(var i = 0; i < initialArray.length; i++) {
+            this._data[initialArray[i].id] = initialArray[i];
+          }
+        }
+      }
+
+      LocalQueryCollection.prototype = new QueryCollection();
+
+      LocalQueryCollection.prototype.clone = function() {
+        var c = DbQueryCollection.prototype.clone.call(this);
+        c._data = this._data;
+        return c;
+      };
+
+      LocalQueryCollection.prototype.add = function(obj) {
+        this._data[obj.id] = obj;
+      };
+
+      LocalQueryCollection.prototype.remove = function(obj) {
+        if(this._data[obj.id]) {
+          delete this._data[obj.id];
+        }
+      };
+
+      LocalQueryCollection.prototype.list = function(callback) {
+        if(callback.executeSql) { // first argument is transaction
+          callback = arguments[1]; // set to second argument
+        }
+        var array = [];
+        for(var id in this._data) {
+          if(this._data.hasOwnProperty(id)) {
+            array.push(this._data[id]);
+          }
+        }
+        var results = [];
+        for(var i = 0; i < array.length; i++) {
+          if(this._filter.match(array[i])) {
+            results.push(array[i]);
+          }
+        }
+        if(callback) {
+          callback(results);
+        } else {
+          return results;
+        }
+      };
+
+      persistence.LocalQueryCollection = LocalQueryCollection;
+
       ////////// Low-level database interface, abstracting from HTML5 and Gears databases \\\\
       persistence.db = persistence.db || {};
 

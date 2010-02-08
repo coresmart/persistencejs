@@ -196,6 +196,10 @@ A `QueryCollection` has the following methods:
   Asynchronously fetches the results matching the formulated query.
   Once retrieved, the callback function is invoked with an array of
   entity objects as argument.
+* `each(tx, eachCallback)`  
+  Asynchronously fetches the results matching the formulated query.
+  Once retrieved, the `eachCallback` function is invoked on each
+  element of the result objects.
 * `add(obj)`  
   Adds object `obj` to the collection.
 * `remove(obj)`  

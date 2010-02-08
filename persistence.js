@@ -919,6 +919,14 @@ var persistence = window.persistence || {};
 
       DbQueryCollection.prototype = new QueryCollection();
 
+      DbQueryCollection.prototype.each = function (tx, eachFn) {
+        this.list(tx, function(results) {
+            for(var i = 0; i < results.length; i++) {
+              eachFn(results[i]);
+            }
+          });
+      }
+
       /**
        * Asynchronous call to actually fetch the items in the collection
        * @param tx transaction to use
@@ -1010,6 +1018,7 @@ var persistence = window.persistence || {};
               });
           });
       };
+
 
       /**
        * A ManyToMany implementation of QueryCollection 

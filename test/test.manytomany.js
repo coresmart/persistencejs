@@ -1,3 +1,4 @@
+console.profile()
 persistence.connect('manytomany', 'My test db', 5 * 1024 * 1024);
 
 var Task = persistence.define('Task', {
@@ -44,7 +45,8 @@ persistence.schemaSync(function (tx) {
                 console.log('[' + r.category.name + '] ' + r.name)
                 window.task = r;
             });
-            //persistence.reset(tx);
+            persistence.reset(tx);
+            console.profileEnd();
         });
     });
 });

@@ -451,12 +451,56 @@ var persistence = window.persistence || {};
           return this.id == other.id;
         }
 
+        Entity.prototype.fetch = function(tx, rel, callback) {
+          var that = this;
+          if(!tx) {
+            persistence.transaction(function(tx) {
+                that.fetch(tx, rel, callback);
+              });
+            return;
+          }
+          if(!this._data[rel]) { // null
+            if(callback) {
+              callback(null);
+            }
+          } else if(this._data_obj[rel]) { // already loaded
+            if(callback) { 
+              callback(this._data_obj[rel]);
+            }
+          } else {
+            meta.hasOne[rel].type.load(tx, this._data[rel], function(obj) {
+                that._data_obj[rel] = obj;
+                if(callback) {
+                  callback(obj);
+                }
+              });
+          }
+        }
+
         /**
          * Returns a QueryCollection implementation matching all instances
          * of this entity in the database
          */
         Entity.all = function () {
           return new DbQueryCollection(entityName);
+        }
+
+        Entity.load = function(tx, id, callback) {
+          if(!tx) {
+            persistence.transaction(function(tx) {
+              Entity.load(tx, id, callback);
+            });
+            return;
+          }
+          if(!id) {
+            callback(null);
+          }
+          tx.executeSql("SELECT * FROM `" + entityName + "` WHERE id = ?", [id], function(results) {
+              if(results.length == 0) {
+                callback(null);
+              }
+              callback(persistence.rowToEntity(entityName, results[0]));
+            });
         }
 
         /**

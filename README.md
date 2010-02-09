@@ -226,10 +226,10 @@ Limitations/Plans
 
 `persistence.js` is still in its early development stages and not
 extensively tested so there may be many bugs. If you find a bug,
-please [report it](http://github.com/zefhemel/persistencejs/issues),
+please [report it](http://yellowgrass.org/project/persistence.js).
 or fork the project, fix the problem and send me a pull request.  For
 a list of planned features and open issues, have a look at the [issue
-tracker](http://github.com/zefhemel/persistencejs/issues).
+tracker](http://yellowgrass.org/project/persistence.js).
 
 License
 -------

@@ -22,7 +22,7 @@
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
-*/
+ */
 var persistence = window.persistence || {};
 
 (function () {
@@ -277,7 +277,7 @@ var persistence = window.persistence || {};
           if (p.substring(0, prefix.length) === prefix) {
             var prop = p.substring(prefix.length);
             if (prop != 'id') {
-              o[prop] = persistence.dbValToEntityVal(row[p], rowMeta.fields[prop]);
+              o._data[prop] = persistence.dbValToEntityVal(row[p], rowMeta.fields[prop]);
             }
           }
         }
@@ -292,7 +292,7 @@ var persistence = window.persistence || {};
     persistence.dbValToEntityVal = function (val, type) {
       switch (type) {
       case 'BOOL':
-        return val === 1;
+        return val == 1;
         break;
       default:
         return val;
@@ -304,7 +304,7 @@ var persistence = window.persistence || {};
      *   dbValToEntityVal)
      */
     persistence.entityValToDbVal = function (val, type) {
-      if (val === undefined) {
+      if (val === undefined || val === null) {
         return null;
       } else if (val.id) {
         return val.id;
@@ -572,7 +572,7 @@ var persistence = window.persistence || {};
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");
-            values.push(persistence.entityValToDbVal(obj[p]));
+            values.push(persistence.entityValToDbVal(obj[p], meta.fields[p]));
             qs.push('?');
             propertyPairs.push("`" + p + "` = ?");
           }
@@ -734,6 +734,9 @@ var persistence = window.persistence || {};
           } else if (operator === '!=' && value === null) {
             return "`" + prefix + property + "` IS NOT NULL";
           } else {
+            if(value === true || value === false) {
+              value = value ? 1 : 0;
+            }
             values.push(persistence.entityValToDbVal(value));
             return "`" + prefix + property + "` " + operator + " ?";
           }
@@ -1119,6 +1122,7 @@ var persistence = window.persistence || {};
           callback = arguments[1]; // set to second argument
         }
         var array = [];
+        var that = this;
         for(var id in this._data) {
           if(this._data.hasOwnProperty(id)) {
             array.push(this._data[id]);
@@ -1130,6 +1134,23 @@ var persistence = window.persistence || {};
             results.push(array[i]);
           }
         }
+        results.sort(function(a, b) {
+            for(var i = 0; i < that._orderColumns.length; i++) {
+              var col = that._orderColumns[i][0];
+              var asc = that._orderColumns[i][1];
+              console.log(that._orderColumns[i]);
+              console.log(a);
+              console.log(b);
+              if(a[col] < b[col]) {
+                console.log(a.name + " < " + b.name);
+                return asc ? 1 : -1;
+              } else if(a[col] > b[col]) {
+                console.log(a.name + " > " + b.name);
+                return asc ? -1 : 1;
+              } 
+            }
+            return 0;
+          });
         if(callback) {
           callback(results);
         } else {

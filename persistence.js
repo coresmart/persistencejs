@@ -52,6 +52,12 @@ var persistence = window.persistence || {};
      */
     persistence.connect = function (dbname, description, size) {
       persistence._conn = persistence.db.connect(dbname, description, size);
+      if(!persistence._conn) {
+        throw {
+          type: "NoSupportedDatabaseFound",
+          message: "No supported database found in this browser."
+        };
+      }
     };
 
     /**
@@ -62,7 +68,14 @@ var persistence = window.persistence || {};
      *            starts, taking the transaction object as argument
      */
     persistence.transaction = function (callback) {
-      persistence._conn.transaction(callback);
+      if(!persistence._conn) {
+        throw {
+          type: "NoActiveDatabase",
+          message: "No ongoing database connection, please connect first."
+        };
+      } else {
+        persistence._conn.transaction(callback);
+      }
     };
 
     /**
@@ -90,6 +103,7 @@ var persistence = window.persistence || {};
     };
 
     var generatedTables = {}; // set
+
     /**
      * Synchronize the data model with the database, creates table that had not
      * been defined before
@@ -99,11 +113,11 @@ var persistence = window.persistence || {};
      *            takes started transaction as argument
      */
     persistence.schemaSync = function (callback) {
-      var queries = [];
+      var queries = [], meta, rowDef, otherMeta, tableName;
       for (var entityName in entityMeta) {
         if (entityMeta.hasOwnProperty(entityName)) {
-          var meta = entityMeta[entityName];
-          var rowDef = '';
+          meta = entityMeta[entityName];
+          rowDef = '';
           for (var prop in meta.fields) {
             if (meta.fields.hasOwnProperty(prop)) {
               rowDef += prop + " " + meta.fields[prop] + ", ";
@@ -111,7 +125,7 @@ var persistence = window.persistence || {};
           }
           for (var rel in meta.hasOne) {
             if (meta.hasOne.hasOwnProperty(rel)) {
-              var otherMeta = meta.hasOne[rel].type.meta;
+              otherMeta = meta.hasOne[rel].type.meta;
               rowDef += rel + " VARCHAR(255), ";
               queries.push( [
                   "CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
@@ -120,7 +134,7 @@ var persistence = window.persistence || {};
           }
           for (var rel in meta.hasMany) {
             if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
-              var tableName = meta.hasMany[rel].tableName;
+              tableName = meta.hasMany[rel].tableName;
               if (!generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
@@ -350,6 +364,7 @@ var persistence = window.persistence || {};
                 that.__defineSetter__(f, function (val) {
                     that._data[f] = val;
                     that._dirtyProperties[f] = true;
+                    that.triggerEvent('set', that, f, val);
                   });
                 that.__defineGetter__(f, function () {
                     return that._data[f];
@@ -374,6 +389,7 @@ var persistence = window.persistence || {};
                       that._data[ref] = val;
                     }
                     that._dirtyProperties[ref] = true;
+                    that.triggerEvent('set', that, ref, val);
                   });
                 that.__defineGetter__(ref, function () {
                     if (that._data[ref] === null || that._data_obj[ref] !== undefined) {
@@ -445,6 +461,8 @@ var persistence = window.persistence || {};
           }
         } // Entity
 
+        Entity.prototype = new Observable();
+
         Entity.meta = meta;
 
         Entity.prototype.equals = function(other) {
@@ -482,7 +500,7 @@ var persistence = window.persistence || {};
          * of this entity in the database
          */
         Entity.all = function () {
-          return new DbQueryCollection(entityName);
+          return new AllDbQueryCollection(entityName);
         }
 
         Entity.load = function(tx, id, callback) {
@@ -662,6 +680,55 @@ var persistence = window.persistence || {};
       }
 
       ////////////////// QUERY COLLECTIONS \\\\\\\\\\\\\\\\\\\\\\\
+
+      /**
+       * Simple observable function constructor
+       * @constructor
+       */
+      function Observable() {
+        this.subscribers = {};
+      }
+
+      Observable.prototype.addEventListener = function (eventType, fn) {
+        if (typeof eventType == 'object') { // assume it's an array
+          var eventTypes = eventType;
+          for ( var i = 0; i < eventTypes.length; i++) {
+            var eventType = eventTypes[i];
+            if (!this.subscribers[eventType]) {
+              this.subscribers[eventType] = [];
+            }
+            this.subscribers[eventType].push(fn);
+          }
+        } else {
+          if (!this.subscribers[eventType]) {
+            this.subscribers[eventType] = [];
+          }
+          this.subscribers[eventType].push(fn);
+        }
+      };
+
+      Observable.prototype.removeEventListener = function(eventType, fn) {
+        var subscribers = this.subscribers[eventType];
+        for ( var i = 0; i < subscribers.length; i++) {
+          if(subscribers[i] == fn) {
+            this.subscribers[eventType].splice(i, 1);
+            return true;
+          }
+        }
+        return false;
+      };
+
+      Observable.prototype.triggerEvent = function (eventType) {
+        if (!this.subscribers[eventType]) { // No subscribers to this event type
+          return;
+        }
+        for (var sid in this.subscribers[eventType]) {
+          if(this.subscribers[eventType].hasOwnProperty(sid)) {
+            this.subscribers[eventType][sid].apply(null, arguments);
+          }
+        }
+      };
+
       /*
        * Each filter has 4 methods:
        * - sql(prefix, values) -- returns a SQL representation of this filter,
@@ -790,6 +857,8 @@ var persistence = window.persistence || {};
       function QueryCollection () {
       }
 
+      QueryCollection.prototype = new Observable();
+
       /**
        * Function called when session is flushed, returns list of SQL queries to execute 
        * (as [query, arg] tuples)
@@ -801,7 +870,7 @@ var persistence = window.persistence || {};
        */
       QueryCollection.prototype.init = function (entityName, constructor) {
         this._filter = new NullFilter();
-        this._orderColumns = []; // tuples of [column, ascending?]
+        this._orderColumns = []; // tuples of [column, ascending]
         this._prefetchFields = [];
         this._additionalJoinSqls = [];
         this._additionalWhereSqls = [];
@@ -809,6 +878,8 @@ var persistence = window.persistence || {};
         this._constructor = constructor;
         this._limit = -1;
         this._skip = 0;
+        // For observable
+        this.subscribers = {};
       }
 
       /**
@@ -822,6 +893,7 @@ var persistence = window.persistence || {};
         c._orderColumns = this._orderColumns.slice(0);
         c._limit = this._limit;
         c._skip = this._skip;
+        c.subscribers = this.subscribers;
         return c;
       };
 
@@ -896,6 +968,7 @@ var persistence = window.persistence || {};
         }
         persistence.add(obj);
         this._filter.makeFit(obj);
+        this.triggerEvent('add', this, obj);
       }
 
       /**
@@ -906,8 +979,8 @@ var persistence = window.persistence || {};
         if(!obj.id || !obj._type) {
           throw "Cannot remove object of non-entity type from collection.";
         }
-        persistence.add(obj);
         this._filter.makeNotFit(obj);
+        this.triggerEvent('remove', this, obj);
       }
 
 
@@ -1018,10 +1091,31 @@ var persistence = window.persistence || {};
                   persistence.add(e);
                 }
                 callback(results);
+                that.triggerEvent('list', that, results);
               });
           });
       };
 
+      /**
+       * An implementation of QueryCollection, that is used
+       * to represent all instances of an entity type
+       * @constructor
+       */
+      function AllDbQueryCollection (entityName) {
+        this.init(entityName, AllDbQueryCollection);
+      }
+
+      AllDbQueryCollection.prototype = new DbQueryCollection();
+
+      AllDbQueryCollection.prototype.add = function(obj) {
+        persistence.add(obj);
+        this.triggerEvent('add', this, obj);
+      };
+
+      AllDbQueryCollection.prototype.remove = function(obj) {
+        persistence.remove(obj);
+        this.triggerEvent('remove', this, obj);
+      };
 
       /**
        * A ManyToMany implementation of QueryCollection 

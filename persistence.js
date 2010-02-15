@@ -356,6 +356,7 @@ var persistence = window.persistence || {};
         this._dirtyProperties = {};
         this._data = {};
         this._data_obj = {}; // references to objects
+        this.subscribers = {}; // observable
 
         for ( var field in meta.fields) {
           (function () {

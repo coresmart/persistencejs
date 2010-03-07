@@ -1213,7 +1213,7 @@ var persistence = window.persistence || {};
       };
 
       LocalQueryCollection.prototype.list = function(callback) {
-        if(callback.executeSql) { // first argument is transaction
+        if(!callback || callback.executeSql) { // first argument is transaction
           callback = arguments[1]; // set to second argument
         }
         var array = [];

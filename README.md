@@ -16,6 +16,7 @@ Browser support
 * Firefox (through Google Gears)
 * Android browser (tested on 1.6 and 2.1)
 * iPhone browser (iPhone OS 3+)
+* Palm WebOS (tested on 1.4.0)
 
 Internet Explorer is likely not supported (untested) because it
 lacks `__defineGetter__` and `__defineSetter__` support, which

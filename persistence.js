@@ -69,10 +69,7 @@ var persistence = window.persistence || {};
      */
     persistence.transaction = function (callback) {
       if(!persistence._conn) {
-        throw {
-          type: "NoActiveDatabase",
-          message: "No ongoing database connection, please connect first."
-        };
+        throw "No ongoing database connection, please connect first.";
       } else {
         persistence._conn.transaction(callback);
       }

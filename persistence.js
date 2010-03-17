@@ -368,6 +368,7 @@ var persistence = window.persistence || {};
                 that.__defineGetter__(f, function () {
                     return that._data[f];
                   });
+                that._data[field] = defaultValue(meta.fields[field]);
               }
             }());
         }
@@ -679,6 +680,16 @@ var persistence = window.persistence || {};
 
         var uuid = s.join("");
         return uuid;
+      }
+
+
+      function defaultValue(type) {
+        switch(type) {
+        case "TEXT": return "";
+        case "INT": return 0;
+        case "BOOL": return false;
+        default: return null;
+        }
       }
 
       ////////////////// QUERY COLLECTIONS \\\\\\\\\\\\\\\\\\\\\\\
@@ -1257,6 +1268,7 @@ var persistence = window.persistence || {};
       };
 
       persistence.LocalQueryCollection = LocalQueryCollection;
+      persistence.Observable           = Observable;
 
       ////////// Low-level database interface, abstracting from HTML5 and Gears databases \\\\
       persistence.db = persistence.db || {};

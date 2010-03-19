@@ -210,34 +210,43 @@ var persistence = window.persistence || {};
         }
       }
       objectsToRemove = {};
-      function removeOneObject() {
-        var obj = removeObjArray.pop();
-        remove(obj, tx, function () {
-            if (removeObjArray.length > 0) {
-              removeOneObject();
-            } else if (callback) {
-              callback();
-            }
-          });
-      }
-      function persistOneObject () {
-        var obj = persistObjArray.pop();
-        save(obj, tx, function () {
-            if (persistObjArray.length > 0) {
-              persistOneObject();
-            } else if(removeObjArray.length > 0) {
-              removeOneObject();
-            } else if (callback) {
-              callback();
-            }
-          });
-      }
-      if (persistObjArray.length > 0) {
-        persistOneObject();
-      } else if(removeObjArray.length > 0) {
-        removeOneObject();
-      } else if(callback) {
-        callback();
+      if(callback) {
+        function removeOneObject() {
+          var obj = removeObjArray.pop();
+          remove(obj, tx, function () {
+              if (removeObjArray.length > 0) {
+                removeOneObject();
+              } else if (callback) {
+                callback();
+              }
+            });
+        }
+        function persistOneObject () {
+          var obj = persistObjArray.pop();
+          save(obj, tx, function () {
+              if (persistObjArray.length > 0) {
+                persistOneObject();
+              } else if(removeObjArray.length > 0) {
+                removeOneObject();
+              } else if (callback) {
+                callback();
+              }
+            });
+        }
+        if (persistObjArray.length > 0) {
+          persistOneObject();
+        } else if(removeObjArray.length > 0) {
+          removeOneObject();
+        } else if(callback) {
+          callback();
+        }
+      } else { // More efficiently
+        for(var i = 0; i < persistObjArray.length; i++) {
+          save(persistObjArray[i], tx);
+        }
+        for(var i = 0; i < removeObjArray.length; i++) {
+          remove(removeObjArray[i], tx);
+        }
       }
     }
 
@@ -606,7 +615,7 @@ var persistence = window.persistence || {};
         }
         executeQueriesSeq(tx, additionalQueries, function() {
           if (properties.length === 0) { // Nothing changed
-            callback();
+            if(callback) callback();
             return;
           }
           obj._dirtyProperties = {};

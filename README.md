@@ -9,6 +9,49 @@ It has no dependencies on any other frameworks, other than the Google
 Gears [initialization script](http://code.google.com/apis/gears/gears_init.js), 
 in case you want to enable Gears support.
 
+What's all this _asynchronous_ stuff about?
+-----------------------------------------
+
+In browsers, Javascript and the web page's render engine have to share a
+single thread. The result of this is that only one thing can happen at a time. If
+a database query would be performed _synchronously_, like in many
+other programming environments, like Java and PHP, the browser would
+freeze from the moment the query was issued until the results came
+back, which is clearly suboptimal. Therefore, many APIs in Javascript
+are defined as _asynchronous_ APIs, which mean that they do not block
+when an "expensive" computation is performed, but instead provide the
+call with a function that will be invoked once the result is known. In
+the meantime, the browser can perform other duties. 
+
+For instance, a synchronous database call call would look as follows:
+
+    var results = db.query("SELECT * FROM Table");
+    for(...) { ... }
+
+The execution of the first statement could take half a second, during
+which the browser doesn't do anything else. By contrast, the
+asynchronous version looks as follows:
+
+    db.query("SELECT * FROM Table", function(results) {
+      for(...) { ... }
+    });
+
+Note that there will be a delay between the `db.query` call and the
+result being available and that while the database is processing the
+query, the execution of the Javascript continues. To make this clear,
+consider the following program:
+    
+    db.query("SELECT * FROM Table", function(results) {
+      console.log("hello");
+    });
+    console.log("world");
+
+Although one could assume this would print "hello", followed by
+"world", the result will likely be that "world" is printed before
+"hello", because "hello" is printed when the results from the
+query are available. This is a tricky thing about asynchronous
+programming that a Javascript developer will have to get used to.
+
 Browser support
 ---------------
 

@@ -165,6 +165,26 @@ explicitly call `persistence.flush()`. The exception to this rule is
 when using the `list(...)` method on a `QueryCollection`, which also
 flushes first.
 
+Dumping (and restoring) a database
+--------------------------------
+
+`persistence.dump` can be used to create an object containing a full
+dump of a database. Naturally, it is adviced to only do this with
+smaller databases. Example:
+
+    persistence.dump(tx, [Task, Category], function(dump) {
+      console.log(dump);
+    });
+
+When `null` is provided as a first argument a new transaction will be started for the operation. If `null` is provided as second argument, `dump` defaults to dumping _all_ defined entities.
+
+The dump format is:
+    
+    {"entity-name": [list of instances],
+     ...}
+
+There is no restore API yet, but this will be implemented soon.
+
 Query collections
 -----------------
 

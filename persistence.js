@@ -117,7 +117,7 @@ var persistence = window.persistence || {};
           rowDef = '';
           for (var prop in meta.fields) {
             if (meta.fields.hasOwnProperty(prop)) {
-              rowDef += prop + " " + meta.fields[prop] + ", ";
+              rowDef += "`" + prop + "` " + meta.fields[prop] + ", ";
             }
           }
           for (var rel in meta.hasOne) {
@@ -588,6 +588,38 @@ var persistence = window.persistence || {};
         entityClassCache[entityName] = Entity;
         return Entity;
       }
+
+
+      /**
+       * Dumps the entire database into an object (that can be serialized to JSON for instance)
+       * @param entities a list of entity constructor functions to serialize, defaults to all
+       * @param callback (object) the callback function called with the results.
+       */
+      persistence.dump = function(tx, entities, callback) {
+        if(!entities) { // Default: all entity types
+          entities = [];
+          for(e in entityClassCache) {
+            if(entityClassCache.hasOwnProperty(e)) {
+              entities.push(entityClassCache[e]);
+            }
+          }
+        }
+
+        var finishedCount = 0;
+        var result = {};
+        for(var i = 0; i < entities.length; i++) {
+          (function() {
+              var Entity = entities[i];
+              Entity.all().list(tx, function(all) {
+                  result[Entity.meta.name] = all.map(function(e) { return e._data; });
+                  finishedCount++;
+                  if(finishedCount === entities.length) {
+                    callback(result);
+                  }
+                });
+            }());
+        }
+      };
 
       /**
        * Internal function to persist an object to the database

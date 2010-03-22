@@ -135,18 +135,12 @@ Objects can also be removed from the database:
 All changes made to tracked objects can be flushed to the database by
 using `persistence.flush`, which takes a transaction object and
 callback function as arguments. A new transaction can be started using
-`persistence.transaction`, but for convenience `persistence.flush` can
-also start a transaction itself, if a `null` value is supplied for the
-transaction:
+`persistence.transaction`:
     
     persistence.transaction(function(tx) {
       persistence.flush(tx, function() {
         alert('Done flushing!');
       });
-    });
-    // or:
-    persistence.flush(null, function() {
-      alert('Done flushing!');
     });
 
 For convenience, it is also possible to not specify a transaction or callback, in that
@@ -162,8 +156,8 @@ Note that when no callback is defined, the flushing still happens asynchronously
 
 __Important__: Changes and new objects will not be persisted until you
 explicitly call `persistence.flush()`. The exception to this rule is
-when using the `list(...)` method on a `QueryCollection`, which also
-flushes first.
+using the `list(...)` method on a database `QueryCollection`, which also
+flushes first, although this behavior may change in the future. 
 
 Dumping (and restoring) a database
 --------------------------------

@@ -50,8 +50,8 @@ var persistence = window.persistence || {};
      * @param size
      *            the maximum size of the database in bytes
      */
-    persistence.connect = function (dbname, description, size) {
-      persistence._conn = persistence.db.connect(dbname, description, size);
+    persistence.connect = function (dbname, description, size, version) {
+      persistence._conn = persistence.db.connect(dbname, description, size, version);
       if(!persistence._conn) {
         throw {
           type: "NoSupportedDatabaseFound",
@@ -261,6 +261,10 @@ var persistence = window.persistence || {};
      * Remove all tables in the database (as defined by the model)
      */
     persistence.reset = function (tx) {
+      if(!tx) {
+        persistence.transaction(function(tx) { persistence.reset(tx); });
+        return;
+      }
       var tableArray = [];
       for (p in generatedTables) {
         if (generatedTables.hasOwnProperty(p)) {
@@ -402,6 +406,9 @@ var persistence = window.persistence || {};
                   });
                 that.__defineGetter__(ref, function () {
                     if (that._data[ref] === null || that._data_obj[ref] !== undefined) {
+                      return that._data_obj[ref];
+                    } else if(that._data[ref] !== null && trackedObjects[that._data[ref]]) {
+                      that._data_obj[ref] = trackedObjects[that._data[ref]];
                       return that._data_obj[ref];
                     } else {
                       throw "Property '" + ref + "' with id: " + that._data[ref]
@@ -972,7 +979,7 @@ var persistence = window.persistence || {};
        * @return the query collection with imposed ordering
        */
       QueryCollection.prototype.order = function (property, ascending) {
-        ascending = ascending || true;
+        ascending = ascending === undefined ? true : ascending;
         var c = this.clone();
         c._orderColumns.push( [ property, ascending ]);
         return c;
@@ -1049,12 +1056,37 @@ var persistence = window.persistence || {};
 
       DbQueryCollection.prototype = new QueryCollection();
 
+      /**
+       * Execute a function for each item in the list
+       * @param tx the transaction to use (or null to open a new one)
+       * @param eachFn (elem) the function to be executed for each item
+       */
       DbQueryCollection.prototype.each = function (tx, eachFn) {
+        if(tx && !tx.executeSql) { // provided oneFn as first argument
+          eachFn = tx;
+          tx = null;
+        }
+
         this.list(tx, function(results) {
             for(var i = 0; i < results.length; i++) {
               eachFn(results[i]);
             }
           });
+      }
+
+      DbQueryCollection.prototype.one = function (tx, oneFn) {
+        if(tx && !tx.executeSql) { // provided oneFn as first argument
+          oneFn = tx;
+          tx = null;
+        }
+
+        this.limit(1).list(tx, function(results) {
+            if(results.length === 0) {
+              oneFn(null);
+            } else {
+              oneFn(results[0]);
+            }
+        });
       }
 
       /**
@@ -1326,9 +1358,9 @@ var persistence = window.persistence || {};
 
       persistence.db.html5 = {};
 
-      persistence.db.html5.connect = function (dbname, description, size) {
+      persistence.db.html5.connect = function (dbname, description, size, version) {
           var that = {};
-          var conn = openDatabase(dbname, '1.0', description, size);
+          var conn = openDatabase(dbname, version, description, size);
 
           that.transaction = function (fn) {
               return conn.transaction(function (sqlt) {
@@ -1393,9 +1425,9 @@ var persistence = window.persistence || {};
           return that;
       };
 
-      persistence.db.connect = function (dbname, description, size) {
+      persistence.db.connect = function (dbname, description, size, version) {
           if (persistence.db.implementation == "html5") {
-              return persistence.db.html5.connect(dbname, description, size);
+              return persistence.db.html5.connect(dbname, description, size, version);
           } else if (persistence.db.implementation == "gears") {
               return persistence.db.gears.connect(dbname);
           }

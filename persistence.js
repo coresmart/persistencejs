@@ -377,6 +377,7 @@ var persistence = window.persistence || {};
                     that._data[f] = val;
                     that._dirtyProperties[f] = true;
                     that.triggerEvent('set', that, f, val);
+                    that.triggerEvent('change', that, f, val);
                   });
                 that.__defineGetter__(f, function () {
                     return that._data[f];
@@ -403,6 +404,7 @@ var persistence = window.persistence || {};
                     }
                     that._dirtyProperties[ref] = true;
                     that.triggerEvent('set', that, ref, val);
+                    that.triggerEvent('change', that, f, val);
                   });
                 that.__defineGetter__(ref, function () {
                     if (that._data[ref] === null || that._data_obj[ref] !== undefined) {
@@ -1030,6 +1032,7 @@ var persistence = window.persistence || {};
         persistence.add(obj);
         this._filter.makeFit(obj);
         this.triggerEvent('add', this, obj);
+        this.triggerEvent('change', this, obj);
       }
 
       /**
@@ -1042,6 +1045,7 @@ var persistence = window.persistence || {};
         }
         this._filter.makeNotFit(obj);
         this.triggerEvent('remove', this, obj);
+        this.triggerEvent('change', this, obj);
       }
 
 
@@ -1196,11 +1200,13 @@ var persistence = window.persistence || {};
       AllDbQueryCollection.prototype.add = function(obj) {
         persistence.add(obj);
         this.triggerEvent('add', this, obj);
+        this.triggerEvent('change', this, obj);
       };
 
       AllDbQueryCollection.prototype.remove = function(obj) {
         persistence.remove(obj);
         this.triggerEvent('remove', this, obj);
+        this.triggerEvent('change', this, obj);
       };
 
       /**
@@ -1290,12 +1296,14 @@ var persistence = window.persistence || {};
       LocalQueryCollection.prototype.add = function(obj) {
         this._data[obj.id] = obj;
         this.triggerEvent('add', this, obj);
+        this.triggerEvent('change', this, obj);
       };
 
       LocalQueryCollection.prototype.remove = function(obj) {
         if(this._data[obj.id]) {
           delete this._data[obj.id];
           this.triggerEvent('remove', this, obj);
+          this.triggerEvent('change', this, obj);
         }
       };
 

@@ -294,6 +294,9 @@ var persistence = window.persistence || {};
       }
       var rowMeta = entityMeta[entityName];
       var ent = getEntity(entityName);
+      if(!row[prefix+'id']) { // null value, no entity found
+        return null;
+      }
       var o = new ent();
       o.id = row[prefix + 'id'];
       o._new = false;
@@ -1436,6 +1439,7 @@ var persistence = window.persistence || {};
       };
 
       persistence.db.connect = function (dbname, description, size, version) {
+          version = version || '1.0';
           if (persistence.db.implementation == "html5") {
               return persistence.db.html5.connect(dbname, description, size, version);
           } else if (persistence.db.implementation == "gears") {

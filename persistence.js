@@ -23,7 +23,7 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
-var persistence = window.persistence || {};
+var persistence = (window && window.persistence) ? window.persistence : {};
 
 (function () {
     var conn = null;

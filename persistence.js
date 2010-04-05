@@ -266,7 +266,7 @@ var persistence = window.persistence || {};
         return;
       }
       var tableArray = [];
-      for (p in generatedTables) {
+      for (var p in generatedTables) {
         if (generatedTables.hasOwnProperty(p)) {
           tableArray.push(p);
         }
@@ -610,7 +610,7 @@ var persistence = window.persistence || {};
       persistence.dump = function(tx, entities, callback) {
         if(!entities) { // Default: all entity types
           entities = [];
-          for(e in entityClassCache) {
+          for(var e in entityClassCache) {
             if(entityClassCache.hasOwnProperty(e)) {
               entities.push(entityClassCache[e]);
             }
@@ -1363,10 +1363,15 @@ var persistence = window.persistence || {};
       persistence.db.conn = null;
       persistence.db.log = true;
 
-      if (window.google && google.gears) {
+      // window object does not exist on Qt Declarative UI (http://doc.trolltech.org/4.7-snapshot/declarativeui.html)
+      if (window && window.google && google.gears) {
           persistence.db.implementation = "gears";
-      } else if (window.openDatabase) {
+      } else if (window && window.openDatabase) {
           persistence.db.implementation = "html5";
+      } else if (openDatabaseSync) {
+          // TODO: find a browser that implements openDatabaseSync and check out if
+          //       it is attached to the window or some other object
+          persistence.db.implementation = "html5-sync";
       }
 
       persistence.db.html5 = {};
@@ -1398,6 +1403,43 @@ var persistence = window.persistence || {};
                       successFn(results);
                   }
               }, errorFn);
+          };
+          return that;
+      };
+	  
+      persistence.db.html5Sync = {};
+	  
+      persistence.db.html5Sync.connect = function (dbname, description, size, version) {
+          var that = {};
+          var conn = openDatabaseSync(dbname, version, description, size);
+
+          that.transaction = function (fn) {
+              return conn.transaction(function (sqlt) {
+                  return fn(persistence.db.html5Sync.transaction(sqlt));
+              });
+          };
+          return that;
+      };
+	  
+      persistence.db.html5Sync.transaction = function (t) {
+          var that = {};
+          that.executeSql = function (query, args, successFn, errorFn) {
+              if (args == null) args = [];
+
+              if(persistence.db.log) {
+                  console.log(query + ' -> ' + args);
+              }
+
+              var result = t.executeSql(query, args);
+              if (result) {
+                  if (successFn) {
+                      var results = [];
+                      for ( var i = 0; i < result.rows.length; i++) {
+                          results.push(result.rows.item(i));
+                      }
+                      successFn(results);
+                  }
+              }
           };
           return that;
       };
@@ -1442,6 +1484,8 @@ var persistence = window.persistence || {};
           version = version || '1.0';
           if (persistence.db.implementation == "html5") {
               return persistence.db.html5.connect(dbname, description, size, version);
+          } else if (persistence.db.implementation == "html5-sync") {
+              return persistence.db.html5Sync.connect(dbname, description, size, version);
           } else if (persistence.db.implementation == "gears") {
               return persistence.db.gears.connect(dbname);
           }

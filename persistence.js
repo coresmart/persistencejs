@@ -319,6 +319,9 @@ var persistence = window.persistence || {};
      */
     persistence.dbValToEntityVal = function (val, type) {
       switch (type) {
+      case 'DATE':
+        // SQL is in seconds and JS in miliseconds
+        return new Date(parseInt(val, 10) * 1000);
       case 'BOOL':
         return val == 1;
         break;
@@ -338,6 +341,10 @@ var persistence = window.persistence || {};
         return val.id;
       } else if (type === 'BOOL') {
         return val ? 1 : 0;
+      } else if (type == 'DATE') {
+        // In order to make SQLite Date/Time functions work we should store
+        // values in seconds and not as miliseconds as JS Date.getTime()
+        return Math.round(val.getTime() / 1000);
       } else {
         return val;
       }

@@ -1324,35 +1324,33 @@ var persistence = window.persistence || {};
 
       ////////// Local implementation of QueryCollection \\\\\\\\\\\\\\\\
 
-      function LocalQueryCollection(entityName, initialArray) {
-        this.init(entityName, LocalQueryCollection);
-        this._data = {};
-        if(initialArray) {
-          for(var i = 0; i < initialArray.length; i++) {
-            this._data[initialArray[i].id] = initialArray[i];
-          }
-        }
+      function LocalQueryCollection(initialArray) {
+        this.init(null, LocalQueryCollection);
+        this._items = initialArray || [];
       }
 
       LocalQueryCollection.prototype = new QueryCollection();
 
       LocalQueryCollection.prototype.clone = function() {
         var c = DbQueryCollection.prototype.clone.call(this);
-        c._data = this._data;
+        c._items = this._items;
         return c;
       };
 
       LocalQueryCollection.prototype.add = function(obj) {
-        this._data[obj.id] = obj;
+        this._items.push(obj);
         this.triggerEvent('add', this, obj);
         this.triggerEvent('change', this, obj);
       };
 
       LocalQueryCollection.prototype.remove = function(obj) {
-        if(this._data[obj.id]) {
-          delete this._data[obj.id];
-          this.triggerEvent('remove', this, obj);
-          this.triggerEvent('change', this, obj);
+        var items = this._items;
+        for(var i = 0; i < items.length; i++) {
+          if(items[i] === obj) {
+            this._items.splice(i, 1);
+            this.triggerEvent('remove', this, obj);
+            this.triggerEvent('change', this, obj);
+          }
         }
       };
 
@@ -1360,13 +1358,8 @@ var persistence = window.persistence || {};
         if(!callback || callback.executeSql) { // first argument is transaction
           callback = arguments[1]; // set to second argument
         }
-        var array = [];
+        var array = this._items.slice(0);
         var that = this;
-        for(var id in this._data) {
-          if(this._data.hasOwnProperty(id)) {
-            array.push(this._data[id]);
-          }
-        }
         var results = [];
         for(var i = 0; i < array.length; i++) {
           if(this._filter.match(array[i])) {
@@ -1377,19 +1370,20 @@ var persistence = window.persistence || {};
             for(var i = 0; i < that._orderColumns.length; i++) {
               var col = that._orderColumns[i][0];
               var asc = that._orderColumns[i][1];
-              console.log(that._orderColumns[i]);
-              console.log(a);
-              console.log(b);
               if(a[col] < b[col]) {
-                console.log(a.name + " < " + b.name);
-                return asc ? 1 : -1;
-              } else if(a[col] > b[col]) {
-                console.log(a.name + " > " + b.name);
                 return asc ? -1 : 1;
+              } else if(a[col] > b[col]) {
+                return asc ? 1 : -1;
               } 
             }
             return 0;
           });
+        if(this._skip) {
+          results.splice(0, this._skip);
+        }
+        if(this._limit > -1) {
+          results = results.slice(0, this._limit);
+        }
         if(callback) {
           callback(results);
         } else {

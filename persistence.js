@@ -604,7 +604,8 @@ var persistence = window.persistence || {};
 
       /**
        * Dumps the entire database into an object (that can be serialized to JSON for instance)
-       * @param entities a list of entity constructor functions to serialize, defaults to all
+       * @param tx transaction to use, use `null` to start a new one
+       * @param entities a list of entity constructor functions to serialize, use `null` for all
        * @param callback (object) the callback function called with the results.
        */
       persistence.dump = function(tx, entities, callback) {
@@ -623,7 +624,23 @@ var persistence = window.persistence || {};
           (function() {
               var Entity = entities[i];
               Entity.all().list(tx, function(all) {
-                  result[Entity.meta.name] = all.map(function(e) { return e._data; });
+                  result[Entity.meta.name] = all.map(function(e) { 
+                      var rec = {};
+                      var fields = Entity.meta.fields;
+                      for(var f in fields) {
+                        if(fields.hasOwnProperty(f)) {
+                          rec[f] = e._data[f];
+                        }
+                      }
+                      var refs = Entity.meta.hasOne;
+                      for(var r in refs) {
+                        if(refs.hasOwnProperty(r)) {
+                          rec[r] = e._data[r];
+                        }
+                      }
+                      rec.id = e.id;
+                      return rec;
+                  });
                   finishedCount++;
                   if(finishedCount === entities.length) {
                     callback(result);
@@ -631,6 +648,33 @@ var persistence = window.persistence || {};
                 });
             }());
         }
+      };
+
+      /**
+       * Loads a set of entities from a dump object
+       * @param tx transaction to use, use `null` to start a new one
+       * @param dump the dump object
+       * @param callback the callback function called when done.
+       */
+      persistence.load = function(tx, dump, callback) {
+        var finishedCount = 0;
+        for(var entityName in dump) {
+          if(dump.hasOwnProperty(entityName)) {
+            var Entity = getEntity(entityName);
+            var instances = dump[entityName];
+            for(var i = 0; i < instances.length; i++) {
+              var instance = instances[i];
+              var ent = new Entity();
+              for(var p in instance) {
+                if(instance.hasOwnProperty(p)) {
+                  ent[p] = instance[p];
+                }
+              }
+              persistence.add(ent);
+            }
+          }
+        }
+        persistence.flush(tx, callback);
       };
 
       /**
@@ -1449,6 +1493,7 @@ var persistence = window.persistence || {};
 }());
 
 // Equals methods
+// Note: really necessary?
 
 Number.prototype.equals = function(other) {
   return this == other; 
@@ -1492,3 +1537,4 @@ Array.prototype.remove = function(el) {
     }
   }
 }
+

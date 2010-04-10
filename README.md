@@ -89,7 +89,10 @@ types are:
 * `BOOL`: for boolean values (`true` or `false`)
 * `JSON`: a special type that can be used to store arbitrary
   [JSON](http://www.json.org) data. Note that this data can not be used
-  to filter or sort in any sensible way.
+  to filter or sort in any sensible way. If internal changes are made to a `JSON`
+  property, `persistence.js` may not register them. Therefore, a manual
+  call to `anObj.markDirty('jsonPropertyName')` is required before calling
+  `persistence.flush`.
 
 Example use:
     
@@ -100,7 +103,8 @@ Example use:
     });
 
     var Category = persistence.define('Category', {
-      name: "TEXT"
+      name: "TEXT",
+      metaData: "JSON"
     });
 
     var Tag = persistence.define('Task', {
@@ -150,6 +154,7 @@ well, or the properties may be set later:
 
     var task = new Task();
     var category = new Category({name: "My category"});
+    category.metaData = {rating: 5};
     var tag = new Tag();
     tag.name = "work";
 

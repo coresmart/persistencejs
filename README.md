@@ -9,19 +9,19 @@ It has no dependencies on any other frameworks, other than the Google
 Gears [initialization script](http://code.google.com/apis/gears/gears_init.js), 
 in case you want to enable Gears support.
 
-What's all this _asynchronous_ stuff about?
+About asynchronous programming
 -----------------------------------------
 
-In browsers, Javascript and the web page's render engine have to share a
-single thread. The result of this is that only one thing can happen at a time. If
-a database query would be performed _synchronously_, like in many
-other programming environments, like Java and PHP, the browser would
-freeze from the moment the query was issued until the results came
-back, which is clearly suboptimal. Therefore, many APIs in Javascript
-are defined as _asynchronous_ APIs, which mean that they do not block
-when an "expensive" computation is performed, but instead provide the
-call with a function that will be invoked once the result is known. In
-the meantime, the browser can perform other duties. 
+In browsers, Javascript and the web page's rendering engine share
+a single thread. The result of this is that only one thing can happen
+at a time. If a database query would be performed _synchronously_,
+like in many other programming environments like Java and PHP the
+browser would freeze from the moment the query was issued until the
+results came back. Therefore, many APIs in Javascript are defined as
+_asynchronous_ APIs, which mean that they do not block when an
+"expensive" computation is performed, but instead provide the call
+with a function that will be invoked once the result is known. In the
+meantime, the browser can perform other duties.
 
 For instance, a synchronous database call call would look as follows:
 
@@ -48,7 +48,7 @@ consider the following program:
 
 Although one could assume this would print "hello", followed by
 "world", the result will likely be that "world" is printed before
-"hello", because "hello" is printed when the results from the
+"hello", because "hello" is only printed when the results from the
 query are available. This is a tricky thing about asynchronous
 programming that a Javascript developer will have to get used to.
 
@@ -80,7 +80,18 @@ Schema definition
 
 A data model is declared using `persistence.define`. The following two
 definitions define a `Task` and `Category` entity with a few simple
-properties. The property types are [SQLite types](http://www.sqlite.org/datatype3.html).
+properties. The property types are based on [SQLite
+types](http://www.sqlite.org/datatype3.html), currently supported
+types are:
+
+* `TEXT`: for textual data 
+* `INT`: for numeric values
+* `BOOL`: for boolean values (`true` or `false`)
+* `JSON`: a special type that can be used to store arbitrary
+  [JSON](http://www.json.org) data. Note that this data can not be used
+  to filter or sort in any sensible way.
+
+Example use:
     
     var Task = persistence.define('Task', {
       name: "TEXT",
@@ -109,13 +120,13 @@ function's `hasMany` call:
     Task.hasMany('tags', Tag, 'tasks');
     Tag.hasMany('tasks', Task, 'tags');
         
-The first statement defines a `tasks` relationship on category objects containing a
-`QueryCollection` (see the section on query collections later) of
-`Task`s, it also defines an inverse relationship on `Task` objects
-with the name `category`. The last two statements define a many-to-many
-relationships between `Task` and `Tag`. `Task` gets a `tags` property
-(a `QueryCollection`) containing all its tags and vice versa, `Tag`
-gets a `tasks` property containing all of its tasks. 
+The first statement defines a `tasks` relationship on category objects
+containing a `QueryCollection` (see the section on query collections
+later) of `Task`s, it also defines an inverse relationship on `Task`
+objects with the name `category`. The last two statements define a
+many-to-many relationships between `Task` and `Tag`. `Task` gets a
+`tags` property (a `QueryCollection`) containing all its tags and vice
+versa, `Tag` gets a `tasks` property containing all of its tasks.
 
 The defined entity definitions are synchronized (activated) with the
 database using a `persistence.schemaSync` call, which takes a callback
@@ -186,8 +197,9 @@ callback function as arguments. A new transaction can be started using
       });
     });
 
-For convenience, it is also possible to not specify a transaction or callback, in that
-case a new transaction will be started automatically. For instance:
+For convenience, it is also possible to not specify a transaction or
+callback, in that case a new transaction will be started
+automatically. For instance:
 
     persistence.flush();
     // or, with callback
@@ -195,7 +207,8 @@ case a new transaction will be started automatically. For instance:
       alert('Done flushing');
     });
 
-Note that when no callback is defined, the flushing still happens asynchronously.
+Note that when no callback is defined, the flushing still happens
+asynchronously.
 
 __Important__: Changes and new objects will not be persisted until you
 explicitly call `persistence.flush()`. The exception to this rule is
@@ -213,22 +226,35 @@ smaller databases. Example:
       console.log(dump);
     });
 
-When `null` is provided as a first argument a new transaction will be started for the operation. If `null` is provided as second argument, `dump` defaults to dumping _all_ defined entities.
+When `null` is provided as a first argument a new transaction will be
+started for the operation. If `null` is provided as second argument,
+`dump` defaults to dumping _all_ defined entities.
 
 The dump format is:
     
     {"entity-name": [list of instances],
      ...}
 
-There is no restore API yet, but this will be implemented soon.
+`persistence.load` is used to restore the dump produced by
+`persistence.dump`. Usage:
+
+    persistence.load(tx, dumpObj, function() {
+      alert('Dump restored!');
+    });
+
+The `tx` argument can be `null` to automatically start a new
+transaction. Note that `persistence.load` does not empty the database
+first, it simply attempts to add all objects to the database. If
+objects with, e.g. the same ID already exist, this will fail.
 
 Query collections
 -----------------
 
 A core concept of `persistence.js` is the `QueryCollection`. A
 `QueryCollection` represents a (sometimes) virtual collection that can
-be filtered, ordered or paginated. `QueryCollection`s are somewhate inspired
-by [Google AppEngine's Query class](http://code.google.com/appengine/docs/python/datastore/queryclass.html).
+be filtered, ordered or paginated. `QueryCollection`s are somewhate
+inspired by [Google AppEngine's Query
+class](http://code.google.com/appengine/docs/python/datastore/queryclass.html).
 A `QueryCollection` has the following methods:
 
 * `filter(property, operator, value)`  
@@ -279,12 +305,10 @@ Example:
         });
     });
 
-Limitations/Plans
+Bugs and Contributions
 -----------------
 
-`persistence.js` is still in its early development stages and not
-extensively tested so there may be many bugs. If you find a bug,
-please [report it](http://yellowgrass.org/project/persistence.js).
+If you find a bug, please [report it](http://yellowgrass.org/project/persistence.js).
 or fork the project, fix the problem and send me a pull request.  For
 a list of planned features and open issues, have a look at the [issue
 tracker](http://yellowgrass.org/project/persistence.js).

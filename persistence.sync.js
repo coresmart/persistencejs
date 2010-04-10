@@ -31,6 +31,13 @@ if(!window.persistence) { // persistence.js not loaded!
 persistence.sync = {};
 
 persistence.sync.Change = persistence.define('_Change', {
+    action: "VARCHAR(10)",
+    date: "INT",
+    data: "JSON"
+});
+
+persistence.sync.Sync = persistence.define('_Sync', {
+    date: "INT"
 });
 
 (function() {
@@ -46,21 +53,57 @@ persistence.sync.Change = persistence.define('_Change', {
         persistence.transaction(function(tx) { persistence.flush(tx, callback); });
         return;
       }
-      var persistObjArray = [];
-      for (var id in trackedObjects) {
-        if (trackedObjects.hasOwnProperty(id)) {
-          persistObjArray.push(trackedObjects[id]);
+      for (var id in persistence.getTrackedObjects()) {
+        if (persistence.getTrackedObjects().hasOwnProperty(id)) {
+          var obj = persistence.trackedObjects[id];
+          if(obj._new) {
+            var change = new persistence.sync.Change();
+            change.date = new Date().getTime();
+            change.action = 'new';
+            var rec = {};
+            var fields = persistence.define(obj._type).meta.fields;
+            console.log(fields);
+            for(var f in fields) {
+              if(fields.hasOwnProperty(f)) {
+                rec[f] = obj._data[f];
+              }
+            }
+            console.log("New: " + id);
+            var refs = persistence.define(obj._type).meta.hasOne;
+            for(var r in refs) {
+              if(refs.hasOwnProperty(r)) {
+                rec[r] = obj._data[r];
+              }
+            }
+            console.log("New 8: " + id);
+            rec.id = obj.id;
+            rec._type = obj._type;
+            change.data = rec;
+            persistence.add(change);
+          } else {
+            for ( var p in obj._dirtyProperties) {
+              if (obj._dirtyProperties.hasOwnProperty(p)) {
+                var change = new persistence.sync.Change();
+                change.date = new Date().getTime();
+                change.action = 'set-prop';
+                change.data = {type: obj._type, id: obj.id, prop: p, value: obj[p]};
+                persistence.add(change);
+              }
+            }
+          }
         }
       }
-      var removeObjArray = [];
-      for (var id in objectsToRemove) {
-        if (objectsToRemove.hasOwnProperty(id)) {
-          removeObjArray.push(objectsToRemove[id]);
+      for (var id in persistence.getObjectsToRemove()) {
+        if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
+          var change = new persistence.sync.Change();
+          change.date = new Date().getTime();
+          change.action = 'delete';
+          change.data = id;
+          persistence.add(change);
         }
       }
       persistence.oldFlush(tx, callback);
     }
-
 
   }());
 

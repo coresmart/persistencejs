@@ -68,7 +68,7 @@ lacks `__defineGetter__` and `__defineSetter__` support, which
 Connecting to a database
 -------------------------
 
-Currently there is one global database connection, which is
+There is one global database connection, which is
 initialized with a `persistence.connect` call.  Its first argument is
 the database name, the second a database description and third the
 maximum database size (in bytes):
@@ -220,7 +220,7 @@ explicitly call `persistence.flush()`. The exception to this rule is
 using the `list(...)` method on a database `QueryCollection`, which also
 flushes first, although this behavior may change in the future. 
 
-Dumping (and restoring) a database
+Dumping and restoring data
 --------------------------------
 
 `persistence.dump` can be used to create an object containing a full
@@ -251,6 +251,9 @@ The `tx` argument can be `null` to automatically start a new
 transaction. Note that `persistence.load` does not empty the database
 first, it simply attempts to add all objects to the database. If
 objects with, e.g. the same ID already exist, this will fail.
+
+Similarly, `persistence.loadFromJson` and `persistence.dumpToJson`
+respectively load and dump all the database's data as JSON strings.
 
 Query collections
 -----------------

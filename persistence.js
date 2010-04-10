@@ -33,6 +33,9 @@ var persistence = window.persistence || {};
 
     persistence.trackedObjects = trackedObjects;
 
+    persistence.getObjectsToRemove = function() { return objectsToRemove; }
+    persistence.getTrackedObjects = function() { return trackedObjects; }
+
     /**
      * Retrieves metadata about entity, mostly for internal use
      */

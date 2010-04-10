@@ -701,6 +701,28 @@ var persistence = window.persistence || {};
       };
 
       /**
+       * Dumps the entire database to a JSON string 
+       * @param tx transaction to use, use `null` to start a new one
+       * @param entities a list of entity constructor functions to serialize, use `null` for all
+       * @param callback (jsonDump) the callback function called with the results.
+       */
+      persistence.dumpToJson = function(tx, entities, callback) {
+        persistence.dump(tx, entities, function(obj) {
+            callback(JSON.stringify(obj));
+          });
+      };
+
+      /**
+       * Loads data from a JSON string (as dumped by `dumpToJson`)
+       * @param tx transaction to use, use `null` to start a new one
+       * @param entities a list of entity constructor functions to serialize, use `null` for all
+       * @param callback (jsonDump) the callback function called with the results.
+       */
+      persistence.loadFromJson = function(tx, jsonDump, callback) {
+        persistence.load(tx, JSON.parse(json), callback);
+      };
+
+      /**
        * Internal function to persist an object to the database
        * this function is invoked by persistence.flush()
        */

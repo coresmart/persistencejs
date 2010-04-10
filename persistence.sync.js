@@ -53,6 +53,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
         persistence.transaction(function(tx) { persistence.flush(tx, callback); });
         return;
       }
+      var changes = [];
       for (var id in persistence.getTrackedObjects()) {
         if (persistence.getTrackedObjects().hasOwnProperty(id)) {
           var obj = persistence.trackedObjects[id];
@@ -80,6 +81,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
             rec._type = obj._type;
             change.data = rec;
             persistence.add(change);
+            changes.push(change);
           } else {
             for ( var p in obj._dirtyProperties) {
               if (obj._dirtyProperties.hasOwnProperty(p)) {
@@ -88,6 +90,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
                 change.action = 'set-prop';
                 change.data = {type: obj._type, id: obj.id, prop: p, value: obj[p]};
                 persistence.add(change);
+                changes.push(change);
               }
             }
           }
@@ -100,9 +103,17 @@ persistence.sync.Sync = persistence.define('_Sync', {
           change.action = 'delete';
           change.data = id;
           persistence.add(change);
+          changes.push(change);
         }
       }
-      persistence.oldFlush(tx, callback);
+      persistence.oldFlush(tx, function() {
+          // Stop tracking change objects, waste of time
+          var trackedObjects = persistence.getTrackedObjects();
+          for(var i = 0; i < changes.length; i++) {
+            delete trackedObjects[changes[i].id];
+          }
+          if(callback) callback();
+        });
     }
 
   }());

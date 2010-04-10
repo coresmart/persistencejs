@@ -1401,10 +1401,10 @@ var persistence = window.persistence || {};
       persistence.db.conn = null;
       persistence.db.log = true;
 
-      if (window.google && google.gears) {
-          persistence.db.implementation = "gears";
-      } else if (window.openDatabase) {
-          persistence.db.implementation = "html5";
+      if (window.openDatabase) {
+        persistence.db.implementation = "html5";
+      } else if (window.google && google.gears) {
+        persistence.db.implementation = "gears";
       }
 
       persistence.db.html5 = {};

@@ -1,0 +1,14 @@
+Some notes on what the syncing protocol is going to look like:
+
+POST content:
+<current timestamp>
+[{action: 'set-prop',
+  date: 23212322
+  data: {type: 'Task', id: '223-2322-...', prop: 'name', value: 'New value'}},
+ {action: 'new',
+  data: {id: '...', name: '...', _type: 'Task'}
+  date: 23232232},
+ {action: 'delete',
+  date: 2323232,
+  data: '232-23232'}]
+

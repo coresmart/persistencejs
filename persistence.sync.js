@@ -63,20 +63,17 @@ persistence.sync.Sync = persistence.define('_Sync', {
             change.action = 'new';
             var rec = {};
             var fields = persistence.define(obj._type).meta.fields;
-            console.log(fields);
             for(var f in fields) {
               if(fields.hasOwnProperty(f)) {
                 rec[f] = obj._data[f];
               }
             }
-            console.log("New: " + id);
             var refs = persistence.define(obj._type).meta.hasOne;
             for(var r in refs) {
               if(refs.hasOwnProperty(r)) {
                 rec[r] = obj._data[r];
               }
             }
-            console.log("New 8: " + id);
             rec.id = obj.id;
             rec._type = obj._type;
             change.data = rec;

@@ -61,8 +61,7 @@ Browser support
 * iPhone browser (iPhone OS 3+)
 * Palm WebOS (tested on 1.4.0)
 
-There is also an experimental support for [Qt 4.7 Declarative UI framework (QML)](http://doc.trolltech.org/4.7-snapshot/declarativeui.html)
-which is an extension to JavaScript.
+There is also an experimental support for [Qt 4.7 Declarative UI framework (QML)](http://doc.trolltech.org/4.7-snapshot/declarativeui.html) which is an extension to JavaScript.
 
 Internet Explorer is likely not supported (untested) because it
 lacks `__defineGetter__` and `__defineSetter__` support, which
@@ -90,6 +89,7 @@ types are:
 * `TEXT`: for textual data 
 * `INT`: for numeric values
 * `BOOL`: for boolean values (`true` or `false`)
+* `DATE`: for date/time value (with precision of 1 second)
 * `JSON`: a special type that can be used to store arbitrary
   [JSON](http://www.json.org) data. Note that this data can not be used
   to filter or sort in any sensible way. If internal changes are made to a `JSON`
@@ -320,9 +320,12 @@ Bugs and Contributions
 -----------------
 
 If you find a bug, please [report it](http://yellowgrass.org/project/persistence.js).
-or fork the project, fix the problem and send me a pull request.  For
+or fork the project, fix the problem and send me a pull request. For
 a list of planned features and open issues, have a look at the [issue
 tracker](http://yellowgrass.org/project/persistence.js).
+
+Thanks goes to [Fabio Rehm](http://github.com/fgrehm) and [Lukas
+Berns](http://github.com/lukasberns) for their contributions.
 
 License
 -------

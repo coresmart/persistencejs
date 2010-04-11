@@ -43,7 +43,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
 (function() {
 
     // Keep old flush implementation to call later
-    persistence.oldFlush = persistence.flush;
+    var oldFlush = persistence.flush;
 
     /**
      * Overriding `persistence.flush` to track changes made
@@ -56,7 +56,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
       var changes = [];
       for (var id in persistence.getTrackedObjects()) {
         if (persistence.getTrackedObjects().hasOwnProperty(id)) {
-          var obj = persistence.trackedObjects[id];
+          var obj = persistence.getTrackedObjects()[id];
           if(obj._new) {
             var change = new persistence.sync.Change();
             change.date = new Date().getTime();
@@ -103,7 +103,7 @@ persistence.sync.Sync = persistence.define('_Sync', {
           changes.push(change);
         }
       }
-      persistence.oldFlush(tx, function() {
+      oldFlush(tx, function() {
           // Stop tracking change objects, waste of time
           var trackedObjects = persistence.getTrackedObjects();
           for(var i = 0; i < changes.length; i++) {

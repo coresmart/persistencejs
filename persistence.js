@@ -31,8 +31,6 @@ var persistence = window.persistence || {};
     var trackedObjects = {};
     var objectsToRemove = {};
 
-    persistence.trackedObjects = trackedObjects;
-
     persistence.getObjectsToRemove = function() { return objectsToRemove; }
     persistence.getTrackedObjects = function() { return trackedObjects; }
 

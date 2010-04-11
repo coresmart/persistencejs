@@ -61,6 +61,9 @@ Browser support
 * iPhone browser (iPhone OS 3+)
 * Palm WebOS (tested on 1.4.0)
 
+There is also an experimental support for [Qt 4.7 Declarative UI framework (QML)](http://doc.trolltech.org/4.7-snapshot/declarativeui.html)
+which is an extension to JavaScript.
+
 Internet Explorer is likely not supported (untested) because it
 lacks `__defineGetter__` and `__defineSetter__` support, which
 `persistence.js` uses heavily. This may change in IE 8.

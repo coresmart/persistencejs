@@ -324,6 +324,9 @@ or fork the project, fix the problem and send me a pull request. For
 a list of planned features and open issues, have a look at the [issue
 tracker](http://yellowgrass.org/project/persistence.js).
 
+For support and discussion, please join the [persistence.js Google
+Group](http://groups.google.com/group/persistencejs).
+
 Thanks goes to [Fabio Rehm](http://github.com/fgrehm) and [Lukas
 Berns](http://github.com/lukasberns) for their contributions.
 

@@ -58,7 +58,7 @@ if(!window.persistence) { // persistence.js not loaded!
      * Parses a search query and returns it as list SQL parts later to be OR'ed or AND'ed.
      */
     function searchPhraseParser(query, indexTbl) {
-      query = query.replace(/['"]/, '').replace(/(^\s+|\s+$)/g, '');
+      query = query.toLowerCase().replace(/['"]/, '').replace(/(^\s+|\s+$)/g, '');
       var words = query.split(/\s+/);
       var sqlParts = [];
       var restrictedToColumn = null;

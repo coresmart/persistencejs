@@ -120,7 +120,7 @@ if(!window.persistence) { // persistence.js not loaded!
             return;
           }
           var tblName = Entity.meta.name;
-          var sql = 'SELECT `' + tblName + '`.*, SUM(`' + tblName + '_Index`.`occurences`) AS _occ FROM `' + tblName + '_Index`';
+          var sql = 'SELECT `' + tblName + '`.*, SUM(`' + tblName + '_Index`.`occurrences`) AS _occ FROM `' + tblName + '_Index`';
           sql += ' LEFT JOIN `' + tblName + '` ON `' + tblName + '`.id = `' + tblName + '_Index`.`entityId` WHERE ';
 
           var sqlParts = searchPhraseParser(query, tblName + '_Index');
@@ -136,7 +136,7 @@ if(!window.persistence) { // persistence.js not loaded!
               var entityResults = [];
               for(var i = 0;  i < results.length; i++) {
                 var obj = persistence.rowToEntity(tblName, results[i]);
-                //obj._occurences = results[i]._occ;
+                //obj._occurrences = results[i]._occ;
                 entityResults.push(obj);
               }
               success(entityResults);
@@ -150,7 +150,7 @@ if(!window.persistence) { // persistence.js not loaded!
         for(var entityName in entityMeta) {
           var meta = entityMeta[entityName];
           if(meta.textIndex) {
-            queries.push(['CREATE TABLE IF NOT EXISTS `' + entityName + '_Index` (`entityId`, `prop`, `word`, `occurences`)']);
+            queries.push(['CREATE TABLE IF NOT EXISTS `' + entityName + '_Index` (`entityId`, `prop`, `word`, `occurrences`)']);
             persistence.generatedTables[entityName + '_Index'] = true;
           }
         }
@@ -169,10 +169,10 @@ if(!window.persistence) { // persistence.js not loaded!
               for ( var p in obj._dirtyProperties) {
                 if (obj._dirtyProperties.hasOwnProperty(p) && p in meta.textIndex) {
                   queries.push(['DELETE FROM `' + indexTbl + '` WHERE `entityId` = ? AND `prop` = ?', [id, p]]);
-                  var occurences = searchTokenizer(obj._data[p]);
-                  for(var word in occurences) {
-                    if(occurences.hasOwnProperty(word)) {
-                      queries.push(['INSERT INTO `' + indexTbl + '` VALUES (?, ?, ?, ?)', [obj.id, p, word.substring(1), occurences[word]]]);
+                  var occurrences = searchTokenizer(obj._data[p]);
+                  for(var word in occurrences) {
+                    if(occurrences.hasOwnProperty(word)) {
+                      queries.push(['INSERT INTO `' + indexTbl + '` VALUES (?, ?, ?, ?)', [obj.id, p, word.substring(1), occurrences[word]]]);
                     }
                   }
                 }

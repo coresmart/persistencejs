@@ -10,7 +10,7 @@ Gears [initialization script](http://code.google.com/apis/gears/gears_init.js),
 in case you want to enable Gears support.
 
 About asynchronous programming
------------------------------------------
+------------------------------
 
 In browsers, Javascript and the web page's rendering engine share
 a single thread. The result of this is that only one thing can happen

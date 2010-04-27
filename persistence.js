@@ -1,5 +1,4 @@
 /**
- * @license
  * Copyright (c) 2010 Zef Hemel <zef@zef.me>
  * 
  * Permission is hereby granted, free of charge, to any person
@@ -33,11 +32,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     var globalPropertyListeners = {}; // EntityType__prop -> QueryColleciton obj
     var queryCollectionCache = {}; // uniqueString -> QueryCollection
 
-    //window.globalPropertyListeners = globalPropertyListeners;
-    //window.queryCollectionCache = queryCollectionCache;
+    // Public Extension hooks
+    persistence.entityDecoratorHooks = [];
+    persistence.flushHooks = [];
+    persistence.schemaSyncHooks = [];
 
     persistence.getObjectsToRemove = function() { return objectsToRemove; }
     persistence.getTrackedObjects = function() { return trackedObjects; }
+    persistence.getEntityMeta = function() { return entityMeta; }
 
     function subscribeToGlobalPropertyListener(coll, entityName, property) {
       var key = entityName + '__' + property;
@@ -138,7 +140,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       return getEntity(entityName);
     };
 
-    var generatedTables = {}; // set
+    persistence.generatedTables = {}; // set
 
     function columnTypeToSqliteType(type) {
       switch(type) {
@@ -157,6 +159,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      */
     persistence.schemaSync = function (callback) {
       var queries = [], meta, rowDef, otherMeta, tableName;
+      
       for (var entityName in entityMeta) {
         if (entityMeta.hasOwnProperty(entityName)) {
           meta = entityMeta[entityName];
@@ -178,7 +181,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           for (var rel in meta.hasMany) {
             if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
               tableName = meta.hasMany[rel].tableName;
-              if (!generatedTables[tableName]) {
+              if (!persistence.generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
                     "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
@@ -191,18 +194,22 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                     "CREATE TABLE IF NOT EXISTS `" + tableName + "` (`" + meta.name + "_" + rel
                     + "` VARCHAR(32), `" + otherMeta.name + '_'
                     + meta.hasMany[rel].inverseProperty + "` VARCHAR(32))", null ]);
-                generatedTables[tableName] = true;
+                persistence.generatedTables[tableName] = true;
               }
             }
           }
           rowDef = rowDef.substring(0, rowDef.length - 2);
-          generatedTables[meta.name] = true;
+          persistence.generatedTables[meta.name] = true;
           queries.push( [
               "CREATE TABLE IF NOT EXISTS `" + meta.name + "` ( id VARCHAR(32) PRIMARY KEY, " + rowDef + ")",
               null ]);
         }
       }
       persistence.transaction(function (tx) {
+          var fns = persistence.schemaSyncHooks;
+          for(var i = 0; i < fns.length; i++) {
+            fns[i](tx);
+          }
           executeQueriesSeq(tx, queries, callback, tx);
         });
     };
@@ -242,6 +249,11 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         persistence.transaction(function(tx) { persistence.flush(tx, callback); });
         return;
       }
+      var fns = persistence.flushHooks;
+      for(var i = 0; i < fns.length; i++) {
+        fns[i](tx);
+      }
+
       var persistObjArray = [];
       for (var id in trackedObjects) {
         if (trackedObjects.hasOwnProperty(id)) {
@@ -312,8 +324,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         return;
       }
       var tableArray = [];
-      for (var p in generatedTables) {
-        if (generatedTables.hasOwnProperty(p)) {
+      for (var p in persistence.generatedTables) {
+        if (persistence.generatedTables.hasOwnProperty(p)) {
           tableArray.push(p);
         }
       }
@@ -327,7 +339,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       }
       dropOneTable();
       persistence.clean();
-      generatedTables = {};
+      persistence.generatedTables = {};
     }
 
     /**
@@ -548,7 +560,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
 
         Entity.prototype.equals = function(other) {
           return this.id == other.id;
-        }
+        };
 
         Entity.prototype.fetch = function(tx, rel, callback) {
           var that = this;
@@ -574,7 +586,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                 }
               });
           }
-        }
+        };
 
         /**
          * Currently this is only required when changing JSON properties
@@ -607,7 +619,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
               }
               callback(persistence.rowToEntity(entityName, results[0]));
             });
-        }
+        };
 
         /**
          * Declares a one-to-many or many-to-many relationship to another entity
@@ -659,6 +671,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           meta.hasOne[refName] = {
             type: otherEntity
           };
+        };
+
+        // Allow decorator functions to add more stuff
+        var fns = persistence.entityDecoratorHooks;
+        for(var i = 0; i < fns.length; i++) {
+          fns[i](Entity);
         }
 
         entityClassCache[entityName] = Entity;
@@ -848,6 +866,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           callback.apply(this, callbackArgs);
         }
       }
+
+      persistence.executeQueriesSeq = executeQueriesSeq;
 
       /**
        * Generates a UUID according to http://www.ietf.org/rfc/rfc4122.txt

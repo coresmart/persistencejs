@@ -139,9 +139,12 @@ if(!window.persistence) { // persistence.js not loaded!
           var meta = entityMeta[entityName];
           if(meta.textIndex) {
             queries.push(['CREATE TABLE IF NOT EXISTS `' + entityName + '_Index` (`entityId`, `prop`, `word`, `occurrences`)']);
+            queries.push(['CREATE INDEX IF NOT EXISTS `' + entityName + '_Index_1` ON `' + entityName + '_Index` (`prop`, `word`)']);
+            queries.push(['CREATE INDEX IF NOT EXISTS `' + entityName + '_Index_2` ON `' + entityName + '_Index` (`word`)']);
             persistence.generatedTables[entityName + '_Index'] = true;
           }
         }
+        queries.reverse();
         persistence.executeQueriesSeq(tx, queries);
       });
 

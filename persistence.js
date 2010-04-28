@@ -1084,6 +1084,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
         return queryCollectionCache[uniqueString];
       }
+      persistence.uniqueQueryCollection = uniqueQueryCollection;
 
       /**
        * The constructor function of the _abstract_ QueryCollection
@@ -1110,6 +1111,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         this._prefetchFields = [];
         this._additionalJoinSqls = [];
         this._additionalWhereSqls = [];
+        this._additionalGroupSqls = [];
         this._entityName = entityName;
         this._constructor = constructor;
         this._limit = -1;
@@ -1144,6 +1146,10 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         for(var i = 0; i < this._additionalWhereSqls.length; i++) {
           s += this._additionalWhereSqls[i];
         }
+        s += '|GroupSQLs:';
+        for(var i = 0; i < this._additionalGroupSqls.length; i++) {
+          s += this._additionalGroupSqls[i];
+        }
         s += '|Limit:';
         s += this._limit;
         s += '|Skip:';
@@ -1162,6 +1168,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         c._orderColumns = this._orderColumns.slice(0);
         c._additionalJoinSqls = this._additionalJoinSqls.slice(0);
         c._additionalWhereSqls = this._additionalWhereSqls.slice(0);
+        c._additionalGroupSqls = this._additionalGroupSqls.slice(0);
         c._limit = this._limit;
         c._skip = this._skip;
         if(cloneSubscribers) {
@@ -1374,8 +1381,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           this._additionalWhereSqls).join(' AND ');
 
         var sql = "SELECT " + selectFields.join(", ") + " FROM `" + entityName
-        + "` " + joinSql + " " + whereSql;
-        if (this._orderColumns.length > 0) {
+                  + "` " + joinSql + " " + whereSql;
+
+        if(this._additionalGroupSqls.length > 0) {
+          sql += this._additionalGroupSqls.join(' ');
+        }
+
+        if(this._orderColumns.length > 0) {
           sql += " ORDER BY "
           + this._orderColumns.map(
             function (c) {
@@ -1566,7 +1578,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
       };
 
-      persistence.QueryCollection = QueryCollection;
+      persistence.QueryCollection      = QueryCollection;
+      persistence.DbQueryCollection    = DbQueryCollection;
       persistence.LocalQueryCollection = LocalQueryCollection;
       persistence.Observable           = Observable;
 

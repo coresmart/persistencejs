@@ -86,6 +86,24 @@ if(!window.persistence) { // persistence.js not loaded!
       return sqlParts;
     }
 
+    function SearchQueryCollection(entityName, query) {
+      this.init(entityName, SearchQueryCollection);
+
+      if(query) {
+        this._additionalJoinSqls.push(', `' + entityName + '_Index`');
+        this._additionalWhereSqls.push('`' + entityName + '`.id = `' + entityName + '_Index`.`entityId`');
+        this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index').join(' OR ') + ')');
+        this._additionalGroupSqls.push(' GROUP BY (`' + entityName + '_Index`.`entityId`)');
+        this._additionalGroupSqls.push(' ORDER BY SUM(`' + entityName + '_Index`.`occurrences`) DESC');
+      }
+    }
+
+    SearchQueryCollection.prototype = new persistence.DbQueryCollection();
+
+    SearchQueryCollection.prototype.order = function() {
+      throw "Imposing additional orderings is not support for search query collections.";
+    };
+
     persistence.entityDecoratorHooks.push(function(Entity) {
         /**
          * Declares a property to be full-text indexed.
@@ -98,49 +116,11 @@ if(!window.persistence) { // persistence.js not loaded!
         };
 
         /**
-         * Searches using the full-text search engine
-         * @param props an object with the following fields:
-         *   - tx (optional): the transaction to use
-         *   - query: search query
-         *   - limit (optional): maximum number results to return (for pagination)
-         *   - skip (optional): number of initial results to skip (for pagination)
-         *   - success: callback(results) function called with the found results
+         * Returns a query collection representing the result of a search
+         * @param query an object with the following fields:
          */
-        Entity.search = function(props) {
-          var tx = props.tx || null;
-          var query = props.query;
-          var success = props.success;
-          var limit = props.limit;
-          var skip = props.skip;
-          if(!tx) {
-            persistence.transaction(function(tx) { 
-                props.tx = tx;
-                Entity.search(props);
-              });
-            return;
-          }
-          var tblName = Entity.meta.name;
-          var sql = 'SELECT `' + tblName + '`.*, SUM(`' + tblName + '_Index`.`occurrences`) AS _occ FROM `' + tblName + '_Index`';
-          sql += ' LEFT JOIN `' + tblName + '` ON `' + tblName + '`.id = `' + tblName + '_Index`.`entityId` WHERE ';
-
-          var sqlParts = searchPhraseParser(query, tblName + '_Index');
-          sql += sqlParts.join(' OR ');
-          sql += ' GROUP BY (`' + tblName + '_Index`.`entityId`) ORDER BY _occ DESC';
-          if(limit) {
-            sql += ' LIMIT ' + limit;
-          }
-          if(skip) {
-            sql += ' OFFSET ' + skip;
-          }
-          tx.executeSql(sql, [], function(results) {
-              var entityResults = [];
-              for(var i = 0;  i < results.length; i++) {
-                var obj = persistence.rowToEntity(tblName, results[i]);
-                //obj._occurrences = results[i]._occ;
-                entityResults.push(obj);
-              }
-              success(entityResults);
-            });
+        Entity.search = function(query) {
+          return persistence.uniqueQueryCollection(new SearchQueryCollection(Entity.meta.name, query));
         };
       });
 

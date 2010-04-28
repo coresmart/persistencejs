@@ -20,16 +20,16 @@ will be created that stores the index.
 
 Searching is done as follows:
 
-    Note.search({query: "note", success: function(results) {
+    Note.search("note").list(tx, function(results) {
       console.log(results);
-    }});
+    });
 
 or you can paginate your results using `limit` and `skip` (similar
 to `limit` and `skip` in QueryCollections).
 
-    Note.search({query: "note", limit: 10, skip: 10, success: function(results) {
+    Note.search("note").limit(10).skip(10).list(null, function(results) {
       console.log(results);
-    }});
+    });
 
 Query language
 --------------

@@ -29,8 +29,17 @@ if(!window.persistence) { // persistence.js not loaded!
 }
 
 (function() {
-    var filteredWords = {'and':true, 'a':true, 'or':true, 'an':true, 'the': true, 'is': true, 'are': true};
+    var filteredWords = {'and':true, 'the': true, 'are': true};
 
+    function normalizeWord(word) {
+      if(!(word in filteredWords || word.length < 3)) {
+          word = word.replace(/ies$/, 'y');
+          word = word.replace(/s$/, '');
+          return word;
+      } else {
+        return false;
+      }
+    }
     /**
      * Does extremely basic tokenizing of text. Also includes some basic stemming.
      */
@@ -39,11 +48,10 @@ if(!window.persistence) { // persistence.js not loaded!
       var wordDict = {};
       // Prefixing words with _ to also index Javascript keywords and special fiels like 'constructor'
       for(var i = 0; i < words.length; i++) {
-        if(!(words[i] in filteredWords || words[i].length < 3)) {
-          var word = '_' + words[i];
+        var normalizedWord = normalizeWord(words[i]);
+        if(normalizedWord) {
+          var word = '_' + normalizedWord;
           // Some extremely basic stemming
-          word = word.replace(/ies$/, 'y');
-          word = word.replace(/s$/, '');
           if(word in wordDict) {
             wordDict[word]++;
           } else {
@@ -63,8 +71,8 @@ if(!window.persistence) { // persistence.js not loaded!
       var sqlParts = [];
       var restrictedToColumn = null;
       for(var i = 0; i < words.length; i++) {
-        var word = words[i];
-        if(word in filteredWords) {
+        var word = normalizeWord(words[i]);
+        if(!word) {
           continue;
         }
         if(word.search(/:$/) !== -1) {

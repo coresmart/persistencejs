@@ -31,8 +31,8 @@ if(!window.persistence) { // persistence.js not loaded!
 (function() {
     var filteredWords = {'and':true, 'the': true, 'are': true};
 
-    function normalizeWord(word) {
-      if(!(word in filteredWords || word.length < 3)) {
+    function normalizeWord(word, filterShortWords) {
+      if(!(word in filteredWords || (filterShortWords && word.length < 3))) {
           word = word.replace(/ies$/, 'y');
           word = word.replace(/s$/, '');
           return word;
@@ -65,13 +65,13 @@ if(!window.persistence) { // persistence.js not loaded!
     /**
      * Parses a search query and returns it as list SQL parts later to be OR'ed or AND'ed.
      */
-    function searchPhraseParser(query, indexTbl) {
+    function searchPhraseParser(query, indexTbl, prefixByDefault) {
       query = query.toLowerCase().replace(/['"]/, '').replace(/(^\s+|\s+$)/g, '');
       var words = query.split(/\s+/);
       var sqlParts = [];
       var restrictedToColumn = null;
       for(var i = 0; i < words.length; i++) {
-        var word = normalizeWord(words[i]);
+        var word = normalizeWord(words[i], !prefixByDefault);
         if(!word) {
           continue;
         }
@@ -81,7 +81,9 @@ if(!window.persistence) { // persistence.js not loaded!
         } 
         var sql = '(';
         if(word.search(/\*/) !== -1) {
-          sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%') + "%'";
+          sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%');
+        } else if(prefixByDefault) {
+          sql += "`" + indexTbl + "`.`word` LIKE '" + word + "%'";
         } else {
           sql += "`" + indexTbl + "`.`word` = '" + word + "'";
         }
@@ -94,13 +96,13 @@ if(!window.persistence) { // persistence.js not loaded!
       return sqlParts;
     }
 
-    function SearchQueryCollection(entityName, query) {
+    function SearchQueryCollection(entityName, query, prefixByDefault) {
       this.init(entityName, SearchQueryCollection);
 
       if(query) {
         this._additionalJoinSqls.push(', `' + entityName + '_Index`');
         this._additionalWhereSqls.push('`' + entityName + '`.id = `' + entityName + '_Index`.`entityId`');
-        this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index').join(' OR ') + ')');
+        this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index', prefixByDefault).join(' OR ') + ')');
         this._additionalGroupSqls.push(' GROUP BY (`' + entityName + '_Index`.`entityId`)');
         this._additionalGroupSqls.push(' ORDER BY SUM(`' + entityName + '_Index`.`occurrences`) DESC');
       }
@@ -127,8 +129,8 @@ if(!window.persistence) { // persistence.js not loaded!
          * Returns a query collection representing the result of a search
          * @param query an object with the following fields:
          */
-        Entity.search = function(query) {
-          return persistence.uniqueQueryCollection(new SearchQueryCollection(Entity.meta.name, query));
+        Entity.search = function(query, prefixByDefault) {
+          return persistence.uniqueQueryCollection(new SearchQueryCollection(Entity.meta.name, query, prefixByDefault));
         };
       });
 

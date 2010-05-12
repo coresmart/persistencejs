@@ -604,6 +604,10 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
 
         Entity.load = function(tx, id, callback) {
+          if(id in trackedObjects) {
+            callback(trackedObjects[id]);
+            return;
+          }
           if(!tx) {
             persistence.transaction(function(tx) {
               Entity.load(tx, id, callback);
@@ -1772,8 +1776,8 @@ Array.prototype.remove = function(el) {
 //    JSON.stringify(value, replacer, space)
 //    JSON.parse(text, reviver)
 
-if (!this.JSON) {
-  this.JSON = {};
+var JSON = (window && window.JSON) ? window.JSON : {};
+if (!JSON.stringify) {
   (function () {
       function f(n) {
         return n < 10 ? '0' + n : n;

@@ -334,3 +334,11 @@ License
 -------
 
 This work is licensed under the [MIT license](http://en.wikipedia.org/wiki/MIT_License).
+
+Support this work
+-----------------
+
+You can support this project by flattering it:
+
+<a href="http://flattr.com/thing/2510/persistence-js" target="_blank">
+<img src="http://api.flattr.com/button/button-static-50x60.png" title="Flattr this" border="0" /></a>

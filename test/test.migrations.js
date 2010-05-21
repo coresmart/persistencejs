@@ -26,8 +26,7 @@ module("Migrator", {
     },
     teardown: function() {
         stop();
-        Migrator.migrations = [];
-        Migrator.setVersion(0, function(){start();});
+        Migrator.reset(start);
     }
 });
 
@@ -53,12 +52,14 @@ asyncTest("migrations scope", 2, function(){
         },
         down: function() {
             same(this, migration, 'down');
-            start();
         }
     });
     
-    migration.up();
-    migration.down();
+    migration.up(function(){
+        migration.down(function(){
+            start();
+        });
+    });
 });
 
 asyncTest("migrating up to some version in order", 6, function(){
@@ -88,6 +89,41 @@ asyncTest("migrating up to some version changes schema version", 1, function(){
         Migrator.version(function(v){
             equals(v, totalActions, 'version changed to');
             start();        
+        });
+    });
+});
+
+asyncTest("migrating down to some version in order", 6, function(){
+    var actionsRan = 0;
+    var totalActions = 5;
+    
+    for (var i = 1; i <= totalActions; i++)
+        Migrator.migration(i, { 
+            down: function() { 
+                actionsRan++;
+                equals(this.version, Math.abs(actionsRan - i), 'migration in order');
+            }
+        });
+    
+    Migrator.setVersion(totalActions, function(){
+        Migrator.migrateDownTo(0, function(){
+            equals(actionsRan, totalActions, 'actions ran');
+            start();
+        });
+    });
+});
+
+asyncTest("migrating down to some version changes schema version", 1, function(){
+    var totalActions = 5;
+    for (var i = 1; i <= totalActions; i++)
+        Migrator.migration(i, { down: function() {} });
+    
+    Migrator.setVersion(totalActions, function(){
+        Migrator.migrateDownTo(0, function(){
+            Migrator.version(function(v){
+                equals(v, 0, 'version changed to');
+                start();        
+            });
         });
     });
 });

@@ -25,7 +25,7 @@
  */
 
 var Migrator = {
-    migrations: [],
+    migrations: {},
 
     version: function(callback) {
         persistence.transaction(function(t){
@@ -44,7 +44,6 @@ var Migrator = {
     setVersion: function(v, callback) {
         persistence.transaction(function(t){
             t.executeSql('UPDATE schema_version SET current_version = ?', [v], function(){
-                console.log('version set ' + v)
                 Migrator._version = v;
                 if (callback) callback();
             });
@@ -53,14 +52,25 @@ var Migrator = {
     
     setup: function(callback) {
         persistence.transaction(function(t){
-            t.executeSql('CREATE TABLE IF NOT EXISTS schema_version (current_version INTEGER)');
-            if (callback) callback();
+            t.executeSql('CREATE TABLE IF NOT EXISTS schema_version (current_version INTEGER)', null,
+                function(){
+                    // Creates a dummy migration just to force setting schema version when cleaning DB
+                    Migrator.migration(0, { up: function() { }, down: function() { } })
+                    if (callback) callback();
+                });
         });
     },
     
+    // Method should only be used for testing
+    reset: function(callback) {
+        // Creates a dummy migration just to force setting schema version when cleaning DB
+        Migrator.migration(0, { up: function() { }, down: function() { } })
+        Migrator.setVersion(0, callback);
+    },
+    
     migration: function(version, actions) {
-        this.migrations[version] = new Migration(version, actions);
-        return this.migrations[version];
+        Migrator.migrations[version] = new Migration(version, actions);
+        return Migrator.migrations[version];
     },
     
     migrateUpTo: function(version, callback) {
@@ -82,6 +92,35 @@ var Migrator = {
         
         this.version(function(currentVersion){
             for (v = currentVersion+1; v <= version; v++)
+                migrationsToRun.unshift(Migrator.migrations[v]);
+
+            if (migrationsToRun.length > 0) {
+                migrateOne();
+            } else if (callback) {
+                callback();
+            }
+        });
+    },
+    
+    migrateDownTo: function(version, callback) {
+        var migrationsToRun = [];
+        
+        function migrateOne() {
+            var migration = migrationsToRun.pop();
+            
+            if (!migration) callback();
+            
+            migration.down(function(){
+                if (migrationsToRun.length > 0) {
+                    migrateOne();
+                } else if (callback) {
+                    callback();
+                }
+            });
+        }
+        
+        this.version(function(currentVersion){
+            for (var v = currentVersion; v >= version; v--)
                 migrationsToRun.unshift(Migrator.migrations[v]);
 
             if (migrationsToRun.length > 0) {

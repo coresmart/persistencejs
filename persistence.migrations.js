@@ -55,7 +55,7 @@ var Migrator = {
             t.executeSql('CREATE TABLE IF NOT EXISTS schema_version (current_version INTEGER)', null,
                 function(){
                     // Creates a dummy migration just to force setting schema version when cleaning DB
-                    Migrator.migration(0, { up: function() { }, down: function() { } })
+                    Migrator.migration(0, { up: function() { }, down: function() { } });
                     if (callback) callback();
                 });
         });
@@ -92,7 +92,7 @@ var Migrator = {
         }
         
         this.version(function(currentVersion){
-            for (v = currentVersion+1; v <= version; v++)
+            for (var v = currentVersion+1; v <= version; v++)
                 migrationsToRun.unshift(Migrator.migrations[v]);
 
             if (migrationsToRun.length > 0) {

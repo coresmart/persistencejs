@@ -107,5 +107,18 @@ asyncTest("migrating down to some version", 7, function(){
     });
 });
 
+asyncTest("migrate to latest", 1, function(){
+    var totalActions = 3;
+    for (var i = 1; i <= totalActions; i++)
+        Migrator.migration(i, { up: function() { } });
+
+    Migrator.migrate(function() {
+        Migrator.version(function(v){
+            equals(v, totalActions, 'latest version');
+            start();
+        }); 
+    });
+});
+
     }); // end Migrator.setup()
 });

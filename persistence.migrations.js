@@ -25,7 +25,7 @@
  */
 
 var Migrator = {
-    migrations: {},
+    migrations: [],
 
     version: function(callback) {
         persistence.transaction(function(t){
@@ -64,7 +64,8 @@ var Migrator = {
     // Method should only be used for testing
     reset: function(callback) {
         // Creates a dummy migration just to force setting schema version when cleaning DB
-        Migrator.migration(0, { up: function() { }, down: function() { } })
+        Migrator.migrations = [];
+        Migrator.migration(0, { up: function() { }, down: function() { } });
         Migrator.setVersion(0, callback);
     },
     
@@ -128,6 +129,23 @@ var Migrator = {
             } else if (callback) {
                 callback();
             }
+        });
+    },
+    
+    migrate: function(version, callback) {
+        if ( arguments.length === 1 ) {
+            callback = version;
+            version = this.migrations.length-1;
+        }
+        
+        this.version(function(curVersion){
+            console.log(curVersion + ' ' + version);
+            if (curVersion < version)
+                Migrator.migrateUpTo(version, callback);
+            else if (curVersion > version)
+                Migrator.migrateDownTo(version, callback);
+            else
+                callback();
         });
     }
 }

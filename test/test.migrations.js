@@ -17,6 +17,7 @@
 
 $(document).ready(function(){
     persistence.connect('migrationstest', 'My migrations db', 5 * 1024 * 1024);    
+    persistence.db.log = false;
     
     Migrator.setup(function() {  
       

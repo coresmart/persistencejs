@@ -43,9 +43,11 @@ var Migrator = {
 
     setVersion: function(v, callback) {
         persistence.transaction(function(t){
-            t.executeSql('UPDATE schema_version SET current_version = ?', [v]);
-            Migrator._version = v;
-            if (callback) callback();
+            t.executeSql('UPDATE schema_version SET current_version = ?', [v], function(){
+                console.log('version set ' + v)
+                Migrator._version = v;
+                if (callback) callback();
+            });
         });
     },
     
@@ -59,6 +61,35 @@ var Migrator = {
     migration: function(version, actions) {
         this.migrations[version] = new Migration(version, actions);
         return this.migrations[version];
+    },
+    
+    migrateUpTo: function(version, callback) {
+        var migrationsToRun = [];
+        
+        function migrateOne() {
+            var migration = migrationsToRun.pop();
+            
+            if (!migration) callback();
+            
+            migration.up(function(){
+                if (migrationsToRun.length > 0) {
+                    migrateOne();
+                } else if (callback) {
+                    callback();
+                }
+            });
+        }
+        
+        this.version(function(currentVersion){
+            for (v = currentVersion+1; v <= version; v++)
+                migrationsToRun.unshift(Migrator.migrations[v]);
+
+            if (migrationsToRun.length > 0) {
+                migrateOne();
+            } else if (callback) {
+                callback();
+            }
+        });
     }
 }
 
@@ -68,10 +99,14 @@ var Migration = function(version, actions) {
     this.actions = actions;
 };
 
-Migration.prototype.up = function() {
+Migration.prototype.up = function(callback) {
     this.actions.up.apply(this);
+    
+    Migrator.setVersion(this.version, callback);
 }
 
-Migration.prototype.down = function() {
+Migration.prototype.down = function(callback) {
     this.actions.down.apply(this);
+    
+    Migrator.setVersion(this.version, callback);
 }

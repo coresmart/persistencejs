@@ -26,6 +26,7 @@ module("Migrator", {
     },
     teardown: function() {
         stop();
+        Migrator.migrations = [];
         Migrator.setVersion(0, function(){start();});
     }
 });
@@ -58,6 +59,37 @@ asyncTest("migrations scope", 2, function(){
     
     migration.up();
     migration.down();
+});
+
+asyncTest("migrating up to some version in order", 6, function(){
+    var actionsRan = 0;
+    var totalActions = 5;
+    
+    for (var i = 1; i <= totalActions; i++)
+        Migrator.migration(i, { 
+            up: function() { 
+                actionsRan++;
+                equals(this.version, actionsRan, 'migration in order');
+            }
+        });
+    
+    Migrator.migrateUpTo(totalActions, function(){
+        equals(actionsRan, totalActions, 'actions ran');
+        start();
+    });
+});
+
+asyncTest("migrating up to some version changes schema version", 1, function(){
+    var totalActions = 5;    
+    for (var i = 1; i <= totalActions; i++)
+        Migrator.migration(i, { up: function() {} });
+    
+    Migrator.migrateUpTo(totalActions, function(){
+        Migrator.version(function(v){
+            equals(v, totalActions, 'version changed to');
+            start();        
+        });
+    });
 });
 
     }); // end Migrator.setup()

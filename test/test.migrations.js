@@ -20,7 +20,27 @@ $(document).ready(function(){
     persistence.db.log = false;
     
     Migrator.setup(function() {  
-      
+
+
+function createMigrations(starting, amount, actions){
+    var amount = starting+amount;
+    
+    for (var i = starting; i < amount; i++) {
+        var newActions = {
+            up: actions.up,
+            down: actions.down
+        };
+        
+        if (actions.createDown) 
+            newActions.down = actions.createDown(i);
+            
+        if (actions.createUp)
+            newActions.up = actions.createUp(i);
+        
+        Migrator.migration(i, newActions);
+    }
+}
+
 module("Migrator", {
     setup: function() {
         
@@ -67,15 +87,14 @@ asyncTest("migrating up to some version", 7, function(){
     var actionsRan = 0;
     var totalActions = 5;
     
-    for (var i = 1; i <= totalActions; i++)
-        Migrator.migration(i, { 
-            up: function() { 
-                actionsRan++;
-                equals(this.version, actionsRan, 'running migration in order');
-            }
-        });
+    createMigrations(1, totalActions, { 
+        up: function() { 
+            actionsRan++;
+            equals(this.version, actionsRan, 'running migration in order');
+        }
+    });
     
-    Migrator.migrateUpTo(totalActions, function(){
+    Migrator.migrate(totalActions, function(){
         equals(actionsRan, totalActions, 'actions ran');
         Migrator.version(function(v){
             equals(v, totalActions, 'version changed to');
@@ -88,16 +107,18 @@ asyncTest("migrating down to some version", 7, function(){
     var actionsRan = 0;
     var totalActions = 5;
     
-    for (var i = 1; i <= totalActions; i++)
-        Migrator.migration(i, { 
-            down: function() { 
+    createMigrations(1, totalActions, { 
+        createDown: function(i) {
+            var position = Math.abs(actionsRan - i);
+            return function () {
                 actionsRan++;
-                equals(this.version, Math.abs(actionsRan - i), 'running migration in order');
-            }
-        });
+                equals(this.version, position, 'running migration in order');
+            };
+        }
+    });
     
     Migrator.setVersion(totalActions, function(){
-        Migrator.migrateDownTo(0, function(){
+        Migrator.migrate(0, function(){
             equals(actionsRan, totalActions, 'actions ran');
             Migrator.version(function(v){
                 equals(v, 0, 'version changed to');
@@ -109,8 +130,8 @@ asyncTest("migrating down to some version", 7, function(){
 
 asyncTest("migrate to latest", 1, function(){
     var totalActions = 3;
-    for (var i = 1; i <= totalActions; i++)
-        Migrator.migration(i, { up: function() { } });
+    
+    createMigrations(1, totalActions, { up: function() { } });
 
     Migrator.migrate(function() {
         Migrator.version(function(v){

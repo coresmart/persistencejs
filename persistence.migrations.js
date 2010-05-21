@@ -139,7 +139,6 @@ var Migrator = {
         }
         
         this.version(function(curVersion){
-            console.log(curVersion + ' ' + version);
             if (curVersion < version)
                 Migrator.migrateUpTo(version, callback);
             else if (curVersion > version)

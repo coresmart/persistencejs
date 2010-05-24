@@ -153,18 +153,33 @@ var Migration = function(version, actions) {
     this.version = version;
     // TODO check if actions contains up and down methods
     this.actions = actions;
+    this.queue = [];
 };
+
+
+Migration.prototype.executeQueries = function(callback) {
+    var queue = this.queue;
+    persistence.transaction(function(tx) {
+        persistence.executeQueriesSeq(tx, queue, callback);
+    });
+}
 
 Migration.prototype.up = function(callback) {
     this.actions.up.apply(this);
+    var version = this.version;
     
-    Migrator.setVersion(this.version, callback);
+    this.executeQueries(function(){
+        Migrator.setVersion(version, callback);
+    });
 }
 
 Migration.prototype.down = function(callback) {
     this.actions.down.apply(this);
+    var version = this.version;
     
-    Migrator.setVersion(this.version, callback);
+    this.executeQueries(function(){
+        Migrator.setVersion(version, callback);
+    });
 }
 
 Migration.prototype.createTable = function(tableName, callback) {
@@ -173,7 +188,7 @@ Migration.prototype.createTable = function(tableName, callback) {
     
     console.log('create table ' + tableName);
     for (var i = 0; i < table.columns.length; i++)
-        console.log('COLUMN: 'table.columns[i].name + ' ' + table.columns[i].type);
+        console.log('COLUMN: ' + table.columns[i].name + ' ' + table.columns[i].type);
 }
 
 Migration.prototype.dropTable = function(tableName) {
@@ -196,8 +211,8 @@ Migration.prototype.removeIndex = function(tableName, columnName) {
     console.log('remove index on ' + tableName + '.' + columnName);
 }
 
-Migration.prototype.execute = function(sql) {
-    console.log('EXECUTE: ' + sql);
+Migration.prototype.execute = function(sql, args) {
+    this.queue.push([sql, args]);
 }
 
 var ColumnsHelper = function() {

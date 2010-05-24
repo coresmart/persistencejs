@@ -147,7 +147,20 @@ module("Migration", {
     },
     teardown: function() {
         stop();
-        Migrator.reset(start);
+        // DROPS ALL TABLES
+        var query = "select 'drop table ' || name || ';' AS dropTable from sqlite_master where type = 'table' and name not in ('__WebKitDatabaseInfoTable__', 'schema_version')";
+        
+        persistence.transaction(function(tx){
+            tx.executeSql(query, null, function(result){
+                var dropTablesSql = [];
+                for (var i = 0; i < result.length; i++)
+                    dropTablesSql.push([result[i].dropTable, null]);
+                
+                persistence.executeQueriesSeq(tx, dropTablesSql, function(){
+                    Migrator.setVersion(0, function(){Migrator.reset(start);});
+                });
+            });
+        });
     }
 });
 
@@ -173,6 +186,24 @@ asyncTest("API", 12, function(){
     });
     
     m.up(start);
+});
+
+asyncTest("execute", 1, function(){    
+    Migrator.migration(1, {
+        up: function() { 
+            this.execute('CREATE TABLE test (id INTEGER)');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        var sql = 'select name from sqlite_master where type = "table" and name == "test"';
+        persistence.transaction(function(tx){
+            tx.executeSql(sql, null, function(result){
+                ok(result.length == 1, 'sql command ran');
+                start();
+            });
+        });
+    });
 });
 
     }); // end Migrator.setup()

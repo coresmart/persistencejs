@@ -171,8 +171,33 @@ Migration.prototype.createTable = function(tableName, callback) {
     var table = new ColumnsHelper();
     callback(table);
     
+    console.log('create table ' + tableName);
     for (var i = 0; i < table.columns.length; i++)
-        console.log(table.columns[i].name, table.columns[i].type);
+        console.log('COLUMN: 'table.columns[i].name + ' ' + table.columns[i].type);
+}
+
+Migration.prototype.dropTable = function(tableName) {
+    console.log('drop table ' + tableName);
+}
+
+Migration.prototype.addColumn = function(tableName, columnName, columnType) {
+    console.log('add column ' + columnName + ' (' + columnType + ') to ' + tableName);
+}
+
+Migration.prototype.removeColumn = function(tableName, columnName) {
+    console.log('remove column ' + columnName + ' from ' + tableName);
+}
+
+Migration.prototype.addIndex = function(tableName, columnName, unique) {
+    console.log('create index on ' + tableName + '.' + columnName + ' unique? ' + (unique ? 'true' : 'false'));
+}
+
+Migration.prototype.removeIndex = function(tableName, columnName) {
+    console.log('remove index on ' + tableName + '.' + columnName);
+}
+
+Migration.prototype.execute = function(sql) {
+    console.log('EXECUTE: ' + sql);
 }
 
 var ColumnsHelper = function() {

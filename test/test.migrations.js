@@ -151,9 +151,15 @@ module("Migration", {
     }
 });
 
-asyncTest("createTable API", 6, function(){    
+asyncTest("API", 12, function(){    
     var m = Migrator.migration(1, {
         up: function() { 
+            ok(typeof(this.addColumn) == "function", 'addColumn');
+            ok(typeof(this.removeColumn) == "function", 'removeColumn');
+            ok(typeof(this.addIndex) == "function", 'addIndex');
+            ok(typeof(this.removeIndex) == "function", 'removeIndex');
+            ok(typeof(this.execute) == "function", 'execute');
+            ok(typeof(this.dropTable) == "function", 'dropTable');
             ok(typeof(this.createTable) == "function", 'createTable');
             
             this.createTable('posts', function(table){

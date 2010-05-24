@@ -347,7 +347,7 @@ asyncTest("addColumn", 1, function(){
     });
 });
 
-asyncTest("removeColumn", 1, function(){    
+asyncTest("removeColumn", 2, function(){    
     Migrator.migration(1, {
         up: function() {
             this.createTable('customer', function(t){
@@ -358,6 +358,7 @@ asyncTest("removeColumn", 1, function(){
     });
     
     Migrator.migrate(function(){
+        columnExists('customer', 'id', 'VARCHAR(32) PRIMARY KEY', start);
         columnNotExists('customer', 'sample_json', 'TEXT', start);
     });
 });

@@ -207,19 +207,32 @@ Migration.prototype.addColumn = function(tableName, columnName, columnType) {
 }
 
 Migration.prototype.removeColumn = function(tableName, columnName) {
-//    var sql = "BEGIN TRANSACTION;"
-//    
-//    sql += "ALTER TABLE " + tableName + " RENAME TO " + tableName + "_bkp;";
-//    
-//    sql += "CREATE TABLE " + tableName + " ();";
-//    
-//    sql += "INSERT INTO t1 SELECT a,b FROM t1_bkp;";
-//    
-//    sql += "DROP TABLE t1_bkp;";
-//    
-//    sql += "COMMIT;";
-//    
-//    this.execute(sql);
+    this.actions.unshift(function(tx, nextCommand){
+        var sql = 'select sql from sqlite_master where type = "table" and name == "'+tableName+'"';
+        tx.executeSql(sql, null, function(result){
+            var columns = new RegExp("CREATE TABLE \\w+ \\((.+)\\)").exec(result[0].sql)[1].split(', ');
+            var selectColumns = [];
+            var columnsSql = [];
+            
+            for (var i = 0; i < columns.length; i++) {
+                var colName = new RegExp("(\\w+) .+").exec(columns[i])[1];
+                if (colName == columnName) continue;
+                
+                columnsSql.push(columns[i]);
+                selectColumns.push(colName);
+            }
+            columnsSql = columnsSql.join(', ');            
+            selectColumns = selectColumns.join(', ');
+            
+            var queries = [];
+            queries.unshift(["ALTER TABLE " + tableName + " RENAME TO " + tableName + "_bkp;", null]);
+            queries.unshift(["CREATE TABLE " + tableName + " (" + columnsSql + ");", null]);
+            queries.unshift(["INSERT INTO " + tableName + " SELECT " + selectColumns + " FROM " + tableName + "_bkp;", null]);
+            queries.unshift(["DROP TABLE " + tableName + "_bkp;", null]);
+            
+            persistence.executeQueriesSeq(tx, queries, nextCommand);
+        });
+    });
 }
 
 Migration.prototype.addIndex = function(tableName, columnName, unique) {

@@ -198,7 +198,8 @@ Migration.prototype.createTable = function(tableName, callback) {
 }
 
 Migration.prototype.dropTable = function(tableName) {
-    console.log('drop table ' + tableName);
+    var sql = 'DROP TABLE ' + tableName;
+    this.executeSql(sql);
 }
 
 Migration.prototype.addColumn = function(tableName, columnName, columnType) {

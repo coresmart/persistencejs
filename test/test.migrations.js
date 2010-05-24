@@ -210,8 +210,18 @@ function tableExists(name, callback){
     var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
-            ok(result.length == 1, 'table created');
-            callback();
+            ok(result.length == 1, name + ' table exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function tableNotExists(name, callback){
+    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 0, name + ' table not exists');
+            if (callback) callback();
         });
     });
 }
@@ -223,7 +233,7 @@ function columnExists(table, column, type, callback) {
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
             ok(result[0].sql.match(regex), column + ' colum exist');
-            callback();
+            if (callback) callback();
         });
     });
 }
@@ -235,7 +245,7 @@ function columnNotExists(table, column, type, callback) {
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
             ok(!result[0].sql.match(regex), column + ' colum does note exist');
-            callback();
+            if (callback) callback();
         });
     });
 }
@@ -358,8 +368,21 @@ asyncTest("removeColumn", 2, function(){
     });
     
     Migrator.migrate(function(){
-        columnExists('customer', 'id', 'VARCHAR(32) PRIMARY KEY', start);
+        columnExists('customer', 'id', 'VARCHAR(32) PRIMARY KEY');
         columnNotExists('customer', 'sample_json', 'TEXT', start);
+    });
+});
+
+asyncTest("dropTable", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer');
+            this.dropTable('customer');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        tableNotExists('customer', start);
     });
 });
 

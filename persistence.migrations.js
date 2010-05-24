@@ -189,10 +189,9 @@ Migration.prototype.createTable = function(tableName, callback) {
     
     var sql = 'CREATE TABLE ' + tableName + ' (id VARCHAR(32) PRIMARY KEY';
     for (var i = 0; i < table.columns.length; i++)
-        sql += ', ' + table.columns[i].name + ' ' + table.columns[i].type;
+        sql += ', ' + table.columns[i];
         
-    this.execute(sql + ')');
-    
+    this.execute(sql + ')');    
 }
 
 Migration.prototype.dropTable = function(tableName) {
@@ -223,7 +222,22 @@ var ColumnsHelper = function() {
     this.columns = [];
 }
 
-ColumnsHelper.COLUMNS_TYPES = ['text', 'integer', 'boolean', 'json', 'date'];
+ColumnsHelper.prototype.text = function(columnName) {
+    this.columns.push(columnName + ' TEXT');
+}
 
-for (var i = 0; i < ColumnsHelper.COLUMNS_TYPES.length; i++)
-    ColumnsHelper.prototype[ColumnsHelper.COLUMNS_TYPES[i]] = function(columnName) {}
+ColumnsHelper.prototype.integer = function(columnName) {
+    this.columns.push(columnName + ' INT');
+}
+
+ColumnsHelper.prototype.boolean = function(columnName) {
+    this.columns.push(columnName + ' BOOL');
+}
+
+ColumnsHelper.prototype.date = function(columnName) {
+    this.columns.push(columnName + ' DATE');
+}
+
+ColumnsHelper.prototype.json = function(columnName) {
+    this.columns.push(columnName + ' TEXT');
+}

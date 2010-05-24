@@ -206,7 +206,29 @@ asyncTest("execute", 1, function(){
     });
 });
 
-asyncTest("createTable adds id by default", 2, function(){    
+function tableExists(name, callback){
+    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 1, 'table created');
+            callback();
+        });
+    });
+}
+
+function columnExists(table, column, type, callback) {
+    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
+    type = type.replace('(', '\\(').replace(')', '\\)');
+    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result[0].sql.match(regex), column + ' colum was added');
+            callback();
+        });
+    });
+}
+
+asyncTest("createTable", 1, function(){    
     Migrator.migration(1, {
         up: function() {
             this.createTable('testing');
@@ -214,15 +236,89 @@ asyncTest("createTable adds id by default", 2, function(){
     });
     
     Migrator.migrate(function(){
-        var sql = 'select sql from sqlite_master where type = "table" and name == "testing"';
-        var regex = /id VARCHAR\(32\) PRIMARY KEY/;
-        persistence.transaction(function(tx){
-            tx.executeSql(sql, null, function(result){
-                ok(result.length == 1, 'table created');
-                ok(regex.test(result[0].sql), 'id colum was added');
-                start();
+        tableExists('testing', start)
+    });
+});
+
+asyncTest("createTable adds id by default", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('testing');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('testing', 'id', 'VARCHAR(32) PRIMARY KEY', start);
+    });
+});
+
+asyncTest("createTable with text column", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.text('name');
             });
-        });
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'name', 'TEXT', start);
+    });
+});
+
+asyncTest("createTable with integer column", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.integer('age');
+            });
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'age', 'INT', start);
+    });
+});
+
+asyncTest("createTable with boolean column", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.boolean('married');
+            });
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'married', 'BOOL', start);
+    });
+});
+
+asyncTest("createTable with date column", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.date('birth');
+            });
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'birth', 'DATE', start);
+    });
+});
+
+asyncTest("createTable with json column", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.json('sample_json');
+            });
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'sample_json', 'TEXT', start);
     });
 });
 

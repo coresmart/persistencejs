@@ -141,5 +141,33 @@ asyncTest("migrate to latest", 1, function(){
     });
 });
 
+module("Migration", {
+    setup: function() {
+        
+    },
+    teardown: function() {
+        stop();
+        Migrator.reset(start);
+    }
+});
+
+asyncTest("createTable API", 6, function(){    
+    var m = Migrator.migration(1, {
+        up: function() { 
+            ok(typeof(this.createTable) == "function", 'createTable');
+            
+            this.createTable('posts', function(table){
+                ok(typeof(table.text) == "function", 'text column');
+                ok(typeof(table.integer) == "function", 'integer column');
+                ok(typeof(table.boolean) == "function", 'boolean column');
+                ok(typeof(table.json) == "function", 'json column');
+                ok(typeof(table.date) == "function", 'date column');
+            });
+        } 
+    });
+    
+    m.up(start);
+});
+
     }); // end Migrator.setup()
 });

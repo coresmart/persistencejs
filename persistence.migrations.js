@@ -166,3 +166,20 @@ Migration.prototype.down = function(callback) {
     
     Migrator.setVersion(this.version, callback);
 }
+
+Migration.prototype.createTable = function(tableName, callback) {
+    var table = new ColumnsHelper();
+    callback(table);
+    
+    for (var i = 0; i < table.columns.length; i++)
+        console.log(table.columns[i].name, table.columns[i].type);
+}
+
+var ColumnsHelper = function() {
+    this.columns = [];
+}
+
+ColumnsHelper.COLUMNS_TYPES = ['text', 'integer', 'boolean', 'json', 'date'];
+
+for (var i = 0; i < ColumnsHelper.COLUMNS_TYPES.length; i++)
+    ColumnsHelper.prototype[ColumnsHelper.COLUMNS_TYPES[i]] = function(columnName) {}

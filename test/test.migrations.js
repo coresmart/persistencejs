@@ -1,27 +1,4 @@
-//new Migration(1, {
-//    up: function() {
-//        this.createTable('posts', function(t) {
-//            t.column('title', 'VARCHAR');
-//            t.column('date', 'DATE');
-//        });
-//    },
-//    down: function() {
-//        this.dropTable('posts');
-//    }
-//});
-
-//persistence.migrate();  // latest version
-//persistence.migrate(3);
-//persistence.migrate(0); // clears schema
-
-
-$(document).ready(function(){
-    persistence.connect('migrationstest', 'My migrations db', 5 * 1024 * 1024);    
-    persistence.db.log = false;
-    
-    Migrator.setup(function() {  
-
-
+// Some utility methods
 function createMigrations(starting, amount, actions){
     var amount = starting+amount;
     
@@ -40,6 +17,76 @@ function createMigrations(starting, amount, actions){
         Migrator.migration(i, newActions);
     }
 }
+
+function tableExists(name, callback){
+    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 1, name + ' table exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function tableNotExists(name, callback){
+    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 0, name + ' table not exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function columnExists(table, column, type, callback) {
+    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
+    type = type.replace('(', '\\(').replace(')', '\\)');
+    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result[0].sql.match(regex), column + ' colum exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function columnNotExists(table, column, type, callback) {
+    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
+    type = type.replace('(', '\\(').replace(')', '\\)');
+    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(!result[0].sql.match(regex), column + ' colum not exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function indexExists(table, column, callback) {
+    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 1, 'index ' + table + '_' + column + ' exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function indexNotExists(table, column, callback) {
+    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 0, 'index ' + table + '_' + column + ' not exists');
+            if (callback) callback();
+        });
+    });
+}
+
+$(document).ready(function(){
+    persistence.connect('migrationstest', 'My migrations db', 5 * 1024 * 1024);    
+    persistence.db.log = false;
+    
+    Migrator.setup(function() {
 
 module("Migrator", {
     setup: function() {
@@ -205,70 +252,6 @@ asyncTest("execute", 1, function(){
         });
     });
 });
-
-function tableExists(name, callback){
-    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(result.length == 1, name + ' table exists');
-            if (callback) callback();
-        });
-    });
-}
-
-function tableNotExists(name, callback){
-    var sql = 'select name from sqlite_master where type = "table" and name == "'+name+'"';
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(result.length == 0, name + ' table not exists');
-            if (callback) callback();
-        });
-    });
-}
-
-function columnExists(table, column, type, callback) {
-    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
-    type = type.replace('(', '\\(').replace(')', '\\)');
-    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(result[0].sql.match(regex), column + ' colum exists');
-            if (callback) callback();
-        });
-    });
-}
-
-function columnNotExists(table, column, type, callback) {
-    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
-    type = type.replace('(', '\\(').replace(')', '\\)');
-    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(!result[0].sql.match(regex), column + ' colum not exists');
-            if (callback) callback();
-        });
-    });
-}
-
-function indexExists(table, column, callback) {
-    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(result.length == 1, 'index ' + table + '_' + column + ' exists');
-            if (callback) callback();
-        });
-    });
-}
-
-function indexNotExists(table, column, callback) {
-    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
-    persistence.transaction(function(tx){
-        tx.executeSql(sql, null, function(result){
-            ok(result.length == 0, 'index ' + table + '_' + column + ' not exists');
-            if (callback) callback();
-        });
-    });
-}
 
 asyncTest("createTable", 1, function(){    
     Migrator.migration(1, {

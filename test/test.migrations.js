@@ -222,7 +222,19 @@ function columnExists(table, column, type, callback) {
     var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
-            ok(result[0].sql.match(regex), column + ' colum was added');
+            ok(result[0].sql.match(regex), column + ' colum exist');
+            callback();
+        });
+    });
+}
+
+function columnNotExists(table, column, type, callback) {
+    var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
+    type = type.replace('(', '\\(').replace(')', '\\)');
+    var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(!result[0].sql.match(regex), column + ' colum does note exist');
             callback();
         });
     });
@@ -319,6 +331,34 @@ asyncTest("createTable with json column", 1, function(){
     
     Migrator.migrate(function(){
         columnExists('customer', 'sample_json', 'TEXT', start);
+    });
+});
+
+asyncTest("addColumn", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer');
+            this.addColumn('customer', 'name', 'TEXT');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnExists('customer', 'name', 'TEXT', start);
+    });
+});
+
+asyncTest("removeColumn", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.json('sample_json');
+            });
+            this.removeColumn('customer', 'sample_json');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        columnNotExists('customer', 'sample_json', 'TEXT', start);
     });
 });
 

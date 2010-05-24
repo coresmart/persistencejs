@@ -199,11 +199,22 @@ Migration.prototype.dropTable = function(tableName) {
 }
 
 Migration.prototype.addColumn = function(tableName, columnName, columnType) {
-    console.log('add column ' + columnName + ' (' + columnType + ') to ' + tableName);
+    var sql = 'ALTER TABLE ' + tableName + ' ADD ' + columnName + ' ' + columnType;
+    this.execute(sql);
 }
 
 Migration.prototype.removeColumn = function(tableName, columnName) {
-    console.log('remove column ' + columnName + ' from ' + tableName);
+//    var sql = "
+//BEGIN TRANSACTION;
+//CREATE TEMPORARY TABLE t1_backup(a,b);
+//INSERT INTO t1_backup SELECT a,b FROM t1;
+//DROP TABLE t1;
+//CREATE TABLE t1(a,b);
+//INSERT INTO t1 SELECT a,b FROM t1_backup;
+//DROP TABLE t1_backup;
+//COMMIT;    
+//";
+//    this.execute();
 }
 
 Migration.prototype.addIndex = function(tableName, columnName, unique) {
@@ -215,7 +226,7 @@ Migration.prototype.removeIndex = function(tableName, columnName) {
 }
 
 Migration.prototype.execute = function(sql, args) {
-    this.queue.push([sql, args]);
+    this.queue.unshift([sql, args]);
 }
 
 var ColumnsHelper = function() {

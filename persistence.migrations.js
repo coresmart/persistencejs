@@ -184,11 +184,15 @@ Migration.prototype.down = function(callback) {
 
 Migration.prototype.createTable = function(tableName, callback) {
     var table = new ColumnsHelper();
-    callback(table);
     
-    console.log('create table ' + tableName);
+    if (callback) callback(table);
+    
+    var sql = 'CREATE TABLE ' + tableName + ' (id VARCHAR(32) PRIMARY KEY';
     for (var i = 0; i < table.columns.length; i++)
-        console.log('COLUMN: ' + table.columns[i].name + ' ' + table.columns[i].type);
+        sql += ', ' + table.columns[i].name + ' ' + table.columns[i].type;
+        
+    this.execute(sql + ')');
+    
 }
 
 Migration.prototype.dropTable = function(tableName) {

@@ -206,5 +206,25 @@ asyncTest("execute", 1, function(){
     });
 });
 
+asyncTest("createTable adds id by default", 2, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('testing');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        var sql = 'select sql from sqlite_master where type = "table" and name == "testing"';
+        var regex = /id VARCHAR\(32\) PRIMARY KEY/;
+        persistence.transaction(function(tx){
+            tx.executeSql(sql, null, function(result){
+                ok(result.length == 1, 'table created');
+                ok(regex.test(result[0].sql), 'id colum was added');
+                start();
+            });
+        });
+    });
+});
+
     }); // end Migrator.setup()
 });

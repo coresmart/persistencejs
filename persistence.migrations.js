@@ -237,11 +237,13 @@ Migration.prototype.removeColumn = function(tableName, columnName) {
 }
 
 Migration.prototype.addIndex = function(tableName, columnName, unique) {
-    console.log('create index on ' + tableName + '.' + columnName + ' unique? ' + (unique ? 'true' : 'false'));
+    var sql = 'CREATE ' + (unique === true ? 'UNIQUE' : '') + ' INDEX ' + tableName + '_' + columnName + ' ON ' + tableName + ' (' + columnName + ')';
+    this.executeSql(sql);
 }
 
 Migration.prototype.removeIndex = function(tableName, columnName) {
-    console.log('remove index on ' + tableName + '.' + columnName);
+    var sql = 'DROP INDEX ' + tableName + '_' + columnName;
+    this.executeSql(sql);
 }
 
 Migration.prototype.executeSql = function(sql, args) {

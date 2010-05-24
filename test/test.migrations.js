@@ -232,7 +232,7 @@ function columnExists(table, column, type, callback) {
     var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
-            ok(result[0].sql.match(regex), column + ' colum exist');
+            ok(result[0].sql.match(regex), column + ' colum exists');
             if (callback) callback();
         });
     });
@@ -244,7 +244,27 @@ function columnNotExists(table, column, type, callback) {
     var regex = "CREATE TABLE \\w+ \\((\\w|[\\(\\), ])*" + column + " " + type + "(\\w|[\\(\\), ])*\\)";
     persistence.transaction(function(tx){
         tx.executeSql(sql, null, function(result){
-            ok(!result[0].sql.match(regex), column + ' colum does note exist');
+            ok(!result[0].sql.match(regex), column + ' colum not exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function indexExists(table, column, callback) {
+    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 1, 'index ' + table + '_' + column + ' exists');
+            if (callback) callback();
+        });
+    });
+}
+
+function indexNotExists(table, column, callback) {
+    var sql = 'select sql from sqlite_master where type = "index" and name == "'+table+'_'+column+'"';
+    persistence.transaction(function(tx){
+        tx.executeSql(sql, null, function(result){
+            ok(result.length == 0, 'index ' + table + '_' + column + ' not exists');
             if (callback) callback();
         });
     });
@@ -383,6 +403,37 @@ asyncTest("dropTable", 1, function(){
     
     Migrator.migrate(function(){
         tableNotExists('customer', start);
+    });
+});
+
+asyncTest("addIndex", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.integer('age');
+            });
+            this.addIndex('customer', 'age');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        indexExists('customer', 'age', start);
+    });
+});
+
+asyncTest("removeIndex", 1, function(){    
+    Migrator.migration(1, {
+        up: function() {
+            this.createTable('customer', function(t){
+                t.integer('age');
+            });
+            this.addIndex('customer', 'age');
+            this.removeIndex('customer', 'age');
+        }
+    });
+    
+    Migrator.migrate(function(){
+        indexNotExists('customer', 'age', start);
     });
 });
 

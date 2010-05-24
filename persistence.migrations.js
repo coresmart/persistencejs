@@ -149,37 +149,39 @@ var Migrator = {
     }
 }
 
-var Migration = function(version, actions) {
+var Migration = function(version, body) {
     this.version = version;
     // TODO check if actions contains up and down methods
-    this.actions = actions;
-    this.queue = [];
+    this.body = body;
+    this.actions = [];
 };
 
-
-Migration.prototype.executeQueries = function(callback) {
-    var queue = this.queue;
-    persistence.transaction(function(tx) {
-        persistence.executeQueriesSeq(tx, queue, callback);
+Migration.prototype.executeActions = function(callback) {
+    var actionsToRun = this.actions;
+    var version = this.version;
+    
+    persistence.transaction(function(tx){
+        function nextAction() {
+            if (actionsToRun.length == 0)
+                Migrator.setVersion(version, callback);
+            else {
+                var action = actionsToRun.pop();
+                action(tx, nextAction);
+            }
+        }
+        
+        nextAction();
     });
 }
 
 Migration.prototype.up = function(callback) {
-    this.actions.up.apply(this);
-    var version = this.version;
-    
-    this.executeQueries(function(){
-        Migrator.setVersion(version, callback);
-    });
+    this.body.up.apply(this);
+    this.executeActions(callback);
 }
 
 Migration.prototype.down = function(callback) {
-    this.actions.down.apply(this);
-    var version = this.version;
-    
-    this.executeQueries(function(){
-        Migrator.setVersion(version, callback);
-    });
+    this.body.down.apply(this);    
+    this.executeActions(callback);
 }
 
 Migration.prototype.createTable = function(tableName, callback) {
@@ -187,11 +189,12 @@ Migration.prototype.createTable = function(tableName, callback) {
     
     if (callback) callback(table);
     
+    var column;
     var sql = 'CREATE TABLE ' + tableName + ' (id VARCHAR(32) PRIMARY KEY';
-    for (var i = 0; i < table.columns.length; i++)
-        sql += ', ' + table.columns[i];
+    while (column = table.columns.pop())
+        sql += ', ' + column;
         
-    this.execute(sql + ')');    
+    this.executeSql(sql + ')');    
 }
 
 Migration.prototype.dropTable = function(tableName) {
@@ -200,21 +203,23 @@ Migration.prototype.dropTable = function(tableName) {
 
 Migration.prototype.addColumn = function(tableName, columnName, columnType) {
     var sql = 'ALTER TABLE ' + tableName + ' ADD ' + columnName + ' ' + columnType;
-    this.execute(sql);
+    this.executeSql(sql);
 }
 
 Migration.prototype.removeColumn = function(tableName, columnName) {
-//    var sql = "
-//BEGIN TRANSACTION;
-//CREATE TEMPORARY TABLE t1_backup(a,b);
-//INSERT INTO t1_backup SELECT a,b FROM t1;
-//DROP TABLE t1;
-//CREATE TABLE t1(a,b);
-//INSERT INTO t1 SELECT a,b FROM t1_backup;
-//DROP TABLE t1_backup;
-//COMMIT;    
-//";
-//    this.execute();
+//    var sql = "BEGIN TRANSACTION;"
+//    
+//    sql += "ALTER TABLE " + tableName + " RENAME TO " + tableName + "_bkp;";
+//    
+//    sql += "CREATE TABLE " + tableName + " ();";
+//    
+//    sql += "INSERT INTO t1 SELECT a,b FROM t1_bkp;";
+//    
+//    sql += "DROP TABLE t1_bkp;";
+//    
+//    sql += "COMMIT;";
+//    
+//    this.execute(sql);
 }
 
 Migration.prototype.addIndex = function(tableName, columnName, unique) {
@@ -225,8 +230,10 @@ Migration.prototype.removeIndex = function(tableName, columnName) {
     console.log('remove index on ' + tableName + '.' + columnName);
 }
 
-Migration.prototype.execute = function(sql, args) {
-    this.queue.unshift([sql, args]);
+Migration.prototype.executeSql = function(sql, args) {
+    this.actions.unshift(function(tx, nextCommand){
+        tx.executeSql(sql, args, nextCommand);
+    });
 }
 
 var ColumnsHelper = function() {
@@ -234,21 +241,21 @@ var ColumnsHelper = function() {
 }
 
 ColumnsHelper.prototype.text = function(columnName) {
-    this.columns.push(columnName + ' TEXT');
+    this.columns.unshift(columnName + ' TEXT');
 }
 
 ColumnsHelper.prototype.integer = function(columnName) {
-    this.columns.push(columnName + ' INT');
+    this.columns.unshift(columnName + ' INT');
 }
 
 ColumnsHelper.prototype.boolean = function(columnName) {
-    this.columns.push(columnName + ' BOOL');
+    this.columns.unshift(columnName + ' BOOL');
 }
 
 ColumnsHelper.prototype.date = function(columnName) {
-    this.columns.push(columnName + ' DATE');
+    this.columns.unshift(columnName + ' DATE');
 }
 
 ColumnsHelper.prototype.json = function(columnName) {
-    this.columns.push(columnName + ' TEXT');
+    this.columns.unshift(columnName + ' TEXT');
 }

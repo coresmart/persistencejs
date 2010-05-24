@@ -171,7 +171,7 @@ asyncTest("API", 12, function(){
             ok(typeof(this.removeColumn) == "function", 'removeColumn');
             ok(typeof(this.addIndex) == "function", 'addIndex');
             ok(typeof(this.removeIndex) == "function", 'removeIndex');
-            ok(typeof(this.execute) == "function", 'execute');
+            ok(typeof(this.executeSql) == "function", 'execute');
             ok(typeof(this.dropTable) == "function", 'dropTable');
             ok(typeof(this.createTable) == "function", 'createTable');
             
@@ -191,7 +191,7 @@ asyncTest("API", 12, function(){
 asyncTest("execute", 1, function(){    
     Migrator.migration(1, {
         up: function() { 
-            this.execute('CREATE TABLE test (id INTEGER)');
+            this.executeSql('CREATE TABLE test (id INTEGER)');
         }
     });
     

@@ -224,6 +224,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       if (!trackedObjects[obj.id]) {
         trackedObjects[obj.id] = obj;
       }
+      return persistence;
     };
 
     /**
@@ -234,6 +235,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       if (!objectsToRemove[obj.id]) {
         objectsToRemove[obj.id] = obj;
       }
+      return persistence;
     };
 
     /**

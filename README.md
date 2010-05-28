@@ -149,7 +149,7 @@ optional.
     });
 
 There is also a migrations plugin you can check out, documentation can be found
-in _persistence.migrations.docs.md_ file
+in [persistence.migrations.docs.md](persistence.migrations.docs.md) file.
 
 Creating and manipulating objects
 ---------------------------------

@@ -2,7 +2,7 @@
 
 `persistence.migrations.js` is a plugin for `persistence.js` that provides
 a simple API for altering your databases in a structured and organised manner
-inpired by [Ruby on Rails migrations](http://guides.rubyonrails.org/migrations.html).
+inspired by [Ruby on Rails migrations](http://guides.rubyonrails.org/migrations.html).
 
 ## Anatomy of a Migration
 

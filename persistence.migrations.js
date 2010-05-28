@@ -175,12 +175,12 @@ Migration.prototype.executeActions = function(callback) {
 }
 
 Migration.prototype.up = function(callback) {
-    this.body.up.apply(this);
+    if (this.body.up) this.body.up.apply(this);
     this.executeActions(callback);
 }
 
 Migration.prototype.down = function(callback) {
-    this.body.down.apply(this);    
+    if (this.body.down) this.body.down.apply(this);    
     this.executeActions(callback);
 }
 

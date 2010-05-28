@@ -420,5 +420,63 @@ asyncTest("removeIndex", 1, function(){
     });
 });
 
+module("Models", {
+    setup: function() {
+        console.log('setup');
+        stop();
+        console.log('defining');
+        this.Task = persistence.define('Task', {
+          name: "TEXT",
+          description: "TEXT",
+          done: "BOOL"
+        });
+        console.log('defining migration');
+        Migrator.migration(1, {
+            up: function() {
+                this.createTable('Task', function(t){
+                    t.text('name');
+                    t.text('description');
+                    t.boolean('done');
+                });
+            },
+            down: function() {
+                this.dropTable('Task');
+            }
+        });
+        console.log('running migrations');
+        Migrator.migrate(function(){
+            console.log('setup finished');
+            start();
+            console.log('start');
+        });
+    },
+    teardown: function() {
+        console.log('teardown');
+        stop();
+        
+        Migrator.migrate(0, function(){
+            console.log('teardown finished');
+            start();
+        });
+    }
+});
+
+asyncTest("CRUD", 1, function(){
+    console.log('CRUD');
+    var task = new this.Task;
+    var allTasks = this.Task.all();
+    
+    console.log('flushing');
+    persistence.add(task).flush(null, function() {
+        persistence.clean(); delete task;
+        console.log('listing');
+        allTasks.list(null, function(){
+          console.log('list');
+            ok(true, 'task found');
+            start();
+        });
+    });
+});
+
     }); // end Migrator.setup()
 });

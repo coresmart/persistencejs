@@ -63,25 +63,27 @@ to `"{userName}@domain.com"`.
 
     persistence.defineMigration(3, {
       up: function() {
-        this.addColumn({table}, {column name}, {column type});
-        this.removeColumn({table}, {column name});
-        this.addIndex({table}, {column name});
-        this.removeIndex({table}, {column name});
-        this.executeSql({raw sql});
-        this.dropTable({table name});
+        this.addColumn('TableName', 'columnName', 'COLUMN_TYPE');
+        this.removeColumn('TableName', 'columnName');
+        this.addIndex('TableName', 'columnName');
+        this.removeIndex('TableName', 'columnName');
+        this.executeSql('RAW SQL');
+        this.dropTable('TableName');
 
-        this.createTable({table name}, function(table){
-          table.text({column name});
-          table.integer({column name});
-          table.boolean({column name});
-          table.json({column name});
-          table.date({column name});
+        this.createTable('TableName', function(table){
+          table.text('textColumnName');
+          table.integer('integerColumnName');
+          table.boolean('booleanColumnName');
+          table.json('jsonColumnName'); // JSON columns will be mapped to TEXT columns on database
+          table.date('dateColumnName');
         });
       }
     });
 
 ## Running Migrations
 
-After your migrations have been loaded, you can run `persistence.migrate()` to
-run migrations until the most recent or you can pass a version number to migrate()
-in case you need to rollback to some specific version.
+After your migrations have been loaded you can run:
+
+* `persistence.migrate()` to run migrations up to the most recent
+* `persistence.migrate(function)` to run migrations up to the most recent and execute some code
+* `persistence.migrate(version, function)` to run migrations up / down to the specified version and execute some code

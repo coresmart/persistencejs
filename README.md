@@ -148,6 +148,9 @@ optional.
       // automatically started
     });
 
+There is also a migrations plugin you can check out, documentation can be found
+in _persistence.migrations.docs.md_ file
+
 Creating and manipulating objects
 ---------------------------------
 

@@ -14,7 +14,7 @@ function createMigrations(starting, amount, actions){
     if (actions.createUp)
       newActions.up = actions.createUp(i);
     
-    Migrator.migration(i, newActions);
+    persistence.defineMigration(i, newActions);
   }
 }
 

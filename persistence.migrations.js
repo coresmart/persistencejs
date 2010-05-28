@@ -29,8 +29,6 @@ if(!window.persistence) { // persistence.js not loaded!
   throw "persistence.js should be loaded before persistence.search.js"
 }
 
-persistence.migrations = (window && window.persistence) ? window.persistence : {};
-
 (function() {
   
     var Migrator = {
@@ -285,10 +283,12 @@ persistence.migrations = (window && window.persistence) ? window.persistence : {
     }
     
     // Makes Migrator and Migration available to tests
+    persistence.migrations = {};
     persistence.migrations.Migrator = Migrator;
     persistence.migrations.Migration = Migration;
     persistence.migrations.init = Migrator.setup;
     
     persistence.migrate = Migrator.migrate;
+    persistence.defineMigration = Migrator.migration;
     
 }());

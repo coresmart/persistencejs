@@ -214,7 +214,7 @@ if(!window.persistence) { // persistence.js not loaded!
     }
     
     Migration.prototype.removeColumn = function(tableName, columnName) {
-      this.actions.unshift(function(tx, nextCommand){
+      this.action(function(tx, nextCommand){
         var sql = 'select sql from sqlite_master where type = "table" and name == "'+tableName+'"';
         tx.executeSql(sql, null, function(result){
           var columns = new RegExp("CREATE TABLE \\w+ \\((.+)\\)").exec(result[0].sql)[1].split(', ');
@@ -253,9 +253,13 @@ if(!window.persistence) { // persistence.js not loaded!
     }
     
     Migration.prototype.executeSql = function(sql, args) {
-      this.actions.unshift(function(tx, nextCommand){
+      this.action(function(tx, nextCommand){
         tx.executeSql(sql, args, nextCommand);
       });
+    }
+    
+    Migration.prototype.action = function(callback) {
+      this.actions.unshift(callback);
     }
     
     var ColumnsHelper = function() {

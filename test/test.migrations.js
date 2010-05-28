@@ -85,7 +85,7 @@ function indexNotExists(table, column, callback) {
 var Migrator = persistence.migrations.Migrator;
 
 $(document).ready(function(){
-  persistence.connect('migrationstest', 'My migrations db', 5 * 1024 * 1024);
+  persistence.connect('migrationstest', 'My db', 5 * 1024 * 1024);
   persistence.db.log = false;
   
   persistence.migrations.init(function() {
@@ -459,17 +459,90 @@ module("Models", {
   }
 });
 
-asyncTest("CRUD", 1, function(){
-  var task = new this.Task;
+asyncTest("Adding and retrieving Entity after migration", 1, function(){
+  var task = new this.Task({name: 'test'});
   var allTasks = this.Task.all();
   
   persistence.add(task).flush(null, function() {
     persistence.clean(); delete task;
-    allTasks.list(null, function(){
-      ok(true, 'task found');
+    allTasks.list(null, function(result){
+      equals(result.length, 1, 'task found');
       start();
     });
   });
+});
+
+module("Custom actions", {
+  setup: function() {
+    stop();
+    
+    this.User = persistence.define('User', {
+      userName: "TEXT",
+      email: "TEXT"
+    });
+    
+    Migrator.migration(1, {
+      up: function() {
+        this.createTable('User', function(t){
+          t.text('userName');
+        });
+      },
+      down: function() {
+        this.dropTable('User');
+      }
+    });
+    
+    Migrator.migrate(function(){
+      start();
+    });
+  },
+  teardown: function() {
+    stop();
+    
+    Migrator.migrate(0, function(){
+      start();
+    });
+  }
+});
+
+
+asyncTest("Running custom actions", 2, function(){
+  var user1 = new this.User({userName: 'user1'});
+  var user2 = new this.User({userName: 'user2'});
+  var allUsers = this.User.all();
+  
+  function addUsers() {
+    persistence.add(user1).add(user2).flush(null, createAndRunMigration);
+  }
+
+  function createAndRunMigration() {
+    Migrator.migration(2, {
+      up: function() {
+        this.addColumn('User', 'email', 'TEXT');
+        this.action(function(tx, nextAction){
+          allUsers.list(tx, function(result){
+            result.forEach(function(u){
+              u.email = u.userName + '@domain.com';
+              persistence.add(u);
+            });
+            persistence.flush(tx, nextAction);
+          });
+        });
+      }
+    });
+    Migrator.migrate(assertUpdated);
+  }
+  
+  function assertUpdated() {
+    allUsers.list(null, function(result){
+      result.forEach(function(u){
+        ok(u.email == u.userName + '@domain.com');
+      });
+      start();
+    });
+  }
+  
+  addUsers();
 });
     
   }); // end persistence.migrations.init()

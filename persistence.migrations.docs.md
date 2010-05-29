@@ -82,8 +82,16 @@ to `"{userName}@domain.com"`.
 
 ## Running Migrations
 
-After your migrations have been loaded you can run:
+First thing you need to do is initialize migrations plugin:
+
+    persistence.migrations.init(function() {
+      // Optional callback to be executed after initialization
+    });
+
+Then you should load your migrations and run:
 
 * `persistence.migrate()` to run migrations up to the most recent
 * `persistence.migrate(function)` to run migrations up to the most recent and execute some code
 * `persistence.migrate(version, function)` to run migrations up / down to the specified version and execute some code
+
+To load migrations you should use something like [RequireJS](http://requirejs.org/).

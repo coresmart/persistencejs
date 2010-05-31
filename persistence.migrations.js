@@ -26,7 +26,7 @@
  */
 
 if(!window.persistence) { // persistence.js not loaded!
-  throw "persistence.js should be loaded before persistence.search.js"
+  throw "persistence.js should be loaded before persistence.migrations.js"
 }
 
 (function() {

@@ -510,7 +510,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                 var coll = it;
                 if (meta.hasMany[coll].manyToMany) {
                   that.__defineSetter__(coll, function (val) {
-                      throw "Not yet supported.";
+                      throw "Not yet supported!!!";
                     });
                   that.__defineGetter__(coll,
                     function () {
@@ -533,7 +533,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                     });
                 } else {
                   that.__defineSetter__(coll, function (val) {
-                      throw "Not yet supported.";
+                      if(val && val._items) { 
+                        // Local query collection, just add each item
+                        // TODO: this is technically not correct, should clear out existing items too
+                        var items = val._items;
+                        for(var i = 0; i < items.length; i++) {
+                          that[coll].add(items[i]);
+                        }
+                      } else {
+                        throw "Not yet supported.";
+                      }
                     });
                   that.__defineGetter__(coll, function () {
                       if (this._data[coll]) {

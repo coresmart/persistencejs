@@ -1668,6 +1668,25 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
       };
 
+      LocalQueryCollection.prototype.destroyAll = function(callback) {
+        if(!callback || callback.executeSql) { // first argument is transaction
+          callback = arguments[1]; // set to second argument
+        }
+        this._items = [];
+        if(callback) callback();
+      };
+
+      LocalQueryCollection.prototype.count = function(callback) {
+        if(!callback || callback.executeSql) { // first argument is transaction
+          callback = arguments[1]; // set to second argument
+        }
+        if(callback) {
+          callback(this._items.length);
+        } else {
+          return this._items.length;
+        }
+      };
+
       persistence.QueryCollection      = QueryCollection;
       persistence.DbQueryCollection    = DbQueryCollection;
       persistence.LocalQueryCollection = LocalQueryCollection;

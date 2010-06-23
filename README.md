@@ -290,6 +290,10 @@ A `QueryCollection` has the following methods:
   Returns a new `QueryCollection` that prefetches entities linked
   through relationship `rel`, note that this only works for one-to-one
   and many-to-one relationships.
+* `add(obj)`  
+  Adds object `obj` to the collection.
+* `remove(obj)`  
+  Removes object `obj` from the collection.
 * `list(tx, callback)`  
   Asynchronously fetches the results matching the formulated query.
   Once retrieved, the callback function is invoked with an array of
@@ -298,15 +302,14 @@ A `QueryCollection` has the following methods:
   Asynchronously fetches the results matching the formulated query.
   Once retrieved, the `eachCallback` function is invoked on each
   element of the result objects.
-* `add(obj)`  
-  Adds object `obj` to the collection.
-* `remove(obj)`  
-  Removes object `obj` from the collection.
 * `one(tx, callback)`
   Asynchronously fetches the first element of the collection, or `null` if none.
 * `destroyAll(tx, callback)`
   Asynchronously removes all the items in the collection. __Important__: this does
   not only remove the items from the collection, but removes the items themselves!
+* `count(tx, callback)`
+  Asynchronously counts the number of items in the collection. The arguments passed
+  to the `callback` function is the number of items.
 
 Query collections are returned by:
 

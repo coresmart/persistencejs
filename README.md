@@ -302,6 +302,11 @@ A `QueryCollection` has the following methods:
   Adds object `obj` to the collection.
 * `remove(obj)`  
   Removes object `obj` from the collection.
+* `one(tx, callback)`
+  Asynchronously fetches the first element of the collection, or `null` if none.
+* `destroyAll(tx, callback)`
+  Asynchronously removes all the items in the collection. __Important__: this does
+  not only remove the items from the collection, but removes the items themselves!
 
 Query collections are returned by:
 

@@ -510,7 +510,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                 var coll = it;
                 if (meta.hasMany[coll].manyToMany) {
                   that.__defineSetter__(coll, function (val) {
-                      throw "Not yet supported!!!";
+                      if(val && val._items) { 
+                        // Local query collection, just add each item
+                        // TODO: this is technically not correct, should clear out existing items too
+                        var items = val._items;
+                        for(var i = 0; i < items.length; i++) {
+                          that[coll].add(items[i]);
+                        }
+                      } else {
+                        throw "Not yet supported.";
+                      }
                     });
                   that.__defineGetter__(coll,
                     function () {
@@ -1434,6 +1443,39 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                 callback(results);
                 that.triggerEvent('list', that, results);
               });
+          });
+      };
+
+      /**
+       * Asynchronous call to remove all the items in the collection. 
+       * Note: does not only remove the items from the collection, but
+       * the items themselves.
+       * @param tx transaction to use
+       * @param callback function to be called when clearing has completed
+       */
+      DbQueryCollection.prototype.destroyAll = function (tx, callback) {
+        var that = this;
+        if(tx && !tx.executeSql) { // provided callback as first argument
+          callback = tx;
+          tx = null;
+        } 
+        if(!tx) { // no transaction supplied
+          persistence.transaction(function(tx) {
+              that.clear(tx, callback);
+            });
+          return;
+        } 
+        var entityName = this._entityName;
+
+        var args = [];
+        var whereSql = "WHERE "
+        + [ this._filter.sql("", args) ].concat(
+          this._additionalWhereSqls).join(' AND ');
+
+        var sql = "DELETE FROM `" + entityName + "` " + whereSql;
+
+        persistence.flush(tx, function () {
+            tx.executeSql(sql, args, callback);
           });
       };
 

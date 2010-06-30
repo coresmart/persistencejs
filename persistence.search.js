@@ -176,7 +176,7 @@ if(!window.persistence) { // persistence.js not loaded!
         for (var id in persistence.getObjectsToRemove()) {
           if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
             var obj = persistence.getObjectsToRemove()[id];
-            var meta = persistence.define(obj._type);
+            var meta = persistence.define(obj._type).meta;
             if(meta.textIndex) {
               queries.push(['DELETE FROM `' + obj._type + '_Index` WHERE `entityId` = ?', [id]]);
             }

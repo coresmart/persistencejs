@@ -341,6 +341,10 @@ Group](http://groups.google.com/group/persistencejs).
 Thanks goes to [Fabio Rehm](http://github.com/fgrehm) and [Lukas
 Berns](http://github.com/lukasberns) for their contributions.
 
+If you use [GWT](http://code.google.com/webtoolkit/) (the Google Web
+Toolkit), be sure to have a look at [Dennis Z. Jiang's GWT persistence.js
+wrapper](http://github.com/dennisjzh/gwt-persistence).
+
 License
 -------
 

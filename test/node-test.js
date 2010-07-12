@@ -1,5 +1,19 @@
-console.profile();
-persistence.connect('manytomany', 'My test db', 5 * 1024 * 1024, 1.0);
+var persistence = require('../persistence').persistence;
+var persistenceBackend = require('../persistence.backend.mysql');
+var sys = require('sys');
+
+persistenceBackend.configure('nodejs_mysql', 'test', 'test');
+
+var session = persistenceBackend.getSession();
+
+// Switch off query logging:
+//persistence.db.log = false;
+
+function log(s) {
+  sys.print(s + "\n");
+}
+
+log("Connected.");
 
 var Task = persistence.define('Task', {
     name: "TEXT",
@@ -18,35 +32,33 @@ Tag.hasMany('tasks', Task, 'tags');
 // 1:N
 Category.hasMany('tasks', Task, 'category');
 
-persistence.schemaSync(function (tx) {
+session.schemaSync(function () {
     var c = new Category( {
         name: "Main"
-    });
-    persistence.add(c);
+    }, session);
+    session.add(c);
     var tag = new Tag( {
         name: "urgent"
-    });
-    persistence.add(tag);
+    }, session);
+    session.add(tag);
     for ( var i = 0; i < 5; i++) {
-        var t = new Task();
+        var t = new Task({}, session);
         t.name = 'Task ' + i;
         t.done = i % 2 == 0;
         t.category = c;
         t.tags.add(tag);
-        persistence.add(t);
+        session.add(t);
     }
 
-    persistence.flush(tx, function () {
+    session.flush(null, function () {
         var allTasks = c.tasks.prefetch('category').filter("done", "=", true);
-        console.log('here');
 
-        allTasks.list(tx, function (results) {
+        allTasks.list(null, function (results) {
             results.forEach(function (r) {
-                console.log('[' + r.category.name + '] ' + r.name)
-                window.task = r;
+                log('[' + r.category.name + '] ' + r.name);
             });
-            //persistence.reset(tx);
-            console.profileEnd();
+            //persistence.reset();
         });
     });
 });
+

@@ -22,6 +22,20 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
+// Some set-up code for non-browser environments
+try {
+  if(!window) {
+    var window = {};
+    var console = {};
+    exports.console = console;
+  }
+} catch(e) {
+  var window = {};
+  var console = {};
+  exports.console = console;
+}
+
 var persistence = (window && window.persistence) ? window.persistence : {};
 
 (function () {
@@ -112,6 +126,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     }
 
     Session.prototype = persistence; // Inherit everything from the root persistence object
+
+    persistence.Session = Session;
 
     /**
      * Connect to a database
@@ -214,7 +230,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
               otherMeta = meta.hasOne[rel].type.meta;
               rowDef += rel + " VARCHAR(255), ";
               queries.push( [
-                  "CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
+                  //"CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
+                  "CREATE INDEX `" + meta.name + "_" + rel + "_" + otherMeta.name
                   + "` ON `" + meta.name + "` (`" + rel + "`)", null ]);
             }
           }
@@ -224,10 +241,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
               if (!persistence.generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
-                    "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
+                    //"CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
+                    "CREATE INDEX `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
                     + tableName + "` (`" + meta.name + "_" + rel + "`)", null ]);
                 queries.push( [
-                    "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + otherMeta.name + "_"
+                    //"CREATE INDEX IF NOT EXISTS `" + tableName + "_" + otherMeta.name + "_"
+                    "CREATE INDEX `" + tableName + "_" + otherMeta.name + "_"
                     + meta.hasMany[rel].inverseProperty + "` ON `" + tableName + "` (`"
                     + otherMeta.name + "_" + meta.hasMany[rel].inverseProperty + "`)", null ]);
                 queries.push( [
@@ -921,13 +940,18 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
         function executeOne () {
           var queryTuple = queries.pop();
-          tx.executeSql(queryTuple[0], queryTuple[1], function () {
-              if (queries.length > 0) {
-                executeOne();
-              } else if (callback) {
-                callback.apply(this, callbackArgs);
-              }
-            }, function(_, err) { console.log(err); });
+          
+          var oneFn = function () {
+            if (queries.length > 0) {
+              executeOne();
+            } else if (callback) {
+              callback.apply(this, callbackArgs);
+            }
+          };
+          tx.executeSql(queryTuple[0], queryTuple[1], oneFn, function(_, err) {
+            console.log(err.message);
+            oneFn();
+          });
         }
         if (queries.length > 0) {
           executeOne();
@@ -1756,10 +1780,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         persistence.db.implementation = "html5";
       } else if (window && window.google && google.gears) {
         persistence.db.implementation = "gears";
-      } else if (openDatabaseSync) {
-          // TODO: find a browser that implements openDatabaseSync and check out if
-          //       it is attached to the window or some other object
-          persistence.db.implementation = "html5-sync";
+      } else {
+        try {
+          if (openDatabaseSync) {
+            // TODO: find a browser that implements openDatabaseSync and check out if
+            //       it is attached to the window or some other object
+            persistence.db.implementation = "html5-sync";
+          }
+        } catch(e) {
+        }
       }
 
       persistence.db.html5 = {};
@@ -1878,6 +1907,10 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           }
       };
 }());
+
+try {
+  exports.persistence = persistence;
+} catch(e) {}
 
 // Equals methods
 // Note: really necessary?

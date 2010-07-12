@@ -96,8 +96,8 @@ if(!window.persistence) { // persistence.js not loaded!
       return sqlParts;
     }
 
-    function SearchQueryCollection(entityName, query, prefixByDefault) {
-      this.init(entityName, SearchQueryCollection);
+    function SearchQueryCollection(session, entityName, query, prefixByDefault) {
+      this.init(session, entityName, SearchQueryCollection);
 
       if(query) {
         this._additionalJoinSqls.push(', `' + entityName + '_Index`');
@@ -129,8 +129,8 @@ if(!window.persistence) { // persistence.js not loaded!
          * Returns a query collection representing the result of a search
          * @param query an object with the following fields:
          */
-        Entity.search = function(query, prefixByDefault) {
-          return persistence.uniqueQueryCollection(new SearchQueryCollection(Entity.meta.name, query, prefixByDefault));
+        Entity.search = function(query, prefixByDefault, session) {
+          return persistence.uniqueQueryCollection(new SearchQueryCollection(session, Entity.meta.name, query, prefixByDefault));
         };
       });
 

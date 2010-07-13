@@ -18,7 +18,7 @@ Tag.hasMany('tasks', Task, 'tags');
 // 1:N
 Category.hasMany('tasks', Task, 'category');
 
-persistence.schemaSync(function (tx) {
+persistence.schemaSync(null, function (tx) {
     var c = new Category( {
         name: "Main"
     });
@@ -38,7 +38,6 @@ persistence.schemaSync(function (tx) {
 
     persistence.flush(tx, function () {
         var allTasks = c.tasks.prefetch('category').filter("done", "=", true);
-        console.log('here');
 
         allTasks.list(tx, function (results) {
             results.forEach(function (r) {

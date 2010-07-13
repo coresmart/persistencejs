@@ -201,6 +201,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     function columnTypeToSqliteType(type) {
       switch(type) {
       case 'JSON': return 'TEXT';
+      case 'BOOL': return 'INT';
+      case 'DATE': return 'INT';
       default: return type;
       }
     }
@@ -213,7 +215,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      *            function to be called when synchronization has completed,
      *            takes started transaction as argument
      */
-    persistence.schemaSync = function (callback) {
+    persistence.schemaSync = function (tx, callback) {
+      if(tx && !tx.executeSql) {
+        callback = tx;
+        tx = null;
+      }
+      if(!tx) {
+        var session = this;
+        this.transaction(function(tx) { session.schemaSync(tx, callback); });
+        return;
+      }
       var queries = [], meta, rowDef, otherMeta, tableName;
       
       for (var entityName in entityMeta) {
@@ -264,13 +275,11 @@ var persistence = (window && window.persistence) ? window.persistence : {};
               null ]);
         }
       }
-      this.transaction(function (tx) {
-          var fns = persistence.schemaSyncHooks;
-          for(var i = 0; i < fns.length; i++) {
-            fns[i](tx);
-          }
-          executeQueriesSeq(tx, queries, callback, tx);
-        });
+      var fns = persistence.schemaSyncHooks;
+      for(var i = 0; i < fns.length; i++) {
+        fns[i](tx);
+      }
+      executeQueriesSeq(tx, queries, callback);
     };
 
     /**
@@ -381,29 +390,39 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     /**
      * Remove all tables in the database (as defined by the model)
      */
-    persistence.reset = function (tx) {
+    persistence.reset = function (tx, callback) {
       var session = this;
       if(!tx) {
         this.transaction(function(tx) { session.reset(tx); });
         return;
       }
-      var tableArray = [];
-      for (var p in persistence.generatedTables) {
-        if (persistence.generatedTables.hasOwnProperty(p)) {
-          tableArray.push(p);
+      // First sync the schema
+      session.schemaSync(tx, function() {
+        var tableArray = [];
+        for (var p in persistence.generatedTables) {
+          if (persistence.generatedTables.hasOwnProperty(p)) {
+            tableArray.push(p);
+          }
         }
-      }
-      function dropOneTable () {
-        var tableName = tableArray.pop();
-        tx.executeSql("DROP TABLE " + tableName, null, function () {
-            if (tableArray.length > 0) {
-              dropOneTable();
-            }
-          });
-      }
-      dropOneTable();
-      this.clean();
-      persistence.generatedTables = {};
+        function dropOneTable () {
+          var tableName = tableArray.pop();
+          tx.executeSql("DROP TABLE " + tableName, null, function () {
+              if (tableArray.length > 0) {
+                dropOneTable();
+              } else {
+                if(callback) callback();
+              }
+            });
+        }
+        if(tableArray.length > 0) {
+          dropOneTable();
+        } else {
+          if(callback) callback();
+        }
+
+        session.clean();
+        persistence.generatedTables = {};
+      });
     }
 
     /**
@@ -688,6 +707,11 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
 
         Entity.load = function(session, tx, id, callback) {
+          if(session && session.executeSql) { // first arg is transaction
+            callback = id;
+            id = tx;
+            tx = session;
+          }
           if(id in session.trackedObjects) {
             callback(session.trackedObjects[id]);
             return;
@@ -945,7 +969,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
             if (queries.length > 0) {
               executeOne();
             } else if (callback) {
-              callback.apply(this, callbackArgs);
+              callback.apply(null, callbackArgs);
             }
           };
           tx.executeSql(queryTuple[0], queryTuple[1], oneFn, function(_, err) {
@@ -1057,7 +1081,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       function NullFilter () {
       }
 
-      NullFilter.prototype.sql = function (prefix, values) {
+      NullFilter.prototype.sql = function (alias, values) {
         return "1=1";
       };
 
@@ -1081,9 +1105,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         this.right = right;
       }
 
-      AndFilter.prototype.sql = function (prefix, values) {
-        return "(" + this.left.sql(prefix, values) + " AND "
-               + this.right.sql(prefix, values) + ")";
+      AndFilter.prototype.sql = function (alias, values) {
+        return "(" + this.left.sql(alias, values) + " AND "
+               + this.right.sql(alias, values) + ")";
       }
 
       AndFilter.prototype.match = function (o) {
@@ -1113,18 +1137,18 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         this.value = value;
       }
 
-      PropertyFilter.prototype.sql = function (prefix, values) {
+      PropertyFilter.prototype.sql = function (alias, values) {
         if (this.operator === '=' && this.value === null) {
-          return "`" + prefix + this.property + "` IS NULL";
+          return "`" + alias + '`.`' + this.property + "` IS NULL";
         } else if (this.operator === '!=' && this.value === null) {
-          return "`" + prefix + this.property + "` IS NOT NULL";
+          return "`" + alias + '`.`' + this.property + "` IS NOT NULL";
         } else {
           var value = this.value;
           if(value === true || value === false) {
             value = value ? 1 : 0;
           }
           values.push(persistence.entityValToDbVal(value));
-          return "`" + prefix + this.property + "` " + this.operator + " ?";
+          return "`" + alias + '`.`' + this.property + "` " + this.operator + " ?";
         }
       }
 
@@ -1459,7 +1483,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         var args = [];
         var mainPrefix = entityName + "_";
 
-        var selectFields = selectAll(meta, meta.name, mainPrefix);
+        var mainAlias = 'root';
+        var selectFields = selectAll(meta, mainAlias, mainPrefix);
 
         var joinSql = this._additionalJoinSqls.join(' ');
 
@@ -1470,17 +1495,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           selectFields = selectFields.concat(selectAll(thisMeta, tableAlias,
               prefetchField + "_"));
           joinSql += "LEFT JOIN `" + thisMeta.name + "` AS `" + tableAlias
-          + "` ON `" + tableAlias + "`.`id` = `" + mainPrefix
-          + prefetchField + "` ";
+          + "` ON `" + tableAlias + "`.`id` = `" + mainAlias + '`.`' + prefetchField + "` ";
 
         }
 
         var whereSql = "WHERE "
-        + [ this._filter.sql(mainPrefix, args) ].concat(
+        + [ this._filter.sql(mainAlias, args) ].concat(
           this._additionalWhereSqls).join(' AND ');
 
         var sql = "SELECT " + selectFields.join(", ") + " FROM `" + entityName
-                  + "` " + joinSql + " " + whereSql;
+                  + "` AS `" + mainAlias + "` " + joinSql + " " + whereSql;
 
         if(this._additionalGroupSqls.length > 0) {
           sql += this._additionalGroupSqls.join(' ');

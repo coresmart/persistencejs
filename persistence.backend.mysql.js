@@ -1,3 +1,7 @@
+/**
+ * This back-end depends on the node.js asynchronous MySQL driver as found on:
+ * http://github.com/sidorares/nodejs-mysql-native
+ */
 var persistencejs = require('./persistence');
 var persistence = persistencejs.persistence;
 var sys = require('sys');
@@ -5,59 +9,65 @@ var createTCPClient = require('./mysql/client').createTCPClient;
 
 /**
  * Based on websql.js from the MySQL Async driver
+ * @TODO: Merge with wrapper code below
  */
 function MySqlTransaction(connection)
 {
-    this.connection = connection;
+  this.connection = connection;
 }
 
 MySqlTransaction.prototype.executeSql = function (query, args, rsCallback, errorCallback)
 {
-    var tx = this;
-    var execCmd = this.connection.execute(query, args);
-    var results = {};
-    results.rows = [];
-    this.connection.row_as_hash = true;
-    execCmd.addListener('row', function(r) {
-        results.rows.push(r);
+  var tx = this;
+  var execCmd = this.connection.execute(query, args);
+  var results = {};
+  results.rows = [];
+  this.connection.row_as_hash = true;
+  tx.clean = true;
+  //sys.print(sys.inspect(args));
+  execCmd.addListener('row', function(r) {
+      results.rows.push(r);
     });
-    execCmd.addListener('end', function() {
-        if (tx.clean && rsCallback) rsCallback(tx, results);
-      });
-    execCmd.addListener('error', function(err)
+  execCmd.addListener('end', function() {
+      if (tx.clean && rsCallback) {
+        tx.clean = true;
+        rsCallback(tx, results);
+      } 
+    });
+  execCmd.addListener('error', function(err)
     { 
-       tx.clean = false; 
-       sys.print(sys.inspect(err));
-       if (errorCallback) 
-          errorCallback(tx, err);
-       if (tx.onerror)
-           tx.onerror(err); 
+      tx.clean = false;
+      if (errorCallback) 
+        errorCallback(tx, err);
+      if (tx.onerror)
+        tx.onerror(err); 
     });
-    tx.last_exec_cmd = execCmd;
+  tx.last_exec_cmd = execCmd;
 }
 
 function openDatabase(db, user, password)
 {
-    var webdb = {};
-    var connection = createTCPClient();
-    connection.auth(db, user, password);
-    connection.query('SET autocommit=0;');
-    connection.auto_prepare = true;
-    webdb.transaction = function(txCreated, txError)
-    {
-        var t = new MySqlTransaction(connection);
-        t.onerror = txError;
-        connection.query('BEGIN');
-        t.clean = true;
-        txCreated(t);
-        var commit = connection.query("");
-        t.last_exec_cmd.addListener('end', function()
-        {   
-            commit.sql = t.clean ? "COMMIT" : "ROLLBACK"
-       });
-    }
-    webdb.close = function() { connection.close(); };
-    return webdb;
+  var webdb = {};
+  var connection = createTCPClient();
+  connection.auth(db, user, password);
+  connection.query('SET autocommit=0;');
+  connection.auto_prepare = true;
+  webdb.transaction = function(txCreated, txError)
+  {
+    var t = new MySqlTransaction(connection);
+    t.onerror = txError;
+    connection.query('BEGIN');
+    t.clean = true;
+    txCreated(t);
+    var commit = connection.query("");
+    t.last_exec_cmd.addListener('end', function() {   
+        commit.sql = t.clean ? "COMMIT" : "ROLLBACK"
+      });
+  }
+  webdb.close = function() { 
+    connection.close();
+  };
+  return webdb;
 }
 
 persistencejs.console.log = function(s) {

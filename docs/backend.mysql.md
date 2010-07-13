@@ -1,4 +1,4 @@
-persistence.backend.mysql.md
+Node.js MySQL Back-end
 ============================
 
 This library implements some wrappers to let `persistence.js` work
@@ -6,20 +6,24 @@ with a MySQL database in a [node.js](http://nodejs.org) environment.
 Although not fully stable it is usable at this point using
 [nodejs-mysql-native](http://github.com/sidorares/nodejs-mysql-native)
 library (which you have to download and include in your project
-manually).
+manually). This library is a starting point to start adding more
+back-ends to `persistence.js`, including NoSQL back-ends.
 
-Use of `persistence.js` is slightly modified to deal with multiple
-concurrent session in the node.js application. A `Session` object needs
-to be passed as an extra argument to certain method calls, typically
-as a last argument. Methods usually called on the `persistence` object
-itself are now called on the `Session` object.
+Sadly the node.js server environment requires slight changes to
+`persistence.js` to make it work with multiple database connections:
+
+* A `Session` object needs to be passed as an extra argument to
+  certain method calls, typically as a last argument.
+* Methods previously called on the `persistence` object itself are now
+  called on the `Session` object.
 
 An example node.js application is included in `test/node-blog.js`. 
 
 Setup
 -----
 You need to `require` two modules, the `persistence.js` library itself
-and the MySQL backend module:
+and the MySQL backend module. Also make sure the MySQL library
+is located (or symlinked) from the current directory:
 
     var persistence = require('./persistence').persistence;
     var persistenceBackend = require('./persistence.backend.mysql');

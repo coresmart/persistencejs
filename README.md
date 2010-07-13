@@ -1,13 +1,21 @@
 persistence.js
 ==============
 `persistence.js` is a simple asynchronous Javascript object-relational
-mapper library. It works with the in-browser HTML5 SQLite database as
+mapper library. In the browser it works with the HTML5 SQLite database as
 well as Google Gears' local data store. It may be used to develop
 offline-capable web applications.
 
-It has no dependencies on any other frameworks, other than the Google
-Gears [initialization script](http://code.google.com/apis/gears/gears_init.js), 
-in case you want to enable Gears support.
+`persistence.js` may also be used on the server, in particular in
+[node.js](http://nodejs.org) environments. The support for this is
+currently under heavy development. There is currently a MySQL back-end
+available. The API to be used in node.js is slightly different than
+described in this README, be sure to check out the
+`docs/backend.mysql.md` document to see how it differs.
+
+For browser use, `persistence.js` has no dependencies on any other
+frameworks, other than the Google Gears [initialization
+script](http://code.google.com/apis/gears/gears_init.js), in case you
+want to enable Gears support.
 
 About asynchronous programming
 ------------------------------

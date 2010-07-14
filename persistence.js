@@ -1012,6 +1012,31 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
       }
 
+      function arrayContains(ar, item) {
+        var l = ar.length;
+        for(var i = 0; i < l; i++) {
+          var el = ar[i];
+          if(el.equals && el.equals(item)) {
+            return true;
+          } else if(el === item) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function arrayRemove(ar, item) {
+        var l = ar.length;
+        for(var i = 0; i < l; i++) {
+          var el = ar[i];
+          if(el.equals && el.equals(item)) {
+            ar.splice(i, 1);
+          } else if(el === item) {
+            ar.splice(i, 1);
+          }
+        }
+      }
+
       ////////////////// QUERY COLLECTIONS \\\\\\\\\\\\\\\\\\\\\\\
 
       /**
@@ -1653,7 +1678,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       }
 
       ManyToManyDbQueryCollection.prototype.add = function(obj) {
-        if(!this._localAdded.contains(obj)) {
+        if(!arrayContains(this._localAdded, obj)) {
           this._session.add(obj);
           this._localAdded.push(obj);
         }
@@ -1669,9 +1694,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       }
 
       ManyToManyDbQueryCollection.prototype.remove = function(obj) {
-        if(this._localAdded.contains(obj)) { // added locally, can just remove it from there
-          this._localAdded.remove(obj);
-        } else if(!this._localRemoved.contains(obj)) {
+        if(arrayContains(this._localAdded, obj)) { // added locally, can just remove it from there
+          arrayRemove(this._localAdded, obj);
+        } else if(!arrayContains(this._localRemoved, obj)) {
           this._localRemoved.push(obj);
         }
       }
@@ -1935,52 +1960,6 @@ var persistence = (window && window.persistence) ? window.persistence : {};
 try {
   exports.persistence = persistence;
 } catch(e) {}
-
-// Equals methods
-// Note: really necessary?
-
-Number.prototype.equals = function(other) {
-  return this == other; 
-}
-
-Boolean.prototype.equals = function(other) {
-  return this == other; 
-}
-
-String.prototype.equals = function(other) {
-  return this == other; 
-}
-
-Array.prototype.equals = function(other) {
-  if(this.length !== other.length) {
-    return false;
-  }
-  for(var i = 0; i < this.length; i++) {
-    if(!this[i].equals(other[i])) {
-      return false;
-    }
-  }
-  return true;
-}
-
-Array.prototype.contains = function(el) {
-  var l = this.length;
-  for(var i = 0; i < l; i++) {
-    if(this[i].equals(el)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-Array.prototype.remove = function(el) {
-  var l = this.length;
-  for(var i = 0; i < l; i++) {
-    if(this[i].equals(el)) {
-      this.splice(i, 1);
-    }
-  }
-}
 
 // JSON2 library, source: http://www.JSON.org/js.html
 // Most modern browsers already support this natively, but mobile

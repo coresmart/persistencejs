@@ -52,8 +52,8 @@ var Post = persistence.define('Post', {
 });
 var Comment = persistence.define('Comment', {
     author: "TEXT",
-    text: "TEXT"
-    date: "DATE",
+    text: "TEXT",
+    date: "DATE"
 });
 
 Post.hasMany('comments', Comment, 'post');

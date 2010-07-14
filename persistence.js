@@ -26,13 +26,13 @@
 // Some set-up code for non-browser environments
 try {
   if(!window) {
-    var window = {};
-    var console = {};
-    exports.console = console;
+    window = {};
+    console = {};
+    //exports.console = console;
   }
 } catch(e) {
-  var window = {};
-  var console = {};
+  window = {};
+  console = {};
   exports.console = console;
 }
 

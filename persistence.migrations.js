@@ -274,7 +274,7 @@ if(!window.persistence) { // persistence.js not loaded!
       this.columns.unshift(columnName + ' INT');
     }
     
-    ColumnsHelper.prototype.boolean = function(columnName) {
+    ColumnsHelper.prototype['boolean'] = function(columnName) {
       this.columns.unshift(columnName + ' BOOL');
     }
     

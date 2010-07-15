@@ -1167,6 +1167,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           return "`" + alias + '`.`' + this.property + "` IS NULL";
         } else if (this.operator === '!=' && this.value === null) {
           return "`" + alias + '`.`' + this.property + "` IS NOT NULL";
+        } else if (this.operator === 'in') {
+          var vals = this.value;
+          var qs = [];
+          for(var i = 0; i < vals.length; i++) {
+            qs.push('?');
+            values.push(persistence.entityValToDbVal(vals[i]));
+          }
+
+          return "`" + alias + '`.`' + this.property + "` IN (" + qs.join(', ') + ")";
         } else {
           var value = this.value;
           if(value === true || value === false) {
@@ -1196,6 +1205,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           break;
         case '>=':
           return o[this.property] >= this.value;
+          break;
+        case 'in':
+          return arrayContains(this.values, o[this.property]);
           break;
         }
       }

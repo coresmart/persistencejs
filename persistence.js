@@ -544,7 +544,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       function Entity (session, obj) {
         var args = argspec.getArgs(arguments, [
             { name: "session", optional: true, check: isSession, defaultValue: persistence },
-            { name: "obj", optional: true, defaultValue: {} }
+            { name: "obj", optional: true, check: function(obj) { return obj; }, defaultValue: {} }
           ]);
         session = args.session;
         obj = args.obj;
@@ -2131,7 +2131,7 @@ var argspec = {};
       };
     }
 
-    argspec.hasProperty = function hasType(type) {
+    argspec.hasType = function(type) {
       return function(obj) {
         return typeof obj === type;
       };

@@ -101,7 +101,7 @@ if(!window.persistence) { // persistence.js not loaded!
 
       if(query) {
         this._additionalJoinSqls.push(', `' + entityName + '_Index`');
-        this._additionalWhereSqls.push('`' + entityName + '`.id = `' + entityName + '_Index`.`entityId`');
+        this._additionalWhereSqls.push('`root`.id = `' + entityName + '_Index`.`entityId`');
         this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index', prefixByDefault).join(' OR ') + ')');
         this._additionalGroupSqls.push(' GROUP BY (`' + entityName + '_Index`.`entityId`)');
         this._additionalGroupSqls.push(' ORDER BY SUM(`' + entityName + '_Index`.`occurrences`) DESC');
@@ -129,8 +129,17 @@ if(!window.persistence) { // persistence.js not loaded!
          * Returns a query collection representing the result of a search
          * @param query an object with the following fields:
          */
-        Entity.search = function(query, prefixByDefault, session) {
-          return persistence.uniqueQueryCollection(new SearchQueryCollection(session, Entity.meta.name, query, prefixByDefault));
+        Entity.search = function(session, query, prefixByDefault) {
+          var args = argspec.getArgs(arguments, [
+              { name: 'session', optional: true, check: function(obj) { return obj.schemaSync; }, defaultValue: persistence },
+              { name: 'query', optional: false, check: argspec.hasType('string') },
+              { name: 'prefixByDefault', optional: false }
+            ]);
+          session = args.session;
+          query = args.query;
+          prefixByDefault = args.prefixByDefault;
+
+          return session.uniqueQueryCollection(new SearchQueryCollection(session, Entity.meta.name, query, prefixByDefault));
         };
       });
 

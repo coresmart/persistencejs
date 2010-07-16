@@ -30,88 +30,105 @@ if(!window.persistence) { // persistence.js not loaded!
 
 persistence.sync = {};
 
-persistence.sync.Change = persistence.define('_Change', {
-    action: "VARCHAR(10)",
-    date: "INT",
-    data: "JSON"
-});
-
-persistence.sync.Sync = persistence.define('_Sync', {
-    date: "INT"
-});
-
 (function() {
 
-    // Keep old flush implementation to call later
-    var oldFlush = persistence.flush;
+    persistence.sync.Sync = persistence.define('_Sync', {
+        entity: "VARCHAR(255)",
+        serverDate: "DATE",
+        localDate: "DATE"
+      });
 
-    /**
-     * Overriding `persistence.flush` to track changes made
-     */
-    persistence.flush = function (tx, callback) {
-      if(!tx) {
-        persistence.transaction(function(tx) { persistence.flush(tx, callback); });
-        return;
-      }
-      var changes = [];
-      for (var id in persistence.getTrackedObjects()) {
-        if (persistence.getTrackedObjects().hasOwnProperty(id)) {
-          var obj = persistence.getTrackedObjects()[id];
-          if(obj._new) {
-            var change = new persistence.sync.Change();
-            change.date = new Date().getTime();
-            change.action = 'new';
-            var rec = {};
-            var fields = persistence.define(obj._type).meta.fields;
-            for(var f in fields) {
-              if(fields.hasOwnProperty(f)) {
-                rec[f] = obj._data[f];
-              }
-            }
-            var refs = persistence.define(obj._type).meta.hasOne;
-            for(var r in refs) {
-              if(refs.hasOwnProperty(r)) {
-                rec[r] = obj._data[r];
-              }
-            }
-            rec.id = obj.id;
-            rec._type = obj._type;
-            change.data = rec;
-            persistence.add(change);
-            changes.push(change);
-          } else {
-            for ( var p in obj._dirtyProperties) {
-              if (obj._dirtyProperties.hasOwnProperty(p)) {
-                var change = new persistence.sync.Change();
-                change.date = new Date().getTime();
-                change.action = 'set-prop';
-                change.data = {type: obj._type, id: obj.id, prop: p, value: obj[p]};
-                persistence.add(change);
-                changes.push(change);
-              }
+    persistence.sync.synchronize = function(uri, Entity, conflictCallback, callback) {
+      persistence.sync.Sync.findBy('entity', Entity.meta.name, function(sync) {
+          var lastServerSyncTime = sync ? sync.serverDate.getTime() : 0;
+          var lastLocalSyncTime = sync ? sync.serverDate.getTime() : 0;
+
+          var xmlHttp = new XMLHttpRequest();
+          xmlHttp.open("GET", uri + '?since=' + lastServerSyncTime, true);
+          xmlHttp.send();
+          xmlHttp.onreadystatechange = function() {
+            if(xmlHttp.readyState==4 && xmlHttp.status==200) {
+              var data = JSON.parse(xmlHttp.responseText);
+              var ids = [];
+              var lookupTbl = {};
+
+              var conflicts = [];
+              var updatesToPush = [];
+
+              console.log(data);
+              data.forEach(function(item) {
+                  ids.push(item.id);
+                  lookupTbl[item.id] = item;
+                })
+              console.log(ids);
+              Entity.all().filter("id", "in", ids).list(function(existingItems) {
+                  existingItems.forEach(function(localItem) {
+                      var remoteItem = lookupTbl[localItem.id];
+                      delete remoteItem.id;
+                      remoteItem.lastChange = new Date(remoteItem.lastChange);
+                      delete lookupTbl[localItem.id];
+                      if(remoteItem.lastChange.getTime() === localItem.lastChange.getTime()) {
+                        return; // not changed
+                      }
+                      var localChangedSinceSync = lastLocalSyncTime < localItem.lastChange.getTime();
+                      var remoteChangedSinceSync = lastServerSyncTime < remoteItem.lastChange.getTime();
+
+                      var itemUpdatedFields = { id: localItem.id };
+                      var itemUpdated = false;
+                      for(var p in remoteItem) {
+                        if(remoteItem.hasOwnProperty(p)) {
+                          if(localItem[p] !== remoteItem[p]) {
+                            console.log("Property differs: " + p);
+                            if(localChangedSinceSync && remoteChangedSinceSync) { // Conflict!
+                              console.log("Conflict!");
+                              conflicts.push({local: localItem, remote: remoteItem, property: p});
+                            } else if(localChangedSinceSync) {
+                              console.log("Push!");
+                              itemUpdated = true;
+                              itemUpdatedFields[p] = localItem[p];
+                            } else {
+                              console.log("Pull!");
+                              localItem[p] = remoteItem[p];
+                            }
+                          }
+                        }
+                      }
+                      if(itemUpdated) {
+                        updatesToPush.push(itemUpdatedFields);
+                      }
+                    });
+                  // Add new remote items
+                  for(var id in lookupTbl) {
+                    if(lookupTbl.hasOwnProperty(id)) {
+                      var remoteItem = lookupTbl[id];
+                      delete remoteItem.id;
+                      var localItem = new Entity(remoteItem);
+                      localItem.id = id;
+                      localItem.lastChange = new Date(remoteItem.lastChange);
+                      persistence.add(localItem);
+                      console.log("Added: ", localItem);
+                    }
+                  }
+                  // Find local new items
+                  Entity.all().filter("id", "not in", ids).filter("lastChange", ">", lastLocalSyncTime).list(function(newItems) {
+                      newItems.forEach(function(newItem) {
+                          var update = { id: newItem.id };
+                          for(var p in newItem._data) {
+                            if(newItem._data.hasOwnProperty(p)) {
+                              update[p] = newItem._data[p];
+                            }
+                          }
+                          updatesToPush.push(update);
+                        });
+                      conflictCallback(conflicts, updatesToPush, function() {
+                          console.log("Updates to push: ", updatesToPush);
+                          persistence.flush(callback);
+                        });
+                    });
+                });
             }
           }
-        }
-      }
-      for (var id in persistence.getObjectsToRemove()) {
-        if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
-          var change = new persistence.sync.Change();
-          change.date = new Date().getTime();
-          change.action = 'delete';
-          change.data = id;
-          persistence.add(change);
-          changes.push(change);
-        }
-      }
-      oldFlush(tx, function() {
-          // Stop tracking change objects, waste of time
-          var trackedObjects = persistence.getTrackedObjects();
-          for(var i = 0; i < changes.length; i++) {
-            delete trackedObjects[changes[i].id];
-          }
-          if(callback) callback();
         });
     }
-
   }());
 

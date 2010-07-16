@@ -18,7 +18,8 @@ Tag.hasMany('tasks', Task, 'tags');
 // 1:N
 Category.hasMany('tasks', Task, 'category');
 
-persistence.schemaSync(null, function (tx) {
+persistence.schemaSync(function (tx) {
+    console.log("Got here!");
     var c = new Category( {
         name: "Main"
     });

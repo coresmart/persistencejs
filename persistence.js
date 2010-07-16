@@ -207,6 +207,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       }
     }
 
+    function isTransaction(obj) {
+      return obj && obj.executeSql;
+    }
+
+    function isSession(obj) {
+      return obj && obj.schemaSync;
+    }
+
     /**
      * Synchronize the data model with the database, creates table that had not
      * been defined before
@@ -216,10 +224,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      *            takes started transaction as argument
      */
     persistence.schemaSync = function (tx, callback) {
-      if(tx && !tx.executeSql) {
-        callback = tx;
-        tx = null;
-      }
+      var args = argspec.getArgs(arguments, [
+          { name: "tx", optional: true, check: isTransaction },
+          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+        ]);
+      tx = args.tx;
+      callback = args.callback;
+
       if(!tx) {
         var session = this;
         this.transaction(function(tx) { session.schemaSync(tx, callback); });
@@ -279,7 +290,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       for(var i = 0; i < fns.length; i++) {
         fns[i](tx);
       }
-      executeQueriesSeq(tx, queries, callback);
+      executeQueriesSeq(tx, queries, function() {
+          callback(tx);
+        });
     };
 
     /**
@@ -316,6 +329,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      *            function to be called when done
      */
     persistence.flush = function (tx, callback) {
+      var args = argspec.getArgs(arguments, [
+          { name: "tx", optional: true, check: isTransaction },
+          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+        ]);
+      tx = args.tx;
+      callback = args.callback;
+
       var session = this;
       if(!tx) {
         this.transaction(function(tx) { session.flush(tx, callback); });
@@ -391,6 +411,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      * Remove all tables in the database (as defined by the model)
      */
     persistence.reset = function (tx, callback) {
+      var args = argspec.getArgs(arguments, [
+          { name: "tx", optional: true, check: isTransaction },
+          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+        ]);
+      tx = args.tx;
+      callback = args.callback;
+
       var session = this;
       if(!tx) {
         this.transaction(function(tx) { session.reset(tx, callback); });
@@ -514,8 +541,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       /**
        * @constructor
        */
-      function Entity (obj, session) {
-        session = session || persistence;
+      function Entity (session, obj) {
+        var args = argspec.getArgs(arguments, [
+            { name: "session", optional: true, check: isSession, defaultValue: persistence },
+            { name: "obj", optional: true, defaultValue: {} }
+          ]);
+        session = args.session;
+        obj = args.obj;
+
         var that = this;
         this.id = createUUID();
         this._new = true;
@@ -569,9 +602,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                 that.__defineGetter__(ref, function () {
                     if (that._data[ref] === null || that._data_obj[ref] !== undefined) {
                       return that._data_obj[ref];
-                    /*} else if(that._data[ref] !== null && trackedObjects[that._data[ref]]) {
-                      that._data_obj[ref] = trackedObjects[that._data[ref]];
-                      return that._data_obj[ref];*/
+                    } else if(that._data[ref] !== null && session.trackedObjects[that._data[ref]]) {
+                      that._data_obj[ref] = session.trackedObjects[that._data[ref]];
+                      return that._data_obj[ref];
                     } else {
                       throw "Property '" + ref + "' with id: " + that._data[ref]
                       + " not fetched, either prefetch it or fetch it manually.";
@@ -660,12 +693,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         };
 
         Entity.prototype.fetch = function(tx, rel, callback) {
+          var args = argspec.getArgs(arguments, [
+              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'rel', optional: false, check: argspec.hasType('string') },
+              { name: 'callback', optional: false, check: argspec.isCallback() },
+            ]);
+          tx = args.tx;
+          rel = args.rel;
+          callback = args.callback;
+
           var that = this;
-          if(typeof tx === "string") {
-            rel = tx;
-            callback = rel;
-            tx = null;
-          }
           if(!tx) {
             this._session.transaction(function(tx) {
                 that.fetch(tx, rel, callback);
@@ -707,31 +744,46 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
 
         Entity.load = function(session, tx, id, callback) {
-          if(session && session.executeSql) { // first arg is transaction
-            callback = id;
-            id = tx;
-            tx = session;
-          }
-          if(id in session.trackedObjects) {
-            callback(session.trackedObjects[id]);
+          var args = argspec.getArgs(arguments, [
+              { name: 'session', optional: true, check: isSession, defaultValue: persistence },
+              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'id', optional: false, check: argspecjs.hasType('string') },
+              { name: 'callback', optional: true, check: argspecjs.isCallback(), defaultValue: function(){} }
+            ]);
+          Entity.findBy(args.session, args.tx, "id", args.id, args.callback);
+        };
+
+        Entity.findBy = function(session, tx, property, value, callback) {
+          var args = argspec.getArgs(arguments, [
+              { name: 'session', optional: true, check: isSession, defaultValue: persistence },
+              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'property', optional: false, check: argspecjs.hasType('string') },
+              { name: 'value', optional: false },
+              { name: 'callback', optional: true, check: argspecjs.isCallback(), defaultValue: function(){} }
+            ]);
+          session = args.session;
+          tx = args.tx;
+          property = args.property;
+          value = args.value;
+          callback = args.callback;
+
+          if(property === 'id' && value in session.trackedObjects) {
+            callback(session.trackedObjects[value]);
             return;
           }
           if(!tx) {
             session.transaction(function(tx) {
-              Entity.load(session, tx, id, callback);
+              Entity.findBy(session, tx, property, value, callback);
             });
             return;
           }
-          if(!id) {
-            callback(null);
-          }
-          tx.executeSql("SELECT * FROM `" + entityName + "` WHERE id = ?", [id], function(results) {
+          tx.executeSql("SELECT * FROM `" + entityName + "` WHERE `" + property + "`= ? LIMIT 1", [session.entityValToDbVal(value)], function(results) {
               if(results.length == 0) {
                 callback(null);
               }
               callback(session.rowToEntity(entityName, results[0]));
             });
-        };
+        }
 
         /**
          * Declares a one-to-many or many-to-many relationship to another entity
@@ -803,6 +855,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param callback (object) the callback function called with the results.
        */
       persistence.dump = function(tx, entities, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'entities', optional: true, check: function(obj) { return entities.length; } },
+            { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
+          ]);
+        tx = args.tx;
+        entities = args.entities;
+        callback = args.callback;
+
         if(!entities) { // Default: all entity types
           entities = [];
           for(var e in entityClassCache) {
@@ -851,6 +912,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param callback the callback function called when done.
        */
       persistence.load = function(tx, dump, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'dump', optional: false },
+            { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
+          ]);
+        tx = args.tx;
+        dump = args.dump;
+        callback = args.callback;
+
         var finishedCount = 0;
         for(var entityName in dump) {
           if(dump.hasOwnProperty(entityName)) {
@@ -1456,10 +1526,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param eachFn (elem) the function to be executed for each item
        */
       DbQueryCollection.prototype.each = function (tx, eachFn) {
-        if(tx && !tx.executeSql) { // provided oneFn as first argument
-          eachFn = tx;
-          tx = null;
-        }
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'eachFn', optional: true, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        eachFn = args.eachFn;
 
         this.list(tx, function(results) {
             for(var i = 0; i < results.length; i++) {
@@ -1468,11 +1540,16 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           });
       }
 
+      // Alias
+      DbQueryCollection.prototype.forEach = DbQueryCollection.prototype.each;
+
       DbQueryCollection.prototype.one = function (tx, oneFn) {
-        if(tx && !tx.executeSql) { // provided oneFn as first argument
-          oneFn = tx;
-          tx = null;
-        }
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'oneFn', optional: false, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        oneFn = args.oneFn;
 
         this.limit(1).list(tx, function(results) {
             if(results.length === 0) {
@@ -1490,6 +1567,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        *   result objects as argument
        */
       DbQueryCollection.prototype.list = function (tx, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'callback', optional: false, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        callback = args.callback;
+
         var that = this;
         var session = this._session;
         if(!tx) { // no transaction supplied
@@ -1589,12 +1673,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param callback function to be called when clearing has completed
        */
       DbQueryCollection.prototype.destroyAll = function (tx, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+          ]);
+        tx = args.tx;
+        callback = args.callback;
+
         var that = this;
         var session = this._session;
-        if(tx && !tx.executeSql) { // provided callback as first argument
-          callback = tx;
-          tx = null;
-        } 
         if(!tx) { // no transaction supplied
           session.transaction(function(tx) {
               that.destroyAll(tx, callback);
@@ -1621,6 +1708,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param callback function to be called when clearing has completed
        */
       DbQueryCollection.prototype.count = function (tx, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'callback', optional: false, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        callback = args.callback;
+
         var that = this;
         var session = this._session;
         if(tx && !tx.executeSql) { // provided callback as first argument
@@ -1768,7 +1862,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         }
       };
 
-      LocalQueryCollection.prototype.list = function(callback) {
+      LocalQueryCollection.prototype.list = function(tx, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'callback', optional: false, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        callback = args.callback;
+
         if(!callback || callback.executeSql) { // first argument is transaction
           callback = arguments[1]; // set to second argument
         }
@@ -1813,10 +1914,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         if(callback) callback();
       };
 
-      LocalQueryCollection.prototype.count = function(callback) {
-        if(!callback || callback.executeSql) { // first argument is transaction
-          callback = arguments[1]; // set to second argument
-        }
+      LocalQueryCollection.prototype.count = function(tx, callback) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'callback', optional: true, check: argspec.isCallback() }
+          ]);
+        tx = args.tx;
+        callback = args.callback;
+
         if(callback) {
           callback(this._items.length);
         } else {
@@ -1967,11 +2072,77 @@ var persistence = (window && window.persistence) ? window.persistence : {};
             return persistence.db.gears.connect(dbname);
           }
       };
+
+
+      window.doSomething = function(session, tx, property, value, callback) {
+        var args = getArgs(arguments, [
+            { name: 'session', optional: true, check: hasProperty('connect'), defaultValue: persistence },
+            { name: 'tx', optional: true, check: hasProperty('executeSql') },
+            { name: 'property', optional: false, check: hasType('string') },
+            { name: 'value', optional: false },
+            { name: 'callback', optional: true, check: hasProperty('apply'), defaultValue: function(){} }
+          ]);
+        return args;
+      };
 }());
 
 try {
   exports.persistence = persistence;
 } catch(e) {}
+
+
+// Argspec library: http://github.com/zefhemel/argspecjs
+var argspec = {};
+
+(function() {
+    argspec.getArgs = function(args, specs) {
+      var argIdx = 0;
+      var specIdx = 0;
+      var argObj = {};
+      while(specIdx < specs.length) {
+        var s = specs[specIdx];
+        var a = args[argIdx];
+        if(s.optional) {
+          if(a !== undefined && s.check(a)) {
+            argObj[s.name] = a;
+            argIdx++;
+            specIdx++;
+          } else {
+            if(s.defaultValue) {
+              argObj[s.name] = s.defaultValue;
+            }
+            specIdx++;
+          }
+        } else {
+          if(s.check && !s.check(a)) {
+            throw "Invalid value for argument: " + s.name + " Value: " + a;
+          }
+          argObj[s.name] = a;
+          specIdx++;
+          argIdx++;
+        }
+      }
+      return argObj;
+    }
+
+    argspec.hasProperty = function(name) {
+      return function(obj) {
+        return obj && obj[name] !== undefined;
+      };
+    }
+
+    argspec.hasProperty = function hasType(type) {
+      return function(obj) {
+        return typeof obj === type;
+      };
+    }
+
+    argspec.isCallback = function() {
+      return function(obj) {
+        return obj && obj.apply;
+      };
+    }
+  }());
 
 // JSON2 library, source: http://www.JSON.org/js.html
 // Most modern browsers already support this natively, but mobile

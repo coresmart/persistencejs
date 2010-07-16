@@ -183,7 +183,7 @@ through the `QueryCollection` API that will be discussed later:
     tasks.tags.list(tx, function(allTags) { console.log(allTags); });
 
 Persisting/removing objects
-------------------
+---------------------------
 
 Similar to [hibernate](http://www.hibernate.org), `persistence.js`
 uses a tracking mechanism to determine which objects' changes have to
@@ -222,7 +222,7 @@ automatically. For instance:
 
     persistence.flush();
     // or, with callback
-    persistence.flush(null, function() {
+    persistence.flush(function() {
       alert('Done flushing');
     });
 
@@ -245,9 +245,9 @@ smaller databases. Example:
       console.log(dump);
     });
 
-When `null` is provided as a first argument a new transaction will be
-started for the operation. If `null` is provided as second argument,
-`dump` defaults to dumping _all_ defined entities.
+The `tx` is left out, a new transaction will be started for the
+operation. If the second argument is left out, `dump` defaults
+to dumping _all_ defined entities.
 
 The dump format is:
     
@@ -261,13 +261,40 @@ The dump format is:
       alert('Dump restored!');
     });
 
-The `tx` argument can be `null` to automatically start a new
+The `tx` argument can be left out to automatically start a new
 transaction. Note that `persistence.load` does not empty the database
 first, it simply attempts to add all objects to the database. If
 objects with, e.g. the same ID already exist, this will fail.
 
 Similarly, `persistence.loadFromJson` and `persistence.dumpToJson`
 respectively load and dump all the database's data as JSON strings.
+
+Entity constructor functions
+----------------------------
+
+The constructor function returned by a `persistence.define` call
+cannot only be used to instantiate new objects, it also has some
+useful methods of its own:
+
+* `EntityName.all([session])` returns a query collection containing
+all
+  persisted instances of that object. The `session` argument is
+  optional and only required when `persistence.js` is used in
+  multi-session mode.
+* `EntityName.load([session], [tx], id, callback)` loads an particular
+  object from the database by id or returns `null` if it has not been
+  found.
+* `EntityName.findBy([session], [tx], property, value, callback)` searches
+  for a particular object based on a property value (this is assumed to
+  be unique), the callback function is called with the found object or
+  `null` if it has not been found.
+
+And of course the methods to define relationships to other entities:
+
+* `EntityName.hasMany(property, Entity, inverseProperty)` defines a
+  1:N or N:M relationship (depending on the inverse property)
+* `EntityName.hasOne(property, Entity)` defines a 1:1 or N:1
+  relationship
 
 Query collections
 -----------------
@@ -302,20 +329,22 @@ A `QueryCollection` has the following methods:
   Adds object `obj` to the collection.
 * `remove(obj)`  
   Removes object `obj` from the collection.
-* `list(tx, callback)`  
+* `list([tx], callback)`  
   Asynchronously fetches the results matching the formulated query.
   Once retrieved, the callback function is invoked with an array of
   entity objects as argument.
-* `each(tx, eachCallback)`  
+* `each([tx], eachCallback)`  
   Asynchronously fetches the results matching the formulated query.
   Once retrieved, the `eachCallback` function is invoked on each
   element of the result objects.
-* `one(tx, callback)`
+* `forEach([tx], eachCallback)`  
+  Alias for `each`
+* `one([tx], callback)`
   Asynchronously fetches the first element of the collection, or `null` if none.
-* `destroyAll(tx, callback)`
+* `destroyAll([tx], callback)`
   Asynchronously removes all the items in the collection. __Important__: this does
   not only remove the items from the collection, but removes the items themselves!
-* `count(tx, callback)`
+* `count([tx], callback)`
   Asynchronously counts the number of items in the collection. The arguments passed
   to the `callback` function is the number of items.
 

@@ -309,8 +309,8 @@ A `QueryCollection` has the following methods:
 * `filter(property, operator, value)`  
   Returns a new `QueryCollection` that adds a filter, filtering a
   certain property based on an operator and value. Supported operators
-  are '=', '!=', '<', '<=', '>' and '>='. Example: `.filter('done',
-  '=', true)`
+  are '=', '!=', '<', '<=', '>', '>=', 'in' and 'not in'. Example:
+  `.filter('done', '=', true)`
 * `order(property, ascending)`  
   Returns a new `QueryCollection` that will order its results by the
   property specified in either an ascending (ascending === true) or

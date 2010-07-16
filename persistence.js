@@ -777,11 +777,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
             });
             return;
           }
-          tx.executeSql("SELECT * FROM `" + entityName + "` WHERE `" + property + "`= ? LIMIT 1", [session.entityValToDbVal(value)], function(results) {
+          tx.executeSql("SELECT * FROM `" + entityName + "` WHERE `" + property + "` = ? LIMIT 1", [session.entityValToDbVal(value)], function(results) {
               if(results.length == 0) {
                 callback(null);
+              } else {
+                callback(session.rowToEntity(entityName, results[0]));
               }
-              callback(session.rowToEntity(entityName, results[0]));
             });
         }
 
@@ -1246,6 +1247,15 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           }
 
           return "`" + alias + '`.`' + this.property + "` IN (" + qs.join(', ') + ")";
+        } else if (this.operator === 'not in') {
+          var vals = this.value;
+          var qs = [];
+          for(var i = 0; i < vals.length; i++) {
+            qs.push('?');
+            values.push(persistence.entityValToDbVal(vals[i]));
+          }
+
+          return "`" + alias + '`.`' + this.property + "` NOT IN (" + qs.join(', ') + ")";
         } else {
           var value = this.value;
           if(value === true || value === false) {
@@ -1277,7 +1287,10 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           return o[this.property] >= this.value;
           break;
         case 'in':
-          return arrayContains(this.values, o[this.property]);
+          return arrayContains(this.value, o[this.property]);
+          break;
+        case 'not in':
+          return !arrayContains(this.value, o[this.property]);
           break;
         }
       }
@@ -1550,6 +1563,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           ]);
         tx = args.tx;
         oneFn = args.oneFn;
+
+        var that = this;
+        if(!tx) {
+          this._session.transaction(function(tx) { that.one(tx, oneFn); });
+          return;
+        }
 
         this.limit(1).list(tx, function(results) {
             if(results.length === 0) {
@@ -2091,7 +2110,7 @@ try {
 } catch(e) {}
 
 
-// Argspec library: http://github.com/zefhemel/argspecjs
+// ArgSpec.js library: http://github.com/zefhemel/argspecjs
 var argspec = {};
 
 (function() {

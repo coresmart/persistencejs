@@ -143,7 +143,7 @@ function showItem(session, tx, req, res, callback) {
 function post(session, tx, req, res, callback) {
   htmlHeader(res, "Created new post");
   var query = parseUrl(req.url, true).query;
-  var post = new Post({title: query.title, text: query.text, date: new Date()}, session);
+  var post = new Post(session, {title: query.title, text: query.text, date: new Date()});
   session.add(post);
   session.flush(tx, function() {
       res.write('<p>Post added.</p>');
@@ -156,7 +156,7 @@ function post(session, tx, req, res, callback) {
 function postComment(session, tx, req, res, callback) {
   htmlHeader(res, "Created new comment");
   var query = parseUrl(req.url, true).query;
-  var comment = new Comment({text: query.text, author: query.author, date: new Date()}, session);
+  var comment = new Comment(session, {text: query.text, author: query.author, date: new Date()});
   Post.load(session, tx, query.post, function(post) {
       post.comments.add(comment);
       session.flush(tx, function() {

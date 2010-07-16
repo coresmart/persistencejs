@@ -747,8 +747,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           var args = argspec.getArgs(arguments, [
               { name: 'session', optional: true, check: isSession, defaultValue: persistence },
               { name: 'tx', optional: true, check: isTransaction },
-              { name: 'id', optional: false, check: argspecjs.hasType('string') },
-              { name: 'callback', optional: true, check: argspecjs.isCallback(), defaultValue: function(){} }
+              { name: 'id', optional: false, check: argspec.hasType('string') },
+              { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
             ]);
           Entity.findBy(args.session, args.tx, "id", args.id, args.callback);
         };
@@ -757,9 +757,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           var args = argspec.getArgs(arguments, [
               { name: 'session', optional: true, check: isSession, defaultValue: persistence },
               { name: 'tx', optional: true, check: isTransaction },
-              { name: 'property', optional: false, check: argspecjs.hasType('string') },
+              { name: 'property', optional: false, check: argspec.hasType('string') },
               { name: 'value', optional: false },
-              { name: 'callback', optional: true, check: argspecjs.isCallback(), defaultValue: function(){} }
+              { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
             ]);
           session = args.session;
           tx = args.tx;

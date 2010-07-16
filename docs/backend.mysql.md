@@ -13,7 +13,7 @@ Sadly the node.js server environment requires slight changes to
 `persistence.js` to make it work with multiple database connections:
 
 * A `Session` object needs to be passed as an extra argument to
-  certain method calls, typically as a last argument.
+  certain method calls, typically as a first argument.
 * Methods previously called on the `persistence` object itself are now
   called on the `Session` object.
 
@@ -66,9 +66,11 @@ A `schemaSync` is typically performed as follows:
 Creating and manipulating objects
 ---------------------------------
 
-Creating and manipulating objects is done much the same way as with regular `persistence.js`, except that in the entity's constructor you need to reference the `Session` again:
+Creating and manipulating objects is done much the same way as with
+regular `persistence.js`, except that in the entity's constructor you
+need to reference the `Session` again:
 
-    var t = new Task({}, session);
+    var t = new Task(session);
     ...
     session.add(t);
 

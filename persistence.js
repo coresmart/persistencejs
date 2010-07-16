@@ -393,7 +393,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     persistence.reset = function (tx, callback) {
       var session = this;
       if(!tx) {
-        this.transaction(function(tx) { session.reset(tx); });
+        this.transaction(function(tx) { session.reset(tx, callback); });
         return;
       }
       // First sync the schema
@@ -718,7 +718,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           }
           if(!tx) {
             session.transaction(function(tx) {
-              Entity.load(tx, id, callback);
+              Entity.load(session, tx, id, callback);
             });
             return;
           }
@@ -890,7 +890,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
        * @param callback (jsonDump) the callback function called with the results.
        */
       persistence.loadFromJson = function(tx, jsonDump, callback) {
-        this.load(tx, JSON.parse(json), callback);
+        this.load(tx, JSON.parse(jsonDump), callback);
       };
 
       /**

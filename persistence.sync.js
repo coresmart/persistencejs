@@ -38,25 +38,40 @@ persistence.sync = {};
         localDate: "DATE"
       });
 
+
+    function sendResponse(uri, updatesToPush) {
+      console.log("Updates to push: ", JSON.stringify(updatesToPush));
+      var xmlHttp = new XMLHttpRequest();
+      xmlHttp.open("POST", uri, true);
+      xmlHttp.send(JSON.stringify(updatesToPush));
+      xmlHttp.onreadystatechange = function() {
+        //alert("Yep!");
+      };
+    }
+
     persistence.sync.synchronize = function(uri, Entity, conflictCallback, callback) {
       persistence.sync.Sync.findBy('entity', Entity.meta.name, function(sync) {
-          var lastServerSyncTime = sync ? sync.serverDate.getTime() : 0;
-          var lastLocalSyncTime = sync ? sync.serverDate.getTime() : 0;
+          var lastServerSyncTime = sync ? sync.serverDate.getTime()/1000 : 0;
+          var lastLocalSyncTime = sync ? sync.serverDate.getTime()/1000 : 0;
+          if(!sync) {
+            sync = new persistence.sync.Sync({entity: Entity.meta.name});
+            persistence.add(sync);
+          }
 
           var xmlHttp = new XMLHttpRequest();
           xmlHttp.open("GET", uri + '?since=' + lastServerSyncTime, true);
           xmlHttp.send();
           xmlHttp.onreadystatechange = function() {
             if(xmlHttp.readyState==4 && xmlHttp.status==200) {
-              var data = JSON.parse(xmlHttp.responseText);
+              var result = JSON.parse(xmlHttp.responseText);
               var ids = [];
               var lookupTbl = {};
 
               var conflicts = [];
               var updatesToPush = [];
 
-              console.log(data);
-              data.forEach(function(item) {
+              console.log(result);
+              result.updates.forEach(function(item) {
                   ids.push(item.id);
                   lookupTbl[item.id] = item;
                 })
@@ -70,8 +85,8 @@ persistence.sync = {};
                       if(remoteItem.lastChange.getTime() === localItem.lastChange.getTime()) {
                         return; // not changed
                       }
-                      var localChangedSinceSync = lastLocalSyncTime < localItem.lastChange.getTime();
-                      var remoteChangedSinceSync = lastServerSyncTime < remoteItem.lastChange.getTime();
+                      var localChangedSinceSync = lastLocalSyncTime < localItem.lastChange.getTime()/1000;
+                      var remoteChangedSinceSync = lastServerSyncTime < remoteItem.lastChange.getTime()/1000;
 
                       var itemUpdatedFields = { id: localItem.id };
                       var itemUpdated = false;
@@ -111,6 +126,8 @@ persistence.sync = {};
                   }
                   // Find local new items
                   Entity.all().filter("id", "not in", ids).filter("lastChange", ">", lastLocalSyncTime).list(function(newItems) {
+                      console.log(newItems);
+                      console.log(lastLocalSyncTime);
                       newItems.forEach(function(newItem) {
                           var update = { id: newItem.id };
                           for(var p in newItem._data) {
@@ -121,7 +138,9 @@ persistence.sync = {};
                           updatesToPush.push(update);
                         });
                       conflictCallback(conflicts, updatesToPush, function() {
-                          console.log("Updates to push: ", updatesToPush);
+                          sendResponse(uri, updatesToPush);
+                          sync.localDate = new Date();
+                          sync.serverDate = new Date(result.now);
                           persistence.flush(callback);
                         });
                     });

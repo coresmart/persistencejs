@@ -130,19 +130,76 @@ function toggleDone(session, tx, req, res, callback) {
 }
 
 function recentChanges(session, tx, req, res, callback) {
+  if(req.method === 'GET') {
+    pushChanges(session, tx, req, res, callback);
+  } else {
+    receiveChanges(session, tx, req, res, callback);
+  }
+}
+
+function pushChanges(session, tx, req, res, callback) {
+  log("Pushing changes.");
   var query = parseUrl(req.url, true).query;
   var since = query.since;
   Task.all(session).filter("lastChange", ">", since).list(tx, function(tasks) {
       var results = [];
       for(var i = 0; i < tasks.length; i++) {
         var taskData = tasks[i]._data;
-        taskData.lastChange = taskData.lastChange.getTime();
         taskData.id = tasks[i].id;
         results.push(taskData);
       }
-      res.write(JSON.stringify(results));
+      res.write(JSON.stringify({now: new Date(), updates: results}));
       callback();
     });
+}
+
+function receiveChanges(session, tx, req, res, callback) {
+  log("Receiving changes.");
+  var body = '';
+  req.addListener('data', function(chunk) {
+      body += chunk.toString();
+    });
+  req.addListener('end', function() {
+      var updates = JSON.parse(body);
+      var allIds = [];
+      var updateLookup = {};
+      for(var i = 0; i < updates.length; i++) {
+        allIds.push(updates[i].id);
+        updateLookup[updates[i].id] = updates[i];
+      }
+      Task.all(session).filter("id", "in", allIds).list(tx, function(existingItems) {
+          for(var i = 0; i < existingItems.length; i++) {
+            var existingItem = existingItems[i];
+            var updateItem = updateLookup[existingItem.id];
+            for(var p in updateItem) {
+              if(updateItem.hasOwnProperty(p)) {
+                if(updateItem[p] !== existingItem[p]) {
+                  existingItem[p] = updateItem[p];
+                }
+              }
+            }
+            delete updateLookup[existingItem.id];
+          }
+          // All new items
+          for(var id in updateLookup) {
+            if(updateLookup.hasOwnProperty(id)) {
+              var update = updateLookup[id];
+              delete update.id;
+              var newItem = new Task(session, update);
+              newItem.id = id;
+              newItem.lastChange = new Date(newItem.lastChange);
+              log("Adding new item.");
+              log(newItem);
+              session.add(newItem);
+            }
+          }
+          session.flush(tx, function() {
+              log("All is saved and done.");
+              callback();
+            });
+        });
+    });
+  Task.all(session).one(tx, function() { });
 }
 
 var urlMap = {

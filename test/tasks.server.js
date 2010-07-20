@@ -29,11 +29,12 @@
  * just visit http://localhost:8888/
  */
 var sys = require('sys');
-var parseUrl = require('url').parse;
-var fs = require('fs'); 
+var connect = require('connect');
+var express = require('express');
 
 var persistence = require('../persistence').persistence;
 var persistenceBackend = require('../persistence.backend.mysql');
+var persistenceSync = require('../persistence.sync.server');
 
 // Database configuration
 persistenceBackend.configure('tasks', 'test', 'test');
@@ -53,225 +54,107 @@ var Task = persistence.define('Task', {
 });
 
 // HTML utilities
-function htmlHeader(res, title) {
-  res.write("<html><head><title>" + title + "</title></head><body>");
+function htmlHeader(title) {
+  return "<html><head><title>" + title + "</title></head><body>";
 }
-function htmlFooter(res) {
-  res.write('<hr/><a href="/">Home</a>');
-  res.write("</body></html>");
+
+function htmlFooter() {
+  return '<hr/><a href="/">Home</a></body></html>';
 }
+
+var app = express.createServer(
+  //connect.logger(), 
+  connect.bodyDecoder(), 
+  connect.staticProvider('.'),
+  function(req, res, next) {
+    var end = res.end;
+
+    req.conn = persistenceBackend.getSession();
+    res.end = function() {
+      req.conn.close();
+      end.apply(res, arguments);
+    };
+    req.conn.transaction(function(tx) {
+        req.tx = tx;
+        //Task.all(req.conn).one(tx, function(){
+            next();
+          //});
+      });
+  }
+);
 
 // Actions
-function initDatabase(session, tx, req, res, callback) {
-  htmlHeader(res, "Initializing database.");
-  session.schemaSync(tx, function() {
-      res.write("Done.");
-      htmlFooter(res);
-      callback();
-    });
-}
+app.get('/init', function(req, res) {
+    var html = htmlHeader("Initializing database.");
+    req.conn.schemaSync(req.tx, function() {
+        html += "Done.";
+        html += htmlFooter();
+        res.send(html);
+      });
+});
 
-function resetDatabase(session, tx, req, res, callback) {
-  htmlHeader(res, "Dropping all tables");
-  session.reset(tx, function() {
-      res.write('All tables dropped, <a href="/init">Click here to create fresh ones</a>');
-      htmlFooter(res);
-      callback();
-    });
-}
 
-function showItems(session, tx, req, res, callback) {
-  htmlHeader(res, "Tasks");
-  res.write('<h1>Tasks</h1>');
-  res.write('<ol>');
-  Task.all(session).order("lastChange", false).list(tx, function(tasks) {
+app.get('/reset', function(req, res) {
+  var html = htmlHeader("Dropping all tables");
+  req.conn.reset(req.tx, function() {
+      html += 'All tables dropped, <a href="/init">Click here to create fresh ones</a>';
+      html += htmlFooter();
+      res.send(html);
+    });
+});
+
+app.get('/', function(req, res) {
+  var html = htmlHeader("Tasks");
+  html += '<h1>Tasks</h1>';
+  html += '<ol>';
+  Task.all(req.conn).order("lastChange", false).list(req.tx, function(tasks) {
       for(var i = 0; i < tasks.length; i++) {
         var task = tasks[i];
-        res.write('<li>' + (task.done ? "[X]" : "[_]") + ' <a href="/toggleDone?id=' + task.id + '">' + task.name + '</a></li>');
+        html += '<li>' + (task.done ? "[X]" : "[_]") + ' <a href="/toggleDone?id=' + task.id + '">' + task.name + '</a></li>';
       }
-      res.write('</ol>');
-      res.write('<h1>Add task</h1>');
-      res.write('<form action="/post" method="GET">');
-      res.write('<p>Name: <input name="name"/></p>');
-      res.write('<p><input type="submit" value="Add"/></p>');
-      res.write('</form>');
-      htmlFooter(res);
-      callback();
+      html += '</ol>';
+      html += '<h1>Add task</h1>';
+      html += '<form action="/post" method="POST">';
+      html += '<p>Name: <input name="name"/></p>';
+      html += '<p><input type="submit" value="Add"/></p>';
+      html += '</form>';
+      html += htmlFooter();
+      res.send(html);
     });
-}
+});
 
-function post(session, tx, req, res, callback) {
-  htmlHeader(res, "Created new task");
-  var query = parseUrl(req.url, true).query;
-  var task = new Task({name: query.name, done: false, lastChange: new Date()}, session);
-  session.add(task);
-  session.flush(tx, function() {
-      res.write('<p>Task added.</p>');
-      res.write('<a href="/">Go back</a>');
-      htmlFooter(res);
-      callback();
+app.post('/post',  function(req, res) {
+  var task = new Task(req.conn, {name: req.body.name, done: false, lastChange: new Date()});
+  req.conn.add(task);
+  req.conn.flush(req.tx, function() {
+      res.redirect('/');
     });
-}
+});
 
-function toggleDone(session, tx, req, res, callback) {
-  htmlHeader(res, "Toggled");
-  var query = parseUrl(req.url, true).query;
-  Task.load(session, tx, query.id, function(task) {
-      session.add(task);
+app.get('/toggleDone', function(req, res) {
+  Task.load(req.conn, req.tx, req.params.get.id, function(task) {
+      req.conn.add(task);
       task.done = !task.done;
       task.lastChange = new Date();
-      session.flush(tx, function() {
-          res.write('<p>Task status toggled.</p>');
-          res.write('<a href="/">Go back</a>');
-          htmlFooter(res);
-          callback();
+      req.conn.flush(req.tx, function() {
+          res.redirect('/');
         });
     });
-}
+});
 
-function recentChanges(session, tx, req, res, callback) {
-  if(req.method === 'GET') {
-    pushChanges(session, tx, req, res, callback);
-  } else {
-    receiveChanges(session, tx, req, res, callback);
-  }
-}
-
-function pushChanges(session, tx, req, res, callback) {
-  log("Pushing changes.");
-  var query = parseUrl(req.url, true).query;
-  var since = query.since;
-  Task.all(session).filter("lastChange", ">", since).list(tx, function(tasks) {
-      var results = [];
-      for(var i = 0; i < tasks.length; i++) {
-        var taskData = tasks[i]._data;
-        taskData.id = tasks[i].id;
-        results.push(taskData);
-      }
-      res.write(JSON.stringify({now: new Date(), updates: results}));
-      callback();
-    });
-}
-
-function receiveChanges(session, tx, req, res, callback) {
-  log("Receiving changes.");
-  var body = '';
-  req.addListener('data', function(chunk) {
-      body += chunk.toString();
-    });
-  req.addListener('end', function() {
-      var updates = JSON.parse(body);
-      var allIds = [];
-      var updateLookup = {};
-      for(var i = 0; i < updates.length; i++) {
-        allIds.push(updates[i].id);
-        updateLookup[updates[i].id] = updates[i];
-      }
-      Task.all(session).filter("id", "in", allIds).list(tx, function(existingItems) {
-          for(var i = 0; i < existingItems.length; i++) {
-            var existingItem = existingItems[i];
-            var updateItem = updateLookup[existingItem.id];
-            for(var p in updateItem) {
-              if(updateItem.hasOwnProperty(p)) {
-                if(updateItem[p] !== existingItem[p]) {
-                  existingItem[p] = updateItem[p];
-                }
-              }
-            }
-            delete updateLookup[existingItem.id];
-          }
-          // All new items
-          for(var id in updateLookup) {
-            if(updateLookup.hasOwnProperty(id)) {
-              var update = updateLookup[id];
-              delete update.id;
-              var newItem = new Task(session, update);
-              newItem.id = id;
-              newItem.lastChange = new Date(newItem.lastChange);
-              log("Adding new item.");
-              log(newItem);
-              session.add(newItem);
-            }
-          }
-          session.flush(tx, function() {
-              log("All is saved and done.");
-              callback();
-            });
-        });
-    });
-  Task.all(session).one(tx, function() { });
-}
-
-var urlMap = {
-  '/init': initDatabase,
-  '/reset': resetDatabase,
-  '/post': post,
-  '/toggleDone': toggleDone,
-  '/recentChanges': recentChanges,
-  '/': showItems
-};
-
-function guessContentType(path) {
-  if(path.indexOf('.html') !== -1) {
-    return "text/html";
-  } else if(path.indexOf('.js') !== -1) {
-    return "text/javascript";
-  } else {
-    return "text/plain";
-  }
-}
-
-var http = require('http');
-http.createServer(function (req, res) {
-  var parsed = parseUrl(req.url, true);
-  var fn = urlMap[parsed.pathname];
-  if(fn) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
-    var session = persistenceBackend.getSession();
-    session.transaction(function(tx) {
-        fn(session, tx, req, res, function() {
-            session.close();
-            res.end();
-          });
+app.get('/recentChanges',  function(req, res) {
+    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.params.get.since, function(updates) {
+        res.send(updates);
       });
-  } else {
-    var path = req.url.substring(1);
-    fs.stat(path, function(err, stats) { 
-        if(err) {
-          res.writeHead(200, {'Content-Type': "text/plain"});
-          res.end("Not found: " + req.url);
-          return;
-        }
-        res.writeHead(200, {'Content-Type': guessContentType(path), 'Content-Length': stats.size}); 
-        var enc = 'binary', rz = 8*1024; 
-        fs.open(path, 'r', 06660, function(err, fd) { 
-            if (err) sys.puts(sys.inspect(err)); 
-            var pos = 0; 
-            function readChunk () { 
-              fs.read(fd, rz, pos, enc, function(err, chunk, 
-                  bytes_read) { 
-                  if (err) sys.puts(sys.inspect(err)); 
-                  if (chunk) { 
-                    try { 
-                      res.write(chunk, enc); 
-                      pos += bytes_read; 
-                      readChunk(); 
-                    } catch (e) { 
-                      fs.close(fd); 
-                      sys.puts(sys.inspect(e)); 
-                    } 
-                  } 
-                  else { 
-                    res.end(); 
-                    fs.close(fd, function (err) { 
-                        if (err) sys.puts(sys.inspect(err)); 
-                      }); 
-                  } 
-                }); 
-            } 
-            readChunk(); 
-          }); 
-      }); 
-  }
-}).listen(8888, "127.0.0.1");
+});
+
+app.post('/recentChanges',  function(req, res) {
+    persistenceSync.receiveUpdates(req.conn, req.tx, Task, req.body, undefined, function() {
+        res.send({status: 'ok'});
+      });
+  });
+
+
+app.listen(8888);
+
 console.log('Server running at http://127.0.0.1:8888/');

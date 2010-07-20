@@ -40,26 +40,55 @@ persistence.sync = {};
 
 
     function sendResponse(uri, updatesToPush) {
-      console.log("Updates to push: ", JSON.stringify(updatesToPush));
+      //console.log("Updates to push: ", JSON.stringify(updatesToPush));
       var xmlHttp = new XMLHttpRequest();
       xmlHttp.open("POST", uri, true);
+      xmlHttp.setRequestHeader('Content-Type', 'application/json');
       xmlHttp.send(JSON.stringify(updatesToPush));
       xmlHttp.onreadystatechange = function() {
         //alert("Yep!");
       };
     }
 
+    function jsonToEntityVal(value, type) {
+      if(type) {
+        switch(type) {
+        case 'DATE': 
+          return new Date(value * 1000); 
+          break;
+        default:
+          return value;
+        }
+      } else {
+        return value;
+      }
+    }
+
+    function entityValToJson(value, type) {
+      if(type) {
+        switch(type) {
+        case 'DATE': 
+          return value.getTime()/1000;
+          break;
+        default:
+          return value;
+        }
+      } else {
+        return value;
+      }
+    }
+
     persistence.sync.synchronize = function(uri, Entity, conflictCallback, callback) {
       persistence.sync.Sync.findBy('entity', Entity.meta.name, function(sync) {
-          var lastServerSyncTime = sync ? sync.serverDate.getTime()/1000 : 0;
-          var lastLocalSyncTime = sync ? sync.serverDate.getTime()/1000 : 0;
+          var lastServerSyncTime = sync ? sync.serverDate : new Date(0);
+          var lastLocalSyncTime = sync ? sync.serverDate : new Date(0);
           if(!sync) {
             sync = new persistence.sync.Sync({entity: Entity.meta.name});
             persistence.add(sync);
           }
 
           var xmlHttp = new XMLHttpRequest();
-          xmlHttp.open("GET", uri + '?since=' + lastServerSyncTime, true);
+          xmlHttp.open("GET", uri + '?since=' + entityValToJson(lastServerSyncTime, 'DATE'), true);
           xmlHttp.send();
           xmlHttp.onreadystatechange = function() {
             if(xmlHttp.readyState==4 && xmlHttp.status==200) {
@@ -69,41 +98,42 @@ persistence.sync = {};
 
               var conflicts = [];
               var updatesToPush = [];
+              var fieldSpec = Entity.meta.fields;
 
-              console.log(result);
+              //console.log(result);
               result.updates.forEach(function(item) {
                   ids.push(item.id);
                   lookupTbl[item.id] = item;
                 })
-              console.log(ids);
+              //console.log(ids);
               Entity.all().filter("id", "in", ids).list(function(existingItems) {
                   existingItems.forEach(function(localItem) {
                       var remoteItem = lookupTbl[localItem.id];
                       delete remoteItem.id;
-                      remoteItem.lastChange = new Date(remoteItem.lastChange);
+                      remoteItem.lastChange = jsonToEntityVal(remoteItem.lastChange, 'DATE');
                       delete lookupTbl[localItem.id];
                       if(remoteItem.lastChange.getTime() === localItem.lastChange.getTime()) {
                         return; // not changed
                       }
-                      var localChangedSinceSync = lastLocalSyncTime < localItem.lastChange.getTime()/1000;
-                      var remoteChangedSinceSync = lastServerSyncTime < remoteItem.lastChange.getTime()/1000;
+                      var localChangedSinceSync = lastLocalSyncTime.getTime() < localItem.lastChange.getTime();
+                      var remoteChangedSinceSync = lastServerSyncTime.getTime() < remoteItem.lastChange.getTime();
 
-                      var itemUpdatedFields = { id: localItem.id };
+                      var itemUpdatedFields = { id: localItem.id, lastChange: remoteItem.lastChange };
                       var itemUpdated = false;
                       for(var p in remoteItem) {
-                        if(remoteItem.hasOwnProperty(p)) {
+                        if(remoteItem.hasOwnProperty(p) && p != 'lastChange') {
                           if(localItem[p] !== remoteItem[p]) {
-                            console.log("Property differs: " + p);
+                            //console.log("Property differs: " + p);
                             if(localChangedSinceSync && remoteChangedSinceSync) { // Conflict!
-                              console.log("Conflict!");
+                              //console.log("Conflict!");
                               conflicts.push({local: localItem, remote: remoteItem, property: p});
                             } else if(localChangedSinceSync) {
-                              console.log("Push!");
+                              //console.log("Push:", fieldSpec[p]);
                               itemUpdated = true;
-                              itemUpdatedFields[p] = localItem[p];
+                              itemUpdatedFields[p] = entityValToJson(localItem[p], fieldSpec[p]);
                             } else {
-                              console.log("Pull!");
-                              localItem[p] = remoteItem[p];
+                              //console.log("Pull: ", fieldSpec[p]);
+                              localItem[p] = jsonToEntityVal(remoteItem[p], fieldSpec[p]);
                             }
                           }
                         }
@@ -119,20 +149,18 @@ persistence.sync = {};
                       delete remoteItem.id;
                       var localItem = new Entity(remoteItem);
                       localItem.id = id;
-                      localItem.lastChange = new Date(remoteItem.lastChange);
+                      localItem.lastChange = jsonToEntityVal(remoteItem.lastChange, 'DATE');
                       persistence.add(localItem);
-                      console.log("Added: ", localItem);
+                      //console.log("Added: ", localItem);
                     }
                   }
                   // Find local new items
                   Entity.all().filter("id", "not in", ids).filter("lastChange", ">", lastLocalSyncTime).list(function(newItems) {
-                      console.log(newItems);
-                      console.log(lastLocalSyncTime);
                       newItems.forEach(function(newItem) {
                           var update = { id: newItem.id };
                           for(var p in newItem._data) {
                             if(newItem._data.hasOwnProperty(p)) {
-                              update[p] = newItem._data[p];
+                              update[p] = entityValToJson(newItem[p], fieldSpec[p]);
                             }
                           }
                           updatesToPush.push(update);
@@ -140,7 +168,8 @@ persistence.sync = {};
                       conflictCallback(conflicts, updatesToPush, function() {
                           sendResponse(uri, updatesToPush);
                           sync.localDate = new Date();
-                          sync.serverDate = new Date(result.now);
+                          sync.serverDate = jsonToEntityVal(result.now, 'DATE');
+                          //console.log("Sync object:", sync);
                           persistence.flush(callback);
                         });
                     });

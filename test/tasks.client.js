@@ -2,7 +2,7 @@
 // Data model
 var Task = persistence.define('Task', {
     name: "TEXT",
-    done: "TEXT",
+    done: "BOOL",
     lastChange: "DATE"
 });
 

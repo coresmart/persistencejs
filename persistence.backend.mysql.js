@@ -19,7 +19,11 @@ function MySqlTransaction(connection)
 MySqlTransaction.prototype.executeSql = function (query, args, rsCallback, errorCallback)
 {
   var tx = this;
-  var execCmd = this.connection.execute(query, args);
+  try {
+    var execCmd = this.connection.execute(query, args);
+  } catch(e) {
+    sys.print(sys.inspect(e));
+  }
   var results = {};
   results.rows = [];
   this.connection.row_as_hash = true;
@@ -37,6 +41,7 @@ MySqlTransaction.prototype.executeSql = function (query, args, rsCallback, error
   execCmd.addListener('error', function(err)
     { 
       tx.clean = false;
+      sys.print(sys.inspect(err));
       if (errorCallback) 
         errorCallback(tx, err);
       if (tx.onerror)
@@ -50,19 +55,19 @@ function openDatabase(db, user, password)
   var webdb = {};
   var connection = createTCPClient();
   connection.auth(db, user, password);
-  connection.query('SET autocommit=0;');
+  connection.query('SET autocommit=1;');
   connection.auto_prepare = true;
   webdb.transaction = function(txCreated, txError)
   {
     var t = new MySqlTransaction(connection);
     t.onerror = txError;
-    connection.query('BEGIN');
+    //connection.query('BEGIN');
     t.clean = true;
     txCreated(t);
-    var commit = connection.query("");
-    t.last_exec_cmd.addListener('end', function() {   
-        commit.sql = t.clean ? "COMMIT" : "ROLLBACK"
-      });
+    //var commit = connection.query("");
+    //t.last_exec_cmd.addListener('end', function() {   
+        //commit.sql = t.clean ? "COMMIT" : "ROLLBACK"
+      //});
   }
   webdb.close = function() { 
     connection.close();

@@ -30,6 +30,34 @@ if(!window.persistence) { // persistence.js not loaded!
 
 persistence.sync = {};
 
+persistence.sync.get = function(uri, successCallback, errorCallback) {
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open("GET", uri, true);
+    xmlHttp.send();
+    xmlHttp.onreadystatechange = function() {
+      if(xmlHttp.readyState==4 && xmlHttp.status==200) {
+        if (successCallback) successCallback(xmlHttp.responseTex);
+      } else {
+        if (errorCallback) errorCallback();  
+      }
+    }; 
+};
+
+persistence.sync.post = function(uri, data, successCallback, errorCallback) { 
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open("POST", uri, true);
+    xmlHttp.setRequestHeader('Content-Type', 'application/json');
+    xmlHttp.send(data);
+    xmlHttp.onreadystatechange = function() {
+      if(xmlHttp.readyState==4 && xmlHttp.status==200) {
+        if (successCallback) successCallback(xmlHttp.responseText);
+      } else {
+        if (errorCallback) errorCallback();  
+      }
+    };  
+}; 
+
+
 (function() {
 
     persistence.sync.Sync = persistence.define('_Sync', {
@@ -40,14 +68,10 @@ persistence.sync = {};
 
 
     function sendResponse(uri, updatesToPush) {
-      //console.log("Updates to push: ", JSON.stringify(updatesToPush));
-      var xmlHttp = new XMLHttpRequest();
-      xmlHttp.open("POST", uri, true);
-      xmlHttp.setRequestHeader('Content-Type', 'application/json');
-      xmlHttp.send(JSON.stringify(updatesToPush));
-      xmlHttp.onreadystatechange = function() {
-        //alert("Yep!");
-      };
+      //console.log("Updates to push: ", JSON.stringify(updatesToPush));◊
+      persistence.sync.post(uri, JSON.stringify(updatesToPush), function() {
+        //alert("Yep!");  
+      });
     }
 
     function jsonToEntityVal(value, type) {
@@ -87,12 +111,8 @@ persistence.sync = {};
             persistence.add(sync);
           }
 
-          var xmlHttp = new XMLHttpRequest();
-          xmlHttp.open("GET", uri + '?since=' + entityValToJson(lastServerSyncTime, 'DATE'), true);
-          xmlHttp.send();
-          xmlHttp.onreadystatechange = function() {
-            if(xmlHttp.readyState==4 && xmlHttp.status==200) {
-              var result = JSON.parse(xmlHttp.responseText);
+          persistence.sync.get(uri + '?since=' + entityValToJson(lastServerSyncTime, 'DATE'), function(responseText) { 
+              var result = JSON.parse(responseText);
               var ids = [];
               var lookupTbl = {};
 
@@ -174,8 +194,7 @@ persistence.sync = {};
                         });
                     });
                 });
-            }
-          }
+            });
         });
     }
   }());

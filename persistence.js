@@ -424,6 +424,9 @@ persistence.entityPropToEntityVal = function(val) {
      */
     persistence.clean = function () {
       this.trackedObjects = {};
+      this.objectsToRemove = {};
+      this.globalPropertyListeners = {};
+      this.queryCollectionCache = {};
     }
 
     /**
@@ -1312,30 +1315,39 @@ persistence.entityPropToEntityVal = function(val) {
       }
 
       PropertyFilter.prototype.match = function (o) {
+        var value = this.value;
+        var propValue = o[this.property];
+        if(value && value.getTime) { // DATE
+          // TODO: Deal with arrays of dates for 'in' and 'not in'
+          value = Math.round(value.getTime() / 1000) * 1000; // Deal with precision
+          if(propValue && propValue.getTime) { // DATE
+            propValue = Math.round(propValue.getTime() / 1000) * 1000; // Deal with precision
+          }
+        }
         switch (this.operator) {
         case '=':
-          return o[this.property] === this.value;
+          return propValue === value;
           break;
         case '!=':
-          return o[this.property] !== this.value;
+          return propValue !== value;
           break;
         case '<':
-          return o[this.property] < this.value;
+          return propValue < value;
           break;
         case '<=':
-          return o[this.property] <= this.value;
+          return propValue <= value;
           break;
         case '>':
-          return o[this.property] > this.value;
+          return propValue > value;
           break;
         case '>=':
-          return o[this.property] >= this.value;
+          return propValue >= value;
           break;
         case 'in':
-          return arrayContains(this.value, o[this.property]);
+          return arrayContains(value, propValue);
           break;
         case 'not in':
-          return !arrayContains(this.value, o[this.property]);
+          return !arrayContains(value, propValue);
           break;
         }
       }

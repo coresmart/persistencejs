@@ -324,7 +324,7 @@ persistence.entityPropToEntityVal = function(val) {
       if (!this.trackedObjects[obj.id]) {
         this.trackedObjects[obj.id] = obj;
       }
-      return persistence;
+      return this;
     };
 
     /**
@@ -336,7 +336,7 @@ persistence.entityPropToEntityVal = function(val) {
         this.objectsToRemove[obj.id] = obj;
       }
       this.objectRemoved(obj);
-      return persistence;
+      return this;
     };
 
     /**

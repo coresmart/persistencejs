@@ -655,7 +655,7 @@ persistence.entityPropToEntityVal = function(val) {
                     } 
                   }, function() {
                     // getterCallback 
-                    if (this._data[coll]) {
+                    if (that._data[coll]) {
                       return that._data[coll];
                     } else {
                       var inverseMeta = meta.hasMany[coll].type.meta;
@@ -687,7 +687,7 @@ persistence.entityPropToEntityVal = function(val) {
                     }
                   }, function() {
                     // getterCallback 
-                    if (this._data[coll]) {
+                    if (that._data[coll]) {
                         return that._data[coll];
                     } else {
                       var queryColl = session.uniqueQueryCollection(new DbQueryCollection(session, meta.hasMany[coll].type.meta.name).filter(meta.hasMany[coll].inverseProperty, '=', that));

@@ -250,7 +250,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           for (var rel in meta.hasOne) {
             if (meta.hasOne.hasOwnProperty(rel)) {
               otherMeta = meta.hasOne[rel].type.meta;
-              rowDef += rel + " VARCHAR(255), ";
+              rowDef += rel + " VARCHAR(32), ";
               queries.push( [
                   //"CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
                   "CREATE INDEX `" + meta.name + "_" + rel + "_" + otherMeta.name
@@ -486,6 +486,9 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      * (also does type conversions, if necessary)
      */
     persistence.dbValToEntityVal = function (val, type) {
+      if(val === null || val === undefined) {
+        return val;
+      }
       switch (type) {
       case 'DATE':
         // SQL is in seconds and JS in miliseconds
@@ -643,7 +646,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                         queryColl._additionalJoinSqls.push("LEFT JOIN `"
                           + meta.hasMany[coll].tableName + "` AS mtm ON mtm.`"
                           + inverseMeta.name + '_' + meta.hasMany[coll].inverseProperty
-                          + "` = `" + inverseMeta.name + "`.`id` ");
+                          + "` = `root`.`id` ");
                         queryColl._additionalWhereSqls.push("mtm.`" + meta.name + '_' + coll
                           + "` = '" + that.id + "'");
                         that._data[coll] = queryColl;
@@ -976,6 +979,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
         var values = [];
         var qs = [];
         var propertyPairs = [];
+        if(obj._new) { // Mark all properties dirty
+          for (var p in meta.fields) {
+            if(meta.fields.hasOwnProperty(p)) {
+              obj._dirtyProperties[p] = true;
+            }
+          }
+        }
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");

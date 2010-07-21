@@ -617,6 +617,7 @@ persistence.entityPropToEntityVal = function(val) {
                     that._data[ref] = val.id;
                     that._data_obj[ref] = val;
                     session.add(val);
+                    session.add(that);
                   } else { // let's assume it's an id
                     that._data[ref] = val;
                   }

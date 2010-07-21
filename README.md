@@ -375,9 +375,7 @@ tracker](http://yellowgrass.org/project/persistence.js).
 For support and discussion, please join the [persistence.js Google
 Group](http://groups.google.com/group/persistencejs).
 
-Thanks goes to [Fabio Rehm](http://github.com/fgrehm), [Lukas
-Berns](http://github.com/lukasberns) and [Roberto
-Saccon](http://github.com/rsaccon) for their contributions.
+Thanks goes to the people listed in `AUTHORS` for their contributions.
 
 If you use [GWT](http://code.google.com/webtoolkit/) (the Google Web
 Toolkit), be sure to have a look at [Dennis Z. Jiang's GWT persistence.js

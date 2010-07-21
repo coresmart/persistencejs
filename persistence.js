@@ -726,7 +726,7 @@ persistence.entityPropToEntityVal = function(val) {
           var args = argspec.getArgs(arguments, [
               { name: 'tx', optional: true, check: isTransaction },
               { name: 'rel', optional: false, check: argspec.hasType('string') },
-              { name: 'callback', optional: false, check: argspec.isCallback() },
+              { name: 'callback', optional: false, check: argspec.isCallback() }
             ]);
           tx = args.tx;
           rel = args.rel;

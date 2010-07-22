@@ -37,9 +37,10 @@ function tableNotExists(name, callback){
 function columnExists(table, column, type, callback) {
   var sql = 'select sql from sqlite_master where type = "table" and name == "'+table+'"';
   type = type.replace('(', '\\(').replace(')', '\\)');
-  var regex = "CREATE TABLE .+`?" + column + "`? " + type + ".+";
+  var regex = "CREATE TABLE .+`?" + column + "`?\\s+" + type + ".+";
   persistence.transaction(function(tx){
     tx.executeSql(sql, null, function(result){
+        console.log('Table def: ------> ', result[0].sql);
       ok(result[0].sql.match(regex), column + ' colum exists');
       if (callback) callback();
     });

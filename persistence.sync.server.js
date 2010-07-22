@@ -63,7 +63,7 @@ function entityValToJson(value, type) {
 }
 
 exports.pushUpdates = function(session, tx, Entity, since, callback) {
-  Entity.all(session).filter("lastChange", ">", since).list(tx, function(items) {
+  Entity.all(session).filter("_lastChange", ">", since).list(tx, function(items) {
       var results = [];
       var fieldSpec = Entity.meta.fields;
       for(var i = 0; i < items.length; i++) {
@@ -96,7 +96,7 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
         var updateItem = updateLookup[existingItem.id];
         for(var p in updateItem) {
           if(updateItem.hasOwnProperty(p)) {
-            if(updateItem[p] !== existingItem[p]) {
+            if(updateItem[p] !== existingItem._data[p]) {
               existingItem[p] = jsonToEntityVal(updateItem[p], fieldSpec[p]);
             }
           }
@@ -126,3 +126,39 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
         });
     });
 };
+
+exports.setupSync = function(persistence) {
+    persistence.entityDecoratorHooks.push(function(Entity) {
+        /**
+         * Declares an entity to be tracked for changes
+         */
+        Entity.enableSync = function() {
+          Entity.meta.enableSync = true;
+          Entity.meta.fields['_lastChange'] = 'DATE';
+        };
+      });
+
+    /**
+     * Resets _lastChange property if the object has dirty project (i.e. the object has changed)
+     */
+    persistence.flushHooks.push(function(session, tx) {
+        var queries = [];
+        for (var id in session.getTrackedObjects()) {
+          if (session.getTrackedObjects().hasOwnProperty(id)) {
+            var obj = session.getTrackedObjects()[id];
+            var meta = persistence.getEntityMeta()[obj._type];
+            if(meta.enableSync) {
+              var isDirty = obj._new;
+              for ( var p in obj._dirtyProperties) {
+                if (obj._dirtyProperties.hasOwnProperty(p)) {
+                  isDirty = true;
+                }
+              }
+              if(isDirty) {
+                obj._lastChange = new Date();
+              }
+            }
+          }
+        }
+      });
+  };

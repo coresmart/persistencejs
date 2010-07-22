@@ -362,7 +362,7 @@ persistence.entityPropToEntityVal = function(val) {
       }
       var fns = persistence.flushHooks;
       for(var i = 0; i < fns.length; i++) {
-        fns[i](tx);
+        fns[i](session, tx);
       }
 
       var persistObjArray = [];
@@ -635,8 +635,7 @@ persistence.entityPropToEntityVal = function(val) {
                     that._data_obj[ref] = session.trackedObjects[that._data[ref]];
                     return that._data_obj[ref];
                   } else {
-                    throw "Property '" + ref + "' with id: " + that._data[ref]
-                    + " not fetched, either prefetch it or fetch it manually.";
+                    throw "Property '" + ref + "' with id: " + that._data[ref] + " not fetched, either prefetch it or fetch it manually.";
                   }
                 });
               }());
@@ -1016,7 +1015,7 @@ persistence.entityPropToEntityVal = function(val) {
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");
-            values.push(persistence.entityValToDbVal(obj[p], meta.fields[p]));
+            values.push(persistence.entityValToDbVal(obj._data[p], meta.fields[p]));
             qs.push('?');
             propertyPairs.push("`" + p + "` = ?");
           }
@@ -1807,10 +1806,10 @@ persistence.entityPropToEntityVal = function(val) {
 
         var args = [];
         var whereSql = "WHERE "
-        + [ this._filter.sql("", args) ].concat(
+        + [ this._filter.sql("root", args) ].concat(
           this._additionalWhereSqls).join(' AND ');
 
-        var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` " + whereSql;
+        var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` AS `root` " + whereSql;
 
         session.flush(tx, function () {
             tx.executeSql(sql, args, function(results) {

@@ -34,6 +34,10 @@ function log(o) {
   sys.print(sys.inspect(o) + "\n");
 }
 
+function getUTCEpoch(date) {
+  return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+}
+
 function jsonToEntityVal(value, type) {
   if(type) {
     switch(type) {
@@ -52,7 +56,7 @@ function entityValToJson(value, type) {
   if(type) {
     switch(type) {
     case 'DATE': 
-      return value.getTime()/1000;
+      return getUTCEpoch(value);
       break;
     default:
       return value;

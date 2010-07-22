@@ -48,8 +48,6 @@ function log(o) {
 
 persistenceSync.setupSync(persistence);
 
-log(persistence.flushHooks);
-
 // Data model
 var Project = persistence.define('Project', {
     name: "TEXT"
@@ -148,6 +146,18 @@ app.post('/tagUpdates',  function(req, res) {
         res.send({status: 'ok'});
       });
   });
+
+app.get('/markAllDone', function(req, res) {
+    Task.all(req.conn).list(req.tx, function(tasks) {
+        tasks.forEach(function(task) {
+            task.done = true;
+          });
+        req.conn.flush(req.tx, function() {
+            res.send({status: 'ok'});
+            log("--------------------------");
+          });
+      });
+});
 
 app.listen(8888);
 

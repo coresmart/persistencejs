@@ -67,6 +67,10 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
       });
 
 
+    function getUTCEpoch(date) {
+      return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+    }
+
     function sendResponse(uri, updatesToPush) {
       //console.log("Updates to push: ", JSON.stringify(updatesToPush));◊
       persistence.sync.post(uri, JSON.stringify(updatesToPush), function() {
@@ -92,7 +96,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
       if(type) {
         switch(type) {
         case 'DATE': 
-          return value.getTime()/1000;
+          return getUTCEpoch(value);
           break;
         default:
           return value;
@@ -102,51 +106,16 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
       }
     }
 
-    persistence.entityDecoratorHooks.push(function(Entity) {
-        /**
-         * Declares an entity to be tracked for changes
-         */
-        Entity.enableSync = function() {
-          Entity.meta.enableSync = true;
-          Entity.meta.fields['_lastChange'] = 'DATE';
-        };
-      });
-
-    /**
-     * Resets _lastChange property if the object has dirty project (i.e. the object has changed)
-     */
-    persistence.flushHooks.push(function(session, tx) {
-        var queries = [];
-        for (var id in session.getTrackedObjects()) {
-          if (session.getTrackedObjects().hasOwnProperty(id)) {
-            var obj = session.getTrackedObjects()[id];
-            var meta = persistence.getEntityMeta()[obj._type];
-            if(meta.enableSync) {
-              var isDirty = obj._new;
-              for ( var p in obj._dirtyProperties) {
-                if (obj._dirtyProperties.hasOwnProperty(p)) {
-                  isDirty = true;
-                }
-              }
-              if(isDirty) {
-                obj._lastChange = new Date();
-              }
-            }
-          }
-        }
-      });
-
-    persistence.sync.synchronize = function(uri, Entity, conflictCallback, callback) {
-      // TODO: Add transaction and session support
-      persistence.flush(function() {
-          persistence.sync.Sync.findBy('entity', Entity.meta.name, function(sync) {
+    function synchronize(session, uri, Entity, conflictCallback, callback) {
+      session.flush(function() {
+          persistence.sync.Sync.findBy(session, 'entity', Entity.meta.name, function(sync) {
               var lastServerSyncTime = sync ? sync.serverDate : new Date(0);
-              var lastLocalSyncTime = sync ? sync.serverDate : new Date(0);
+              var lastLocalSyncTime = sync ? sync.localDate : new Date(0);
               var meta = Entity.meta;
               var fieldSpec = meta.fields;
               if(!sync) {
-                sync = new persistence.sync.Sync({entity: Entity.meta.name});
-                persistence.add(sync);
+                sync = new persistence.sync.Sync(session, {entity: Entity.meta.name});
+                session.add(sync);
               }
 
               persistence.sync.get(uri + '?since=' + entityValToJson(lastServerSyncTime, 'DATE'), function(responseText) { 
@@ -163,17 +132,17 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                       lookupTbl[item.id] = item;
                     })
                   //console.log(ids);
-                  Entity.all().filter("id", "in", ids).list(function(existingItems) {
+                  Entity.all(session).filter("id", "in", ids).list(function(existingItems) {
                       existingItems.forEach(function(localItem) {
                           var remoteItem = lookupTbl[localItem.id];
                           delete remoteItem.id;
                           remoteItem._lastChange = jsonToEntityVal(remoteItem._lastChange, 'DATE');
                           delete lookupTbl[localItem.id];
-                          if(remoteItem._lastChange.getTime() === localItem._lastChange.getTime()) {
+                          if(getUTCEpoch(remoteItem._lastChange) === getUTCEpoch(localItem._lastChange)) {
                             return; // not changed
                           }
-                          var localChangedSinceSync = lastLocalSyncTime.getTime() < localItem._lastChange.getTime();
-                          var remoteChangedSinceSync = lastServerSyncTime.getTime() < remoteItem._lastChange.getTime();
+                          var localChangedSinceSync = getUTCEpoch(lastLocalSyncTime) < getUTCEpoch(localItem._lastChange);
+                          var remoteChangedSinceSync = getUTCEpoch(lastServerSyncTime) < getUTCEpoch(remoteItem._lastChange);
 
                           var itemUpdatedFields = { id: localItem.id, _lastChange: remoteItem._lastChange };
                           var itemUpdated = false;
@@ -207,12 +176,12 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                           var localItem = new Entity(remoteItem);
                           localItem.id = id;
                           localItem._lastChange = jsonToEntityVal(remoteItem._lastChange, 'DATE');
-                          persistence.add(localItem);
+                          session.add(localItem);
                           //console.log("Added: ", localItem);
                         }
                       }
                       // Find local new/updated items
-                      Entity.all().filter("id", "not in", ids).filter("_lastChange", ">", lastLocalSyncTime).list(function(newItems) {
+                      Entity.all(session).filter("id", "not in", ids).filter("_lastChange", ">", lastLocalSyncTime).list(function(newItems) {
                           console.log("Updated/new: ", newItems);
                           newItems.forEach(function(newItem) {
                               var update = { id: newItem.id };
@@ -233,7 +202,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                             sync.localDate = new Date();
                             sync.serverDate = jsonToEntityVal(result.now, 'DATE');
                             //console.log("Sync object:", sync);
-                            persistence.flush(callback);
+                            session.flush(callback);
                           }
                           if(conflicts.length > 0) {
                             conflictCallback(conflicts, updatesToPush, next);
@@ -246,5 +215,51 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
             });
         });
     }
+
+    persistence.entityDecoratorHooks.push(function(Entity) {
+        /**
+         * Declares an entity to be tracked for changes
+         */
+        Entity.enableSync = function(uri) {
+          Entity.meta.enableSync = true;
+          Entity.meta.syncUri = uri;
+          Entity.meta.fields['_lastChange'] = 'DATE';
+        };
+
+        Entity.syncAll = function(session, uri, conflictCallback, callback) {
+          var args = argspec.getArgs(arguments, [
+              { name: 'session', optional: true, check: function(obj) { return obj && obj.flush; }, defaultValue: persistence },
+              { name: 'uri', optional: true, check: argspec.hasType('string'), defaultValue: this.meta.syncUri },
+              { name: 'conflictCallback', check: argspec.isCallback() },
+              { name: 'callback', check: argspec.isCallback() }
+            ]);
+          synchronize(args.session, args.uri, this, args.conflictCallback, args.callback);
+        };
+      });
+
+    /**
+     * Resets _lastChange property if the object has dirty project (i.e. the object has changed)
+     */
+    persistence.flushHooks.push(function(session, tx) {
+        var queries = [];
+        for (var id in session.getTrackedObjects()) {
+          if (session.getTrackedObjects().hasOwnProperty(id)) {
+            var obj = session.getTrackedObjects()[id];
+            var meta = persistence.getEntityMeta()[obj._type];
+            if(meta.enableSync) {
+              var isDirty = obj._new;
+              for ( var p in obj._dirtyProperties) {
+                if (obj._dirtyProperties.hasOwnProperty(p)) {
+                  isDirty = true;
+                }
+              }
+              if(isDirty) {
+                obj._lastChange = new Date();
+              }
+            }
+          }
+        }
+      });
+
   }());
 

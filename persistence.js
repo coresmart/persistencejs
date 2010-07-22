@@ -2050,7 +2050,7 @@ persistence.entityPropToEntityVal = function(val) {
           var that = {};
           that.executeSql = function (query, args, successFn, errorFn) {
               if(persistence.db.log) {
-                  console.log(query);
+                  console.log(query, args);
               }
               t.executeSql(query, args, function (_, result) {
                   if (successFn) {
@@ -2085,7 +2085,7 @@ persistence.entityPropToEntityVal = function(val) {
               if (args == null) args = [];
 
               if(persistence.db.log) {
-                  console.log(query + ' -> ' + args);
+                  console.log(query, args);
               }
 
               var result = t.executeSql(query, args);
@@ -2119,7 +2119,7 @@ persistence.entityPropToEntityVal = function(val) {
           var that = {};
           that.executeSql = function (query, args, successFn, errorFn) {
               if(persistence.db.log) {
-                  console.log(query);
+                  console.log(query, args);
               }
               var rs = conn.execute(query, args);
               if (successFn) {

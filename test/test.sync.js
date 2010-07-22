@@ -20,9 +20,9 @@ $(document).ready(function(){
 
   Project.hasMany('tasks', Task, 'project');
 
-  Task.enableSync();
-  Project.enableSync();
-  Tag.enableSync();
+  Task.enableSync('/taskUpdates');
+  Project.enableSync('/projectUpdates');
+  Tag.enableSync('/tagUpdates');
 
   module("Setup");
 
@@ -45,16 +45,15 @@ $(document).ready(function(){
 
   module("Sync");
 
+  function noConflictsHandler(conflicts, updatesToPush, callback) {
+    ok(false, "Should not go to conflict resolving");
+    callback();
+  }
+
   asyncTest("initial sync of project", function() {
-      persistence.sync.synchronize('/projectUpdates', Project, function(conflicts, updatesToPush, callback) {
-          ok(false, "Should not go to conflict resolving");
-          callback();
-        }, function() {
+      Project.syncAll(noConflictsHandler, function() {
           ok(true, "Came back from sync");
-          persistence.sync.synchronize('/projectUpdates', Project, function(conflicts, updatesToPush, callback) {
-              ok(false, "Should not go to conflict resolving");
-              callback();
-            }, function() {
+          Project.syncAll(noConflictsHandler, function() {
               ok(true, "Came back from second sync");
               Project.all().list(function(projects) {
                   equals(projects.length, 1, "1 project synced");
@@ -67,15 +66,9 @@ $(document).ready(function(){
     });
 
   asyncTest("initial sync of tasks", function() {
-      persistence.sync.synchronize('/taskUpdates', Task, function(conflicts, updatesToPush, callback) {
-          ok(false, "Should not go to conflict resolving");
-          callback();
-        }, function() {
+      Task.syncAll(noConflictsHandler, function() {
           ok(true, "Came back from sync");
-          persistence.sync.synchronize('/taskUpdates', Task, function(conflicts, updatesToPush, callback) {
-              ok(false, "Should not go to conflict resolving");
-              callback();
-            }, function() {
+          Task.syncAll(noConflictsHandler, function() {
               ok(true, "Came back from second sync");
               Task.all().list(function(tasks) {
                   equals(tasks.length, 25, "25 tasks synced");
@@ -95,37 +88,34 @@ $(document).ready(function(){
               tasks[i].done = true;
             }
           }
-          persistence.sync.synchronize('/taskUpdates', Task, function(conflicts, updatesToPush, callback) {
-              ok(false, "Should not go to conflict resolving");
-              callback();
-            }, function() {
+          Task.syncAll(noConflictsHandler, function() {
               ok(true, "Came back from sync");
               start();
             });
         });
     });
 
-  asyncTest("resetting local db and resyncing", function() {
-      persistence.reset(function() {
-          persistence.schemaSync(function() {
-              ok(true, "Database reset");
+  function resetResync(callback) {
+    persistence.reset(function() {
+        persistence.schemaSync(function() {
+            ok(true, "Database reset");
 
-              persistence.sync.synchronize('/projectUpdates', Project, function(conflicts, updatesToPush, callback) {
-                  ok(false, "Should not go to conflict resolving");
-                  callback();
-                }, function() {
-                  ok(true, "Came back from projectsync");
-                  persistence.sync.synchronize('/taskUpdates', Task, function(conflicts, updatesToPush, callback) {
-                      ok(false, "Should not go to conflict resolving");
-                      callback();
-                    }, function() {
-                      ok(true, "Came back from task sync");
-                      Task.all().filter("done", "=", true).count(function(n) {
-                          equals(13, n, "right number of tasks done.");
-                          start();
-                        });
-                    });
-                });
+            Project.syncAll(noConflictsHandler, function() {
+                ok(true, "Came back from project sync");
+                Task.syncAll(noConflictsHandler, function() {
+                    ok(true, "Came back from task sync");
+                    callback();
+                  });
+              });
+          });
+      });
+  }
+
+  asyncTest("resetting local db and resyncing", function() {
+      resetResync(function() {
+          Task.all().filter("done", "=", true).count(function(n) {
+              equals(13, n, "right number of tasks done.");
+              setTimeout(start, 1200);
             });
         });
     });
@@ -134,9 +124,50 @@ $(document).ready(function(){
       var p = new Project({name: "Locally created project"});
       persistence.add(p);
       for(var i = 0; i < 10; i++) {
-        var t = new Task({"Local task " + i});
+        var t = new Task({name: "Local task " + i});
         p.tasks.add(t);
       }
-      start();
+      persistence.flush(function() {
+          ok(true, "project and tasks added locally");
+          Project.syncAll(noConflictsHandler, function() {
+              ok(true, "returned from project sync");
+              Task.syncAll(noConflictsHandler, function() {
+                  ok(true, "returned from task sync");
+                  setTimeout(function() {
+                    p.tasks.list(function(tasks) {
+                        tasks.forEach(function(task) {
+                            task.done = true;
+                          });
+                        Task.syncAll(noConflictsHandler, function() {
+                            start();
+                          });
+                      });
+                  }, 1200);
+                });
+            });
+        });
+    });
+
+  asyncTest("resetting local db and resyncing", function() {
+      resetResync(function() {
+          Task.all().filter("done", "=", true).count(function(n) {
+              equals(23, n, "right number of tasks done.");
+              setTimeout(start, 1200);
+            });
+        });
+    });
+
+  asyncTest("marking all tasks done remotely", function() {
+      persistence.sync.get('/markAllDone', function(resp) {
+          var data = JSON.parse(resp);
+          same(data, {status: 'ok'}, "Remote reset");
+          Task.syncAll(noConflictsHandler, function() {
+              ok(true, "Came back from sync");
+              Task.all().filter("done", "=", true).count(function(n) {
+                  equals(35, n, "all tasks were marked done and synced correctly");
+                  start();
+                });
+            });
+        });
     });
 });

@@ -39,15 +39,29 @@ try {
 var persistence = (window && window.persistence) ? window.persistence : {}; 
  
 /**
- * Default getter/setter implementation for entity properties 
+ * Default implementation for entity-property 
  */
-persistence.defineProp = function(scope, field, setterCallback, getterCallback) {
-    scope.__defineSetter__(field, function (val) {
-        setterCallback(val);
+persistence.defineProp = function(scope, fieldName, setterCallback, getterCallback) {
+    scope.__defineSetter__(fieldName, function (value) {
+        setterCallback(value);
     });
-    scope.__defineGetter__(field, function () {
+    scope.__defineGetter__(fieldname, function () {
         return getterCallback();
     });
+};
+
+/**
+ * Default implementation for entity-property setter  
+ */
+persistence.set = function(scope, fieldName, value) { 
+    scope[fieldName] = value; 
+};
+
+/**
+ * Default implementation for entity-property getter  
+ */
+persistence.get = function(arg1, arg2) { 
+    return (arguments.length == 1) ? arg1 : arg1[arg2];
 };
  
 /**
@@ -535,7 +549,6 @@ persistence.entityPropToEntityVal = function(val) {
      *   dbValToEntityVal)
      */
     persistence.entityValToDbVal = function (val, type) {
-      val = persistence.entityPropToEntityVal(val);
       if (val === undefined || val === null) {
         return null;
       } else if (type === 'JSON' && val) {
@@ -587,7 +600,7 @@ persistence.entityPropToEntityVal = function(val) {
 
         for ( var field in meta.fields) {
           (function () {
-              if (meta.fields.hasOwnProperty(field)) {    
+              if (meta.fields.hasOwnProperty(field)) {
                 var f = field; // Javascript scopes/closures SUCK
                 persistence.defineProp(that, f, function(val) {
                   // setterCallback
@@ -600,10 +613,10 @@ persistence.entityPropToEntityVal = function(val) {
                 }, function() {
                   // getterCallback 
                   return that._data[f];
-                });
+                });    
                 that._data[field] = defaultValue(meta.fields[field]);
               }
-            }());
+          }()); 
         }
 
         for ( var it in meta.hasOne) {
@@ -709,7 +722,7 @@ persistence.entityPropToEntityVal = function(val) {
 
           for ( var f in obj) {
             if (obj.hasOwnProperty(f)) {
-              that[f] = obj[f];
+              persistence.set(that, f);
             }
           }
         } // Entity
@@ -726,7 +739,7 @@ persistence.entityPropToEntityVal = function(val) {
           var args = argspec.getArgs(arguments, [
               { name: 'tx', optional: true, check: isTransaction },
               { name: 'rel', optional: false, check: argspec.hasType('string') },
-              { name: 'callback', optional: false, check: argspec.isCallback() }
+              { name: 'callback', optional: false, check: argspec.isCallback() },
             ]);
           tx = args.tx;
           rel = args.rel;
@@ -1016,7 +1029,7 @@ persistence.entityPropToEntityVal = function(val) {
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");
-            values.push(persistence.entityValToDbVal(obj[p], meta.fields[p]));
+            values.push(persistence.entityValToDbVal(persistence.get(obj, p), meta.fields[p]));
             qs.push('?');
             propertyPairs.push("`" + p + "` = ?");
           }
@@ -1282,7 +1295,7 @@ persistence.entityPropToEntityVal = function(val) {
           var qs = [];
           for(var i = 0; i < vals.length; i++) {
             qs.push('?');
-            values.push(persistence.entityValToDbVal(vals[i]));
+            values.push(persistence.entityValToDbVal(persistence.get(vals, i)));
           }
           if(vals.length === 0) {
             // Optimize this a little
@@ -1295,7 +1308,7 @@ persistence.entityPropToEntityVal = function(val) {
           var qs = [];
           for(var i = 0; i < vals.length; i++) {
             qs.push('?');
-            values.push(persistence.entityValToDbVal(vals[i]));
+            values.push(persistence.entityValToDbVal(persistence.get(vals, i)));
           }
 
           if(vals.length === 0) {

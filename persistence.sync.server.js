@@ -132,7 +132,6 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
         }
       }
       session.flush(tx, function() {
-          log("All is saved and done.");
           callback({status: 'ok', now: now});
         });
     });

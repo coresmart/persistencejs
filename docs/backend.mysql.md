@@ -4,10 +4,11 @@ Node.js MySQL Back-end
 This library implements some wrappers to let `persistence.js` work
 with a MySQL database in a [node.js](http://nodejs.org) environment.
 Although not fully stable it is usable at this point using
-[nodejs-mysql-native](http://github.com/sidorares/nodejs-mysql-native)
-library (which you have to download and include in your project
-manually). This library is a starting point to start adding more
-back-ends to `persistence.js`, including NoSQL back-ends.
+[node-mysql](http://http://github.com/stevebest/node-mysql)
+library (which you can easily install if you have
+[npm](http://npmjs.org/) installed using `npm install mysql`) This
+library is a starting point to start adding more back-ends to
+`persistence.js`, including NoSQL back-ends.
 
 Sadly the node.js server environment requires slight changes to
 `persistence.js` to make it work with multiple database connections:

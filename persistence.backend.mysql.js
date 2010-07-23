@@ -1,11 +1,13 @@
 /**
  * This back-end depends on the node.js asynchronous MySQL driver as found on:
- * http://github.com/sidorares/nodejs-mysql-native
+ * http://github.com/stevebest/node-mysql
+ * Easy install using npm:
+ *   npm install mysql
  */
 var persistencejs = require('./persistence');
 var persistence = persistencejs.persistence;
 var sys = require('sys');
-var mysql = require('./mysql/mysql');
+var mysql = require('mysql');
 
 persistencejs.console.log = function(s) {
   sys.print(sys.inspect(s) + "\n");

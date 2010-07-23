@@ -478,7 +478,6 @@ persistence.entityPropToEntityVal = function(val) {
      * Converts a database row into an entity object
      */
     persistence.rowToEntity = function (entityName, row, prefix) {
-      //console.log(row);
       prefix = prefix || '';
       if (this.trackedObjects[row[prefix + "id"]]) { // Cached version
         return this.trackedObjects[row[prefix + "id"]];

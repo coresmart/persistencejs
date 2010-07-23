@@ -49,7 +49,7 @@ function jsonToEntityVal(value, type) {
 }
 
 function getEpoch(date) {
-  return Math.round(date.getTime()/1000);
+  return date.getTime(); //Math.round(date.getTime()/1000);
 }
 
 function entityValToJson(value, type) {
@@ -127,6 +127,7 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
               newItem[p] = jsonToEntityVal(update[p], fieldSpec[p]);
             }
           }
+          newItem._lastChange = now;
           session.add(newItem);
         }
       }

@@ -76,7 +76,7 @@ $(document).ready(function(){
                   tasks.forEach(function(task) {
                       equals(false, task.done, "task not done");
                     });
-                  setTimeout(start, 1200); // Delay a bit
+                  start();
                 });
             });
         });
@@ -113,11 +113,10 @@ $(document).ready(function(){
   }
 
   asyncTest("resetting local db and resyncing", function() {
-      console.log("-------- resetting everything-------");
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
               equals(13, n, "right number of tasks done.");
-              setTimeout(start, 1200);
+              start();
             });
         });
     });
@@ -135,16 +134,14 @@ $(document).ready(function(){
               ok(true, "returned from project sync");
               Task.syncAll(noConflictsHandler, function() {
                   ok(true, "returned from task sync");
-                  setTimeout(function() {
-                    p.tasks.list(function(tasks) {
-                        tasks.forEach(function(task) {
-                            task.done = true;
-                          });
-                        Task.syncAll(noConflictsHandler, function() {
-                            start();
-                          });
-                      });
-                  }, 1200);
+                  p.tasks.list(function(tasks) {
+                      tasks.forEach(function(task) {
+                          task.done = true;
+                        });
+                      Task.syncAll(noConflictsHandler, function() {
+                          start();
+                        });
+                    });
                 });
             });
         });
@@ -154,7 +151,7 @@ $(document).ready(function(){
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
               equals(n, 23, "right number of tasks done.");
-              setTimeout(start, 1200);
+              start();
             });
         });
     });
@@ -167,7 +164,7 @@ $(document).ready(function(){
               ok(true, "Came back from sync");
               Task.all().filter("done", "=", true).count(function(n) {
                   equals(35, n, "all tasks were marked done and synced correctly");
-                  setTimeout(start, 1200);
+                  start();
                 });
             });
         });
@@ -186,22 +183,20 @@ $(document).ready(function(){
                 }
               }
               persistence.flush(function() {
-                  setTimeout(function() {
-                      Task.syncAll(function(conflicts, updatesToPush, callback) {
-                          ok(true, "Conflict resolver called");
-                          equals(conflicts.length, 18, "Number of conflicts");
-                          console.log("Conflicts: ", conflicts);
-                          persistence.sync.preferLocalConflictHandler(conflicts, updatesToPush, callback);
-                        }, function() {
-                          ok(true, "Came back from sync");
-                          resetResync(function() {
-                              Task.all().filter("done", "=", true).list(function(tasks) {
-                                  equals(tasks.length, 18, "Conflicts were properly resolved towards the server");
-                                  setTimeout(start, 1200);
-                                });
+                  Task.syncAll(function(conflicts, updatesToPush, callback) {
+                      ok(true, "Conflict resolver called");
+                      equals(conflicts.length, 18, "Number of conflicts");
+                      console.log("Conflicts: ", conflicts);
+                      persistence.sync.preferLocalConflictHandler(conflicts, updatesToPush, callback);
+                    }, function() {
+                      ok(true, "Came back from sync");
+                      resetResync(function() {
+                          Task.all().filter("done", "=", true).list(function(tasks) {
+                              equals(tasks.length, 18, "Conflicts were properly resolved towards the server");
+                              start();
                             });
                         });
-                    }, 1200);
+                    });
                 });
             });
         });
@@ -218,20 +213,18 @@ $(document).ready(function(){
                 }
               }
               persistence.flush(function() {
-                  setTimeout(function() {
-                      Task.syncAll(function(conflicts, updatesToPush, callback) {
-                          ok(true, "Conflict resolver called");
-                          equals(conflicts.length, 18, "Number of conflicts");
-                          console.log("Conflicts: ", conflicts);
-                          persistence.sync.preferRemoteConflictHandler(conflicts, updatesToPush, callback);
-                        }, function() {
-                          ok(true, "Came back from sync");
-                          Task.all().filter("done", "=", true).list(function(tasks) {
-                              equals(tasks.length, 0, "Conflicts were properly resolved");
-                              start();
-                            });
+                  Task.syncAll(function(conflicts, updatesToPush, callback) {
+                      ok(true, "Conflict resolver called");
+                      equals(conflicts.length, 18, "Number of conflicts");
+                      console.log("Conflicts: ", conflicts);
+                      persistence.sync.preferRemoteConflictHandler(conflicts, updatesToPush, callback);
+                    }, function() {
+                      ok(true, "Came back from sync");
+                      Task.all().filter("done", "=", true).list(function(tasks) {
+                          equals(tasks.length, 0, "Conflicts were properly resolved");
+                          start();
                         });
-                    }, 1200);
+                    });
                 });
             });
         });

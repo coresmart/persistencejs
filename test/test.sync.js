@@ -47,6 +47,7 @@ $(document).ready(function(){
 
   function noConflictsHandler(conflicts, updatesToPush, callback) {
     ok(false, "Should not go to conflict resolving");
+    console.log("Conflicts: ", conflicts);
     callback();
   }
 
@@ -112,6 +113,7 @@ $(document).ready(function(){
   }
 
   asyncTest("resetting local db and resyncing", function() {
+      console.log("-------- resetting everything-------");
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
               equals(13, n, "right number of tasks done.");
@@ -151,7 +153,7 @@ $(document).ready(function(){
   asyncTest("resetting local db and resyncing", function() {
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
-              equals(23, n, "right number of tasks done.");
+              equals(n, 23, "right number of tasks done.");
               setTimeout(start, 1200);
             });
         });
@@ -173,7 +175,7 @@ $(document).ready(function(){
 
   module("Conflicts");
 
-  asyncTest("marking all tasks as undone remotely", 3, function() {
+  asyncTest("prefer local conflict handler", 8, function() {
       persistence.sync.get('/markAllUndone', function(resp) {
           var data = JSON.parse(resp);
           same(data, {status: 'ok'}, "Remote marking undone");
@@ -187,11 +189,45 @@ $(document).ready(function(){
                   setTimeout(function() {
                       Task.syncAll(function(conflicts, updatesToPush, callback) {
                           ok(true, "Conflict resolver called");
+                          equals(conflicts.length, 18, "Number of conflicts");
                           console.log("Conflicts: ", conflicts);
+                          persistence.sync.preferLocalConflictHandler(conflicts, updatesToPush, callback);
                         }, function() {
                           ok(true, "Came back from sync");
-                          Task.all().filter("done", "=", false).count(function(n) {
-                              //equals(17, n, "all tasks were marked undone and synced correctly");
+                          resetResync(function() {
+                              Task.all().filter("done", "=", true).list(function(tasks) {
+                                  equals(tasks.length, 18, "Conflicts were properly resolved towards the server");
+                                  setTimeout(start, 1200);
+                                });
+                            });
+                        });
+                    }, 1200);
+                });
+            });
+        });
+    });
+
+  asyncTest("prefer remote conflict handler", 5, function() {
+      persistence.sync.get('/markAllUndone', function(resp) {
+          var data = JSON.parse(resp);
+          same(data, {status: 'ok'}, "Remote marking undone");
+          Task.all().list(function(tasks) {
+              for(var i = 0; i < tasks.length; i++) {
+                if(i % 2 === 0) {
+                  tasks[i].done = true;
+                }
+              }
+              persistence.flush(function() {
+                  setTimeout(function() {
+                      Task.syncAll(function(conflicts, updatesToPush, callback) {
+                          ok(true, "Conflict resolver called");
+                          equals(conflicts.length, 18, "Number of conflicts");
+                          console.log("Conflicts: ", conflicts);
+                          persistence.sync.preferRemoteConflictHandler(conflicts, updatesToPush, callback);
+                        }, function() {
+                          ok(true, "Came back from sync");
+                          Task.all().filter("done", "=", true).list(function(tasks) {
+                              equals(tasks.length, 0, "Conflicts were properly resolved");
                               start();
                             });
                         });

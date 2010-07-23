@@ -62,21 +62,14 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
 
     persistence.sync.Sync = persistence.define('_Sync', {
         entity: "VARCHAR(255)",
-        serverDate: "DATE",
-        localDate: "DATE"
+        localDate: "BIGINT",
+        serverDate: "BIGINT",
+        serverPushDate: "BIGINT"
       });
 
 
-    function getUTCEpoch(date) {
-      //return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+    function getEpoch(date) {
       return Math.round(date.getTime() / 1000);
-    }
-
-    function sendResponse(uri, updatesToPush) {
-      //console.log("Updates to push: ", JSON.stringify(updatesToPush));◊
-      persistence.sync.post(uri, JSON.stringify(updatesToPush), function() {
-        //alert("Yep!");  
-      });
     }
 
     function jsonToEntityVal(value, type) {
@@ -97,7 +90,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
       if(type) {
         switch(type) {
         case 'DATE': 
-          return getUTCEpoch(value);
+          return Math.round(value.getTime() / 1000);
           break;
         default:
           return value;
@@ -107,19 +100,42 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
       }
     }
 
+    persistence.sync.preferLocalConflictHandler = function(conflicts, updatesToPush, callback) {
+      conflicts.forEach(function(conflict) {
+          var update = {id: conflict.local.id};
+          conflict.properties.forEach(function(p) {
+              update[p] = conflict.local._data[p];
+            });
+          updatesToPush.push(update);
+        });
+      callback();
+    };
+
+    persistence.sync.preferRemoteConflictHandler = function(conflicts, updatesToPush, callback) {
+      conflicts.forEach(function(conflict) {
+          conflict.properties.forEach(function(p) {
+              conflict.local[p] = conflict.remote[p];
+            });
+        });
+      persistence.flush(callback);
+    };
+
     function synchronize(session, uri, Entity, conflictCallback, callback) {
       session.flush(function() {
           persistence.sync.Sync.findBy(session, 'entity', Entity.meta.name, function(sync) {
-              var lastServerSyncTime = sync ? sync.serverDate : new Date(0);
-              var lastLocalSyncTime = sync ? sync.localDate : new Date(0);
+              var lastServerSyncTime = sync ? sync.serverDate : 0;
+              var lastServerPushTime = sync ? sync.serverPushDate : 0;
+              var lastLocalSyncTime = sync ? sync.localDate : 0;
+              console.log("Syncing: ", Entity.meta.name, " last time: " + lastLocalSyncTime);
               var meta = Entity.meta;
               var fieldSpec = meta.fields;
+              //var now = getEpoch(new Date());
               if(!sync) {
                 sync = new persistence.sync.Sync(session, {entity: Entity.meta.name});
                 session.add(sync);
               }
 
-              persistence.sync.get(uri + '?since=' + entityValToJson(lastServerSyncTime, 'DATE'), function(responseText) { 
+              persistence.sync.get(uri + '?since=' + lastServerSyncTime, function(responseText) { 
                   var result = JSON.parse(responseText);
                   var ids = [];
                   var lookupTbl = {};
@@ -132,64 +148,54 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                       ids.push(item.id);
                       lookupTbl[item.id] = item;
                     })
-                  //console.log(ids);
+                  // Step 1: Look at local versions of remotely updated entities
                   Entity.all(session).filter("id", "in", ids).list(function(existingItems) {
                       existingItems.forEach(function(localItem) {
                           var remoteItem = lookupTbl[localItem.id];
                           delete remoteItem.id;
-                          remoteItem._lastChange = jsonToEntityVal(remoteItem._lastChange, 'DATE');
                           delete lookupTbl[localItem.id];
-                          if(getUTCEpoch(remoteItem._lastChange) === getUTCEpoch(localItem._lastChange)) {
-                            return; // not changed
-                          }
-                          var localChangedSinceSync = getUTCEpoch(lastLocalSyncTime) < getUTCEpoch(localItem._lastChange);
-                          var remoteChangedSinceSync = getUTCEpoch(lastServerSyncTime) < getUTCEpoch(remoteItem._lastChange);
-                          console.log("Local sync times: ", getUTCEpoch(lastLocalSyncTime), getUTCEpoch(localItem._lastChange));
 
-                          var itemUpdatedFields = { id: localItem.id, _lastChange: remoteItem._lastChange };
-                          var itemUpdated = false;
+                          var localChangedSinceSync = lastLocalSyncTime < localItem._lastChange;
+
+                          var itemUpdatedFields = { id: localItem.id };
+
+                          var conflictingProperties = [];
                           for(var p in remoteItem) {
-                            if(remoteItem.hasOwnProperty(p) && p != '_lastChange') {
+                            if(remoteItem.hasOwnProperty(p) && p !== '_lastChange') {
                               if(localItem._data[p] !== remoteItem[p]) {
-                                console.log("Watch this: ");
-                                console.log("------------> ", localChangedSinceSync, remoteChangedSinceSync);
-                                if(localChangedSinceSync && remoteChangedSinceSync) { // Conflict!
-                                  console.log("----------> conflict <--------------");
-                                  conflicts.push({local: localItem, remote: remoteItem, property: p});
-                                } else if(localChangedSinceSync) {
-                                  //console.log("Push:", fieldSpec[p]);
-                                  itemUpdated = true;
-                                  itemUpdatedFields[p] = entityValToJson(localItem._data[p], fieldSpec[p]);
+                                if(localChangedSinceSync) { // Conflict!
+                                  conflictingProperties.push(p);
                                 } else {
-                                  //console.log("Pull: ", fieldSpec[p]);
                                   localItem[p] = jsonToEntityVal(remoteItem[p], fieldSpec[p]);
                                 }
                               }
-                            }
+                            } 
                           }
-                          if(itemUpdated) {
-                            updatesToPush.push(itemUpdatedFields);
+                          // Check if _lastChange happens to be lastServerPushTime, because then we can ignore all this
+                          if(conflictingProperties.length > 0 && remoteItem._lastChange !== lastServerPushTime) {
+                            conflicts.push({local: localItem, remote: remoteItem, properties: conflictingProperties});
                           }
                         });
-                      // Add new remote items
+                      // Step 2: store new remote items locally
+                      // NOTE: all that's left in lookupTbl is new, we deleted the existing items
                       for(var id in lookupTbl) {
                         if(lookupTbl.hasOwnProperty(id)) {
                           var remoteItem = lookupTbl[id];
                           delete remoteItem.id;
                           var localItem = new Entity(remoteItem);
                           localItem.id = id;
-                          localItem._lastChange = jsonToEntityVal(remoteItem._lastChange, 'DATE');
+                          localItem._lastChange = getEpoch(new Date());
                           session.add(localItem);
                           //console.log("Added: ", localItem);
                         }
                       }
-                      // Find local new/updated items
+                      // Step 3: Find local new/updated items (not part of the remote change set)
                       Entity.all(session).filter("id", "not in", ids).filter("_lastChange", ">", lastLocalSyncTime).list(function(newItems) {
                           console.log("Updated/new: ", newItems);
                           newItems.forEach(function(newItem) {
                               var update = { id: newItem.id };
                               for(var p in fieldSpec) {
-                                if(fieldSpec.hasOwnProperty(p)) {
+                                if(fieldSpec.hasOwnProperty(p) && p != '_lastChange') {
                                   update[p] = entityValToJson(newItem._data[p], fieldSpec[p]);
                                 }
                               }
@@ -201,13 +207,17 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                               updatesToPush.push(update);
                             });
                           function next() {
-                            sendResponse(uri, updatesToPush);
-                            sync.localDate = new Date();
-                            sync.serverDate = jsonToEntityVal(result.now, 'DATE');
+                            persistence.sync.post(uri, JSON.stringify(updatesToPush), function(response) {
+                                var pushData = JSON.parse(response);
+                                session.flush(function() {
+                                    sync.localDate = getEpoch(new Date());
+                                    sync.serverDate = result.now;
+                                    sync.serverPushDate = pushData.now;
+                                    session.flush(callback);
+                                  });
+                              });
                             //console.log("Sync object:", sync);
-                            session.flush(callback);
                           }
-                          console.log("Conflicts: ", conflicts);
                           if(conflicts.length > 0) {
                             conflictCallback(conflicts, updatesToPush, next);
                           } else {
@@ -227,7 +237,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
         Entity.enableSync = function(uri) {
           Entity.meta.enableSync = true;
           Entity.meta.syncUri = uri;
-          Entity.meta.fields['_lastChange'] = 'DATE';
+          Entity.meta.fields['_lastChange'] = 'BIGINT';
         };
 
         Entity.syncAll = function(session, uri, conflictCallback, callback) {
@@ -258,7 +268,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                 }
               }
               if(isDirty) {
-                obj._lastChange = new Date();
+                obj._lastChange = getEpoch(new Date());
               }
             }
           }

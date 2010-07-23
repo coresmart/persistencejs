@@ -23,10 +23,10 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  *
  *
- * USAGE:
- * On first run, be sure to initialize the database first: http://localhost:8888/init
- * otherwise the application will hang (because the select query fails). After that,
- * just visit http://localhost:8888/
+ * Requirements:
+ * node.js
+ * npm install connect
+ * npm install express
  */
 var sys = require('sys');
 var connect = require('connect');

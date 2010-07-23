@@ -227,11 +227,11 @@ persistence.entityPropToEntityVal = function(val) {
     }
 
     function isTransaction(obj) {
-      return obj && obj.executeSql;
+      return !obj || (obj && obj.executeSql);
     }
 
     function isSession(obj) {
-      return obj && obj.schemaSync;
+      return !obj || (obj && obj.schemaSync);
     }
 
     /**

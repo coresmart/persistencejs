@@ -81,7 +81,11 @@ The server must expose a resource located at the given URI that responds to:
 * `POST` requests with as its body a JSON array of new/updated
   objects. Every object needs to have at least an `id` property.
 
-  Example:
+  Example, posting to:
+
+      /taskChanges
+
+  with body:
 
       [{"id":"BDDF85807155497490C12D6DA3A833F1",
         "name":"Locally created project"}]
@@ -94,3 +98,16 @@ The server must expose a resource located at the given URI that responds to:
 
       {"status": "ok", 
        "now": 1279888110797}
+
+Limitations
+-----------
+
+* This synchronization library synchronizes on a per-object granularity. It
+  does not keep exact changes on a per-property basis, therefore
+  conflicts may be introduced that need to be resolved.
+* It does not synchronize many-to-many relationships at this point
+* Error handling is not really implemented, e.g. there's no way to
+  deal with a return from the server other than "status: ok" at this
+  point.
+* There may still be many bugs, I'm not sure.
+       

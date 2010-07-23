@@ -35,7 +35,8 @@ function log(o) {
 }
 
 function getUTCEpoch(date) {
-  return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+  //return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+  return Math.round(date.getTime() / 1000);
 }
 
 function jsonToEntityVal(value, type) {

@@ -165,7 +165,37 @@ $(document).ready(function(){
               ok(true, "Came back from sync");
               Task.all().filter("done", "=", true).count(function(n) {
                   equals(35, n, "all tasks were marked done and synced correctly");
-                  start();
+                  setTimeout(start, 1200);
+                });
+            });
+        });
+    });
+
+  module("Conflicts");
+
+  asyncTest("marking all tasks as undone remotely", 3, function() {
+      persistence.sync.get('/markAllUndone', function(resp) {
+          var data = JSON.parse(resp);
+          same(data, {status: 'ok'}, "Remote marking undone");
+          Task.all().list(function(tasks) {
+              for(var i = 0; i < tasks.length; i++) {
+                if(i % 2 === 0) {
+                  tasks[i].done = true;
+                }
+              }
+              persistence.flush(function() {
+                  setTimeout(function() {
+                      Task.syncAll(function(conflicts, updatesToPush, callback) {
+                          ok(true, "Conflict resolver called");
+                          console.log("Conflicts: ", conflicts);
+                        }, function() {
+                          ok(true, "Came back from sync");
+                          Task.all().filter("done", "=", false).count(function(n) {
+                              //equals(17, n, "all tasks were marked undone and synced correctly");
+                              start();
+                            });
+                        });
+                    }, 1200);
                 });
             });
         });

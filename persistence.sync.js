@@ -68,7 +68,8 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
 
 
     function getUTCEpoch(date) {
-      return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+      //return Math.round((date.getTime() + (date.getTimezoneOffset() * 60000)) / 1000);
+      return Math.round(date.getTime() / 1000);
     }
 
     function sendResponse(uri, updatesToPush) {
@@ -143,15 +144,17 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                           }
                           var localChangedSinceSync = getUTCEpoch(lastLocalSyncTime) < getUTCEpoch(localItem._lastChange);
                           var remoteChangedSinceSync = getUTCEpoch(lastServerSyncTime) < getUTCEpoch(remoteItem._lastChange);
+                          console.log("Local sync times: ", getUTCEpoch(lastLocalSyncTime), getUTCEpoch(localItem._lastChange));
 
                           var itemUpdatedFields = { id: localItem.id, _lastChange: remoteItem._lastChange };
                           var itemUpdated = false;
                           for(var p in remoteItem) {
                             if(remoteItem.hasOwnProperty(p) && p != '_lastChange') {
                               if(localItem._data[p] !== remoteItem[p]) {
-                                //console.log("Property differs: " + p);
+                                console.log("Watch this: ");
+                                console.log("------------> ", localChangedSinceSync, remoteChangedSinceSync);
                                 if(localChangedSinceSync && remoteChangedSinceSync) { // Conflict!
-                                  //console.log("Conflict!");
+                                  console.log("----------> conflict <--------------");
                                   conflicts.push({local: localItem, remote: remoteItem, property: p});
                                 } else if(localChangedSinceSync) {
                                   //console.log("Push:", fieldSpec[p]);
@@ -204,6 +207,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                             //console.log("Sync object:", sync);
                             session.flush(callback);
                           }
+                          console.log("Conflicts: ", conflicts);
                           if(conflicts.length > 0) {
                             conflictCallback(conflicts, updatesToPush, next);
                           } else {

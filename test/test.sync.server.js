@@ -154,7 +154,17 @@ app.get('/markAllDone', function(req, res) {
           });
         req.conn.flush(req.tx, function() {
             res.send({status: 'ok'});
-            log("--------------------------");
+          });
+      });
+});
+
+app.get('/markAllUndone', function(req, res) {
+    Task.all(req.conn).list(req.tx, function(tasks) {
+        tasks.forEach(function(task) {
+            task.done = false;
+          });
+        req.conn.flush(req.tx, function() {
+            res.send({status: 'ok'});
           });
       });
 });

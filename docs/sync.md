@@ -62,8 +62,9 @@ The server must expose a resource located at the given URI that responds to:
 * `GET` requests with a `since=<UNIX MS TIMESTAMP>` GET parameter that
   will return a JSON object with two properties:
   * `now`, the timestamp of the current time at the server (in ms since 1/1/1970)
-  * `updates`, an array of updated objects with at least an `id` and
-    `_lastChange` field (in the same timestamp format).
+  * `updates`, an array of objects updated since the timestamp
+    `since`. Each object has at least an `id` and `_lastChange` field
+    (in the same timestamp format).
 
   For instance:
       

@@ -30,31 +30,27 @@ if(!window.persistence) { // persistence.js not loaded!
 
 persistence.sync = {};
 
-persistence.sync.get = function(uri, successCallback, errorCallback) {
+persistence.sync.getJSON = function(uri, callback) {
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("GET", uri, true);
     xmlHttp.send();
     xmlHttp.onreadystatechange = function() {
       if(xmlHttp.readyState==4 && xmlHttp.status==200) {
-        if (successCallback) successCallback(xmlHttp.responseText);
-      } else {
-        if (errorCallback) errorCallback();  
+        callback(JSON.parse(xmlHttp.responseText));
       }
-    }; 
+    };
 };
 
-persistence.sync.post = function(uri, data, successCallback, errorCallback) { 
+persistence.sync.postJSON = function(uri, data, callback) {
     var xmlHttp = new XMLHttpRequest();
     xmlHttp.open("POST", uri, true);
     xmlHttp.setRequestHeader('Content-Type', 'application/json');
     xmlHttp.send(data);
     xmlHttp.onreadystatechange = function() {
       if(xmlHttp.readyState==4 && xmlHttp.status==200) {
-        if (successCallback) successCallback(xmlHttp.responseText);
-      } else {
-        if (errorCallback) errorCallback();  
+        callback(JSON.parse(xmlHttp.responseText));
       }
-    };  
+    };
 }; 
 
 
@@ -123,19 +119,19 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
     function synchronize(session, uri, Entity, conflictCallback, callback) {
       session.flush(function() {
           persistence.sync.Sync.findBy(session, 'entity', Entity.meta.name, function(sync) {
-              var lastServerSyncTime = sync ? sync.serverDate : 0;
-              var lastServerPushTime = sync ? sync.serverPushDate : 0;
-              var lastLocalSyncTime = sync ? sync.localDate : 0;
+              var lastServerSyncTime = sync ? persistence.get(sync, 'serverDate') : 0;
+              var lastServerPushTime = sync ? persistence.get(sync, 'serverPushDate') : 0;
+              var lastLocalSyncTime = sync ? persistence.get(sync, 'localDate') : 0;
               var meta = Entity.meta;
-              var fieldSpec = meta.fields;
+              var fieldSpec = meta.fields;   
+
               //var now = getEpoch(new Date());
               if(!sync) {
                 sync = new persistence.sync.Sync(session, {entity: Entity.meta.name});
                 session.add(sync);
               }
 
-              persistence.sync.get(uri + '?since=' + lastServerSyncTime, function(responseText) { 
-                  var result = JSON.parse(responseText);
+              persistence.sync.getJSON(uri + '?since=' + lastServerSyncTime, function(result) {
                   var ids = [];
                   var lookupTbl = {};
 
@@ -209,8 +205,7 @@ persistence.sync.post = function(uri, data, successCallback, errorCallback) {
                               updatesToPush.push(update);
                             });
                           function next() {
-                            persistence.sync.post(uri, JSON.stringify(updatesToPush), function(response) {
-                                var pushData = JSON.parse(response);
+                            persistence.sync.postJSON(uri, JSON.stringify(updatesToPush), function(pushData) {
                                 session.flush(function() {
                                     sync.localDate = getEpoch(new Date());
                                     sync.serverDate = result.now;

@@ -39,23 +39,32 @@ try {
 var persistence = (window && window.persistence) ? window.persistence : {}; 
  
 /**
- * Default getter/setter implementation for entity properties 
+ * Default implementation for entity-property 
  */
 persistence.defineProp = function(scope, field, setterCallback, getterCallback) {
-    scope.__defineSetter__(field, function (val) {
-        setterCallback(val);
+    scope.__defineSetter__(field, function (value) {
+        setterCallback(value);
     });
     scope.__defineGetter__(field, function () {
         return getterCallback();
     });
 };
- 
+
 /**
- * Depends on getter / setter implementation
+ * Default implementation for entity-property setter  
  */
-persistence.entityPropToEntityVal = function(val) { 
-    return val; 
+persistence.set = function(scope, fieldName, value) { 
+    scope[fieldName] = value; 
 };
+
+/**
+ * Default implementation for entity-property getter  
+ */
+persistence.get = function(arg1, arg2) { 
+    return (arguments.length == 1) ? arg1 : arg1[arg2];
+};
+
+
 
 (function () {
     var entityMeta = {};
@@ -535,7 +544,6 @@ persistence.entityPropToEntityVal = function(val) {
      *   dbValToEntityVal)
      */
     persistence.entityValToDbVal = function (val, type) {
-      val = persistence.entityPropToEntityVal(val);
       if (val === undefined || val === null) {
         return null;
       } else if (type === 'JSON' && val) {
@@ -654,7 +662,8 @@ persistence.entityPropToEntityVal = function(val) {
                       // TODO: this is technically not correct, should clear out existing items too
                       var items = val._items;
                       for(var i = 0; i < items.length; i++) {
-                        that[coll].add(items[i]);
+                        //that[coll].add(items[i]);
+                        persistence.get(that, coll).add(items[i]);
                       }
                     } else {
                         throw "Not yet supported.";
@@ -686,7 +695,8 @@ persistence.entityPropToEntityVal = function(val) {
                       // TODO: this is technically not correct, should clear out existing items too
                       var items = val._items;
                       for(var i = 0; i < items.length; i++) {
-                        that[coll].add(items[i]);
+                        //that[coll].add(items[i]);
+                        persistence.get(that, coll).add(items[i]); 
                       }
                     } else {
                       throw "Not yet supported.";
@@ -708,7 +718,7 @@ persistence.entityPropToEntityVal = function(val) {
 
           for ( var f in obj) {
             if (obj.hasOwnProperty(f)) {
-              that[f] = obj[f];
+              persistence.set(that, f, obj[f]);
             }
           }
         } // Entity
@@ -1023,7 +1033,7 @@ persistence.entityPropToEntityVal = function(val) {
         var additionalQueries = [];
         for(var p in meta.hasMany) {
           if(meta.hasMany.hasOwnProperty(p)) {
-            additionalQueries = additionalQueries.concat(obj[p].persistQueries());
+            additionalQueries = additionalQueries.concat(persistence.get(obj, p).persistQueries());
           }
         }
         executeQueriesSeq(tx, additionalQueries, function() {

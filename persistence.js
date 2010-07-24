@@ -39,29 +39,15 @@ try {
 var persistence = (window && window.persistence) ? window.persistence : {}; 
  
 /**
- * Default implementation for entity-property 
+ * Default getter/setter implementation for entity properties 
  */
-persistence.defineProp = function(scope, fieldName, setterCallback, getterCallback) {
-    scope.__defineSetter__(fieldName, function (value) {
-        setterCallback(value);
+persistence.defineProp = function(scope, field, setterCallback, getterCallback) {
+    scope.__defineSetter__(field, function (val) {
+        setterCallback(val);
     });
-    scope.__defineGetter__(fieldname, function () {
+    scope.__defineGetter__(field, function () {
         return getterCallback();
     });
-};
-
-/**
- * Default implementation for entity-property setter  
- */
-persistence.set = function(scope, fieldName, value) { 
-    scope[fieldName] = value; 
-};
-
-/**
- * Default implementation for entity-property getter  
- */
-persistence.get = function(arg1, arg2) { 
-    return (arguments.length == 1) ? arg1 : arg1[arg2];
 };
  
 /**
@@ -241,11 +227,11 @@ persistence.entityPropToEntityVal = function(val) {
     }
 
     function isTransaction(obj) {
-      return obj && obj.executeSql;
+      return !obj || (obj && obj.executeSql);
     }
 
     function isSession(obj) {
-      return obj && obj.schemaSync;
+      return !obj || (obj && obj.schemaSync);
     }
 
     /**
@@ -258,7 +244,7 @@ persistence.entityPropToEntityVal = function(val) {
      */
     persistence.schemaSync = function (tx, callback) {
       var args = argspec.getArgs(arguments, [
-          { name: "tx", optional: true, check: isTransaction },
+          { name: "tx", optional: true, check: isTransaction, defaultValue: null },
           { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
         ]);
       tx = args.tx;
@@ -376,7 +362,7 @@ persistence.entityPropToEntityVal = function(val) {
       }
       var fns = persistence.flushHooks;
       for(var i = 0; i < fns.length; i++) {
-        fns[i](tx);
+        fns[i](session, tx);
       }
 
       var persistObjArray = [];
@@ -448,7 +434,7 @@ persistence.entityPropToEntityVal = function(val) {
      */
     persistence.reset = function (tx, callback) {
       var args = argspec.getArgs(arguments, [
-          { name: "tx", optional: true, check: isTransaction },
+          { name: "tx", optional: true, check: isTransaction, defaultValue: null },
           { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
         ]);
       tx = args.tx;
@@ -549,6 +535,7 @@ persistence.entityPropToEntityVal = function(val) {
      *   dbValToEntityVal)
      */
     persistence.entityValToDbVal = function (val, type) {
+      val = persistence.entityPropToEntityVal(val);
       if (val === undefined || val === null) {
         return null;
       } else if (type === 'JSON' && val) {
@@ -600,7 +587,7 @@ persistence.entityPropToEntityVal = function(val) {
 
         for ( var field in meta.fields) {
           (function () {
-              if (meta.fields.hasOwnProperty(field)) {
+              if (meta.fields.hasOwnProperty(field)) {    
                 var f = field; // Javascript scopes/closures SUCK
                 persistence.defineProp(that, f, function(val) {
                   // setterCallback
@@ -613,10 +600,10 @@ persistence.entityPropToEntityVal = function(val) {
                 }, function() {
                   // getterCallback 
                   return that._data[f];
-                });    
+                });
                 that._data[field] = defaultValue(meta.fields[field]);
               }
-          }()); 
+            }());
         }
 
         for ( var it in meta.hasOne) {
@@ -648,8 +635,7 @@ persistence.entityPropToEntityVal = function(val) {
                     that._data_obj[ref] = session.trackedObjects[that._data[ref]];
                     return that._data_obj[ref];
                   } else {
-                    throw "Property '" + ref + "' with id: " + that._data[ref]
-                    + " not fetched, either prefetch it or fetch it manually.";
+                    throw "Property '" + ref + "' with id: " + that._data[ref] + " not fetched, either prefetch it or fetch it manually.";
                   }
                 });
               }());
@@ -722,7 +708,7 @@ persistence.entityPropToEntityVal = function(val) {
 
           for ( var f in obj) {
             if (obj.hasOwnProperty(f)) {
-              persistence.set(that, f);
+              that[f] = obj[f];
             }
           }
         } // Entity
@@ -737,9 +723,9 @@ persistence.entityPropToEntityVal = function(val) {
 
         Entity.prototype.fetch = function(tx, rel, callback) {
           var args = argspec.getArgs(arguments, [
-              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
               { name: 'rel', optional: false, check: argspec.hasType('string') },
-              { name: 'callback', optional: false, check: argspec.isCallback() },
+              { name: 'callback', optional: false, check: argspec.isCallback() }
             ]);
           tx = args.tx;
           rel = args.rel;
@@ -789,7 +775,7 @@ persistence.entityPropToEntityVal = function(val) {
         Entity.load = function(session, tx, id, callback) {
           var args = argspec.getArgs(arguments, [
               { name: 'session', optional: true, check: isSession, defaultValue: persistence },
-              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
               { name: 'id', optional: false, check: argspec.hasType('string') },
               { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
             ]);
@@ -799,7 +785,7 @@ persistence.entityPropToEntityVal = function(val) {
         Entity.findBy = function(session, tx, property, value, callback) {
           var args = argspec.getArgs(arguments, [
               { name: 'session', optional: true, check: isSession, defaultValue: persistence },
-              { name: 'tx', optional: true, check: isTransaction },
+              { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
               { name: 'property', optional: false, check: argspec.hasType('string') },
               { name: 'value', optional: false },
               { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
@@ -902,7 +888,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       persistence.dump = function(tx, entities, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'entities', optional: true, check: function(obj) { return entities.length; } },
             { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
           ]);
@@ -959,7 +945,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       persistence.load = function(tx, dump, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'dump', optional: false },
             { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
           ]);
@@ -1029,7 +1015,7 @@ persistence.entityPropToEntityVal = function(val) {
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");
-            values.push(persistence.entityValToDbVal(persistence.get(obj, p), meta.fields[p]));
+            values.push(persistence.entityValToDbVal(obj._data[p], meta.fields[p]));
             qs.push('?');
             propertyPairs.push("`" + p + "` = ?");
           }
@@ -1295,7 +1281,7 @@ persistence.entityPropToEntityVal = function(val) {
           var qs = [];
           for(var i = 0; i < vals.length; i++) {
             qs.push('?');
-            values.push(persistence.entityValToDbVal(persistence.get(vals, i)));
+            values.push(persistence.entityValToDbVal(vals[i]));
           }
           if(vals.length === 0) {
             // Optimize this a little
@@ -1308,7 +1294,7 @@ persistence.entityPropToEntityVal = function(val) {
           var qs = [];
           for(var i = 0; i < vals.length; i++) {
             qs.push('?');
-            values.push(persistence.entityValToDbVal(persistence.get(vals, i)));
+            values.push(persistence.entityValToDbVal(vals[i]));
           }
 
           if(vals.length === 0) {
@@ -1610,7 +1596,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       DbQueryCollection.prototype.each = function (tx, eachFn) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'eachFn', optional: true, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -1628,7 +1614,7 @@ persistence.entityPropToEntityVal = function(val) {
 
       DbQueryCollection.prototype.one = function (tx, oneFn) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'oneFn', optional: false, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -1657,7 +1643,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       DbQueryCollection.prototype.list = function (tx, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'callback', optional: false, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -1763,7 +1749,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       DbQueryCollection.prototype.destroyAll = function (tx, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
           ]);
         tx = args.tx;
@@ -1798,7 +1784,7 @@ persistence.entityPropToEntityVal = function(val) {
        */
       DbQueryCollection.prototype.count = function (tx, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'callback', optional: false, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -1820,10 +1806,10 @@ persistence.entityPropToEntityVal = function(val) {
 
         var args = [];
         var whereSql = "WHERE "
-        + [ this._filter.sql("", args) ].concat(
+        + [ this._filter.sql("root", args) ].concat(
           this._additionalWhereSqls).join(' AND ');
 
-        var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` " + whereSql;
+        var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` AS `root` " + whereSql;
 
         session.flush(tx, function () {
             tx.executeSql(sql, args, function(results) {
@@ -1953,7 +1939,7 @@ persistence.entityPropToEntityVal = function(val) {
 
       LocalQueryCollection.prototype.list = function(tx, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'callback', optional: false, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -2005,7 +1991,7 @@ persistence.entityPropToEntityVal = function(val) {
 
       LocalQueryCollection.prototype.count = function(tx, callback) {
         var args = argspec.getArgs(arguments, [
-            { name: 'tx', optional: true, check: isTransaction },
+            { name: 'tx', optional: true, check: isTransaction, defaultValue: null },
             { name: 'callback', optional: true, check: argspec.isCallback() }
           ]);
         tx = args.tx;
@@ -2064,7 +2050,7 @@ persistence.entityPropToEntityVal = function(val) {
           var that = {};
           that.executeSql = function (query, args, successFn, errorFn) {
               if(persistence.db.log) {
-                  console.log(query);
+                  console.log(query, args);
               }
               t.executeSql(query, args, function (_, result) {
                   if (successFn) {
@@ -2099,7 +2085,7 @@ persistence.entityPropToEntityVal = function(val) {
               if (args == null) args = [];
 
               if(persistence.db.log) {
-                  console.log(query + ' -> ' + args);
+                  console.log(query, args);
               }
 
               var result = t.executeSql(query, args);
@@ -2133,7 +2119,7 @@ persistence.entityPropToEntityVal = function(val) {
           var that = {};
           that.executeSql = function (query, args, successFn, errorFn) {
               if(persistence.db.log) {
-                  console.log(query);
+                  console.log(query, args);
               }
               var rs = conn.execute(query, args);
               if (successFn) {
@@ -2197,7 +2183,7 @@ var argspec = {};
             argIdx++;
             specIdx++;
           } else {
-            if(s.defaultValue) {
+            if(s.defaultValue !== undefined) {
               argObj[s.name] = s.defaultValue;
             }
             specIdx++;

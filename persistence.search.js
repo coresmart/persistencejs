@@ -160,12 +160,12 @@ if(!window.persistence) { // persistence.js not loaded!
       });
 
 
-    persistence.flushHooks.push(function(tx) {
+    persistence.flushHooks.push(function(session, tx) {
         var queries = [];
-        for (var id in persistence.getTrackedObjects()) {
-          if (persistence.getTrackedObjects().hasOwnProperty(id)) {
-            var obj = persistence.getTrackedObjects()[id];
-            var meta = persistence.define(obj._type).meta;
+        for (var id in session.getTrackedObjects()) {
+          if (session.getTrackedObjects().hasOwnProperty(id)) {
+            var obj = session.getTrackedObjects()[id];
+            var meta = session.define(obj._type).meta;
             var indexTbl = obj._type + '_Index';
             if(meta.textIndex) {
               for ( var p in obj._dirtyProperties) {
@@ -185,7 +185,7 @@ if(!window.persistence) { // persistence.js not loaded!
         for (var id in persistence.getObjectsToRemove()) {
           if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
             var obj = persistence.getObjectsToRemove()[id];
-            var meta = persistence.define(obj._type).meta;
+            var meta = persistence.getEntityMeta()[obj._type];
             if(meta.textIndex) {
               queries.push(['DELETE FROM `' + obj._type + '_Index` WHERE `entityId` = ?', [id]]);
             }

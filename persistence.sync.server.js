@@ -48,11 +48,15 @@ function jsonToEntityVal(value, type) {
   }
 }
 
+function getEpoch(date) {
+  return date.getTime(); //Math.round(date.getTime()/1000);
+}
+
 function entityValToJson(value, type) {
   if(type) {
     switch(type) {
     case 'DATE': 
-      return value.getTime()/1000;
+      return Math.round(date.getTime() / 1000);
       break;
     default:
       return value;
@@ -63,20 +67,26 @@ function entityValToJson(value, type) {
 }
 
 exports.pushUpdates = function(session, tx, Entity, since, callback) {
-  Entity.all(session).filter("lastChange", ">", since).list(tx, function(items) {
+  Entity.all(session).filter("_lastChange", ">", since).list(tx, function(items) {
       var results = [];
-      var fieldSpec = Entity.meta.fields;
+      var meta = Entity.meta;
+      var fieldSpec = meta.fields;
       for(var i = 0; i < items.length; i++) {
         var itemData = items[i]._data;
         var item = {id: items[i].id};
-        for(var p in itemData) {
-          if(itemData.hasOwnProperty(p)) {
+        for(var p in fieldSpec) {
+          if(fieldSpec.hasOwnProperty(p)) {
             item[p] = entityValToJson(itemData[p], fieldSpec[p]);
+          }
+        }
+        for(var p in meta.hasOne) {
+          if(meta.hasOne.hasOwnProperty(p)) {
+            item[p] = entityValToJson(itemData[p]);
           }
         }
         results.push(item);
       }
-      callback({now: entityValToJson(new Date(), "DATE"), updates: results});
+      callback({now: getEpoch(new Date()), updates: results});
     });
 };
 
@@ -84,6 +94,7 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
   validator = validator || function() { return true; };
   var allIds = [];
   var updateLookup = {};
+  var now = getEpoch(new Date());
   for(var i = 0; i < updates.length; i++) {
     allIds.push(updates[i].id);
     updateLookup[updates[i].id] = updates[i];
@@ -96,8 +107,9 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
         var updateItem = updateLookup[existingItem.id];
         for(var p in updateItem) {
           if(updateItem.hasOwnProperty(p)) {
-            if(updateItem[p] !== existingItem[p]) {
+            if(updateItem[p] !== existingItem._data[p]) {
               existingItem[p] = jsonToEntityVal(updateItem[p], fieldSpec[p]);
+              existingItem._lastChange = now;
             }
           }
         }
@@ -115,14 +127,53 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
               newItem[p] = jsonToEntityVal(update[p], fieldSpec[p]);
             }
           }
-          log("Adding new item.");
-          log(newItem);
+          newItem._lastChange = now;
           session.add(newItem);
         }
       }
       session.flush(tx, function() {
-          log("All is saved and done.");
-          callback();
+          callback({status: 'ok', now: now});
         });
     });
 };
+
+exports.setupSync = function(persistence) {
+    persistence.entityDecoratorHooks.push(function(Entity) {
+        /**
+         * Declares an entity to be tracked for changes
+         */
+        Entity.enableSync = function() {
+          Entity.meta.enableSync = true;
+          Entity.meta.fields['_lastChange'] = 'BIGINT';
+        };
+      });
+
+    /**
+     * Resets _lastChange property if the object has dirty project (i.e. the object has changed)
+     */
+    persistence.flushHooks.push(function(session, tx) {
+        var queries = [];
+        for (var id in session.getTrackedObjects()) {
+          if (session.getTrackedObjects().hasOwnProperty(id)) {
+            var obj = session.getTrackedObjects()[id];
+            var meta = persistence.getEntityMeta()[obj._type];
+            if(meta.enableSync) {
+              var isDirty = obj._new;
+              var lastChangeIsDirty = false;
+              for ( var p in obj._dirtyProperties) {
+                if (obj._dirtyProperties.hasOwnProperty(p)) {
+                  isDirty = true;
+                }
+                if(p === '_lastChange') {
+                  lastChangeIsDirty = true;
+                }
+              }
+              if(isDirty && !lastChangeIsDirty) {
+                // Only set _lastChange if it has not been set manually (during a sync)
+                obj._lastChange = getEpoch(new Date());
+              }
+            }
+          }
+        }
+      });
+  };

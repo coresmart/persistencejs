@@ -1,3 +1,6 @@
+// Original file at: http://github.com/rsaccon/uki/tree/master/src/uki-persistence/persistence.js
+
+
 /**
  * persistencejs integration (http://www.persistencejs.org)
  * 

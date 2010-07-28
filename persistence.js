@@ -662,7 +662,6 @@ persistence.get = function(arg1, arg2) {
                       // TODO: this is technically not correct, should clear out existing items too
                       var items = val._items;
                       for(var i = 0; i < items.length; i++) {
-                        //that[coll].add(items[i]);
                         persistence.get(that, coll).add(items[i]);
                       }
                     } else {
@@ -695,14 +694,13 @@ persistence.get = function(arg1, arg2) {
                       // TODO: this is technically not correct, should clear out existing items too
                       var items = val._items;
                       for(var i = 0; i < items.length; i++) {
-                        //that[coll].add(items[i]);
                         persistence.get(that, coll).add(items[i]); 
                       }
                     } else {
                       throw "Not yet supported.";
                     }
                   }, function() {
-                    // getterCallback 
+                    // getterCallback
                     if (that._data[coll]) {
                         return that._data[coll];
                     } else {
@@ -1021,7 +1019,7 @@ persistence.get = function(arg1, arg2) {
               obj._dirtyProperties[p] = true;
             }
           }
-        }
+        } 
         for ( var p in obj._dirtyProperties) {
           if (obj._dirtyProperties.hasOwnProperty(p)) {
             properties.push("`" + p + "`");
@@ -1325,7 +1323,7 @@ persistence.get = function(arg1, arg2) {
 
       PropertyFilter.prototype.match = function (o) {
         var value = this.value;
-        var propValue = o[this.property];
+        var propValue = persistence.get(o, this.property);
         if(value && value.getTime) { // DATE
           // TODO: Deal with arrays of dates for 'in' and 'not in'
           value = Math.round(value.getTime() / 1000) * 1000; // Deal with precision
@@ -1363,7 +1361,7 @@ persistence.get = function(arg1, arg2) {
 
       PropertyFilter.prototype.makeFit = function(o) {
         if(this.operator === '=') {
-          o[this.property] = this.value;
+          persistence.set(o, this.property, this.value);
         } else {
           throw "Sorry, can't perform makeFit for other filters than =";
         }
@@ -1371,10 +1369,10 @@ persistence.get = function(arg1, arg2) {
 
       PropertyFilter.prototype.makeNotFit = function(o) {
         if(this.operator === '=') {
-          o[this.property] = null;
+          persistence.set(o, this.property, null);
         } else {
           throw "Sorry, can't perform makeNotFit for other filters than =";
-        }            
+        }
       }
 
       /**
@@ -1969,12 +1967,14 @@ persistence.get = function(arg1, arg2) {
         results.sort(function(a, b) {
             for(var i = 0; i < that._orderColumns.length; i++) {
               var col = that._orderColumns[i][0];
-              var asc = that._orderColumns[i][1];
-              if(a[col] < b[col]) {
+              var asc = that._orderColumns[i][1]; 
+              var aVal = persistence.get(a, col);
+              var bVal = persistence.get(b, col);
+              if(aVal < bVal) {
                 return asc ? -1 : 1;
-              } else if(a[col] > b[col]) {
+              } else if(aVal > bVal) {
                 return asc ? 1 : -1;
-              } 
+              }
             }
             return 0;
           });

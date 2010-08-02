@@ -36,8 +36,7 @@ $(document).ready(function(){
     });
 
   asyncTest("setting up remote database", 1, function() {
-      persistence.sync.get('/reset', function(resp) {
-          var data = JSON.parse(resp);
+      persistence.sync.getJSON('/reset', function(data) {
           same(data, {status: 'ok'}, "Remote reset");
           start();
         });
@@ -157,8 +156,7 @@ $(document).ready(function(){
     });
 
   asyncTest("marking all tasks done remotely", function() {
-      persistence.sync.get('/markAllDone', function(resp) {
-          var data = JSON.parse(resp);
+      persistence.sync.getJSON('/markAllDone', function(data) {
           same(data, {status: 'ok'}, "Remote reset");
           Task.syncAll(noConflictsHandler, function() {
               ok(true, "Came back from sync");
@@ -173,8 +171,7 @@ $(document).ready(function(){
   module("Conflicts");
 
   asyncTest("prefer local conflict handler", 8, function() {
-      persistence.sync.get('/markAllUndone', function(resp) {
-          var data = JSON.parse(resp);
+      persistence.sync.getJSON('/markAllUndone', function(data) {
           same(data, {status: 'ok'}, "Remote marking undone");
           Task.all().list(function(tasks) {
               for(var i = 0; i < tasks.length; i++) {
@@ -203,8 +200,7 @@ $(document).ready(function(){
     });
 
   asyncTest("prefer remote conflict handler", 5, function() {
-      persistence.sync.get('/markAllUndone', function(resp) {
-          var data = JSON.parse(resp);
+      persistence.sync.getJSON('/markAllUndone', function(data) {
           same(data, {status: 'ok'}, "Remote marking undone");
           Task.all().list(function(tasks) {
               for(var i = 0; i < tasks.length; i++) {

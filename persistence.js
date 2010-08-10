@@ -251,17 +251,19 @@ persistence.get = function(arg1, arg2) {
      *            function to be called when synchronization has completed,
      *            takes started transaction as argument
      */
-    persistence.schemaSync = function (tx, callback) {
+    persistence.schemaSync = function (tx, callback, emulate) {
       var args = argspec.getArgs(arguments, [
           { name: "tx", optional: true, check: isTransaction, defaultValue: null },
-          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} },
+          { name: "emulate", optional: true, check: argspec.hasType('boolean') }
         ]);
       tx = args.tx;
       callback = args.callback;
+      emulate = args.emulate;
 
       if(!tx) {
         var session = this;
-        this.transaction(function(tx) { session.schemaSync(tx, callback); });
+        this.transaction(function(tx) { session.schemaSync(tx, callback, emulate); });
         return;
       }
       var queries = [], meta, rowDef, otherMeta, tableName;
@@ -314,13 +316,18 @@ persistence.get = function(arg1, arg2) {
               null ]);
         }
       }
-      var fns = persistence.schemaSyncHooks;
-      for(var i = 0; i < fns.length; i++) {
-        fns[i](tx);
+      if(emulate) {
+        // Done
+        callback(tx);
+      } else {
+        var fns = persistence.schemaSyncHooks;
+        for(var i = 0; i < fns.length; i++) {
+          fns[i](tx);
+        }
+        executeQueriesSeq(tx, queries, function() {
+            callback(tx);
+          });
       }
-      executeQueriesSeq(tx, queries, function() {
-          callback(tx);
-        });
     };
 
     /**
@@ -480,7 +487,7 @@ persistence.get = function(arg1, arg2) {
 
         session.clean();
         persistence.generatedTables = {};
-      });
+      }, true);
     }
 
     /**

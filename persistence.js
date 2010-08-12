@@ -27,12 +27,10 @@
 try {
   if(!window) {
     window = {};
-    console = {};
     //exports.console = console;
   }
 } catch(e) {
   window = {};
-  console = {};
   exports.console = console;
 }
 

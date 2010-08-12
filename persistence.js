@@ -282,8 +282,8 @@ persistence.get = function(arg1, arg2) {
               otherMeta = meta.hasOne[rel].type.meta;
               rowDef += rel + " VARCHAR(32), ";
               queries.push( [
-                  //"CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
-                  "CREATE INDEX `" + meta.name + "_" + rel + "_" + otherMeta.name
+                  "CREATE INDEX IF NOT EXISTS `" + meta.name + "_" + rel + "_" + otherMeta.name
+                  //"CREATE INDEX `" + meta.name + "_" + rel + "_" + otherMeta.name
                   + "` ON `" + meta.name + "` (`" + rel + "`)", null ]);
             }
           }
@@ -293,12 +293,12 @@ persistence.get = function(arg1, arg2) {
               if (!persistence.generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
-                    //"CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
-                    "CREATE INDEX `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
+                    "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
+                    //"CREATE INDEX `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
                     + tableName + "` (`" + meta.name + "_" + rel + "`)", null ]);
                 queries.push( [
-                    //"CREATE INDEX IF NOT EXISTS `" + tableName + "_" + otherMeta.name + "_"
-                    "CREATE INDEX `" + tableName + "_" + otherMeta.name + "_"
+                    "CREATE INDEX IF NOT EXISTS `" + tableName + "_" + otherMeta.name + "_"
+                    //"CREATE INDEX `" + tableName + "_" + otherMeta.name + "_"
                     + meta.hasMany[rel].inverseProperty + "` ON `" + tableName + "` (`"
                     + otherMeta.name + "_" + meta.hasMany[rel].inverseProperty + "`)", null ]);
                 queries.push( [
@@ -2179,8 +2179,11 @@ persistence.get = function(arg1, arg2) {
 }());
 
 try {
-  exports.persistence = persistence;
-} catch(e) {}
+  if(exports) {
+    exports.persistence = persistence;
+  }
+} catch(e) {
+}
 
 
 // ArgSpec.js library: http://github.com/zefhemel/argspecjs

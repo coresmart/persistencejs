@@ -6,6 +6,7 @@
  */
 var persistencejs = require('./persistence');
 var persistence = persistencejs.persistence;
+var websql = require('./persistence.store.websql');
 var sys = require('sys');
 var mysql = require('mysql');
 

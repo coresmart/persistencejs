@@ -795,6 +795,10 @@ persistence.get = function(arg1, arg2) {
     NullFilter.prototype.makeNotFit = function(o) {
     };
 
+    NullFilter.prototype.toUniqueString = function() {
+      return "NULL";
+    };
+
     /**
      * Filter that makes sure that both its left and right filter match
      * @param left left-hand filter object
@@ -805,20 +809,23 @@ persistence.get = function(arg1, arg2) {
       this.right = right;
     }
 
-
     AndFilter.prototype.match = function (o) {
       return this.left.match(o) && this.right.match(o);
-    }
+    };
 
     AndFilter.prototype.makeFit = function(o) {
       this.left.makeFit(o);
       this.right.makeFit(o);
-    }
+    };
 
     AndFilter.prototype.makeNotFit = function(o) {
       this.left.makeNotFit(o);
       this.right.makeNotFit(o);
-    }
+    };
+
+    AndFilter.prototype.toUniqueString = function() {
+      return this.left.toUniqueString() + " AND " + this.right.toUniqueString();
+    };
 
     /**
      * Filter that checks whether a certain property matches some value, based on an
@@ -877,7 +884,7 @@ persistence.get = function(arg1, arg2) {
       } else {
         throw "Sorry, can't perform makeFit for other filters than =";
       }
-    }
+    };
 
     PropertyFilter.prototype.makeNotFit = function(o) {
       if(this.operator === '=') {
@@ -885,7 +892,15 @@ persistence.get = function(arg1, arg2) {
       } else {
         throw "Sorry, can't perform makeNotFit for other filters than =";
       }
-    }
+    };
+
+    PropertyFilter.prototype.toUniqueString = function() {
+      var val = this.value;
+      if(val && val._type) {
+        val = val._id;
+      }
+      return this.property + this.operator + val;
+    };
 
     persistence.NullFilter = NullFilter;
     persistence.AndFilter = AndFilter;
@@ -945,7 +960,7 @@ persistence.get = function(arg1, arg2) {
       var s = this._constructor.name + ": " + this._entityName;
       s += '|Filter:';
       var values = [];
-      s += this._filter.sql('', values);
+      s += this._filter.toUniqueString();
       s += '|Values:';
       for(var i = 0; i < values.length; i++) {
         s += values + "|^|";
@@ -1108,14 +1123,12 @@ persistence.get = function(arg1, arg2) {
       this.init(session, entityName, DbQueryCollection);
     }
 
-    DbQueryCollection.prototype = new QueryCollection();
-
     /**
      * Execute a function for each item in the list
      * @param tx the transaction to use (or null to open a new one)
      * @param eachFn (elem) the function to be executed for each item
      */
-    DbQueryCollection.prototype.each = function (tx, eachFn) {
+    QueryCollection.prototype.each = function (tx, eachFn) {
       var args = argspec.getArgs(arguments, [
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: 'eachFn', optional: true, check: argspec.isCallback() }
@@ -1131,9 +1144,9 @@ persistence.get = function(arg1, arg2) {
     }
 
     // Alias
-    DbQueryCollection.prototype.forEach = DbQueryCollection.prototype.each;
+    QueryCollection.prototype.forEach = QueryCollection.prototype.each;
 
-    DbQueryCollection.prototype.one = function (tx, oneFn) {
+    QueryCollection.prototype.one = function (tx, oneFn) {
       var args = argspec.getArgs(arguments, [
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: 'oneFn', optional: false, check: argspec.isCallback() }
@@ -1142,10 +1155,6 @@ persistence.get = function(arg1, arg2) {
       oneFn = args.oneFn;
 
       var that = this;
-      if(!tx) {
-        this._session.transaction(function(tx) { that.one(tx, oneFn); });
-        return;
-      }
 
       this.limit(1).list(tx, function(results) {
           if(results.length === 0) {
@@ -1155,6 +1164,9 @@ persistence.get = function(arg1, arg2) {
           }
         });
     }
+
+    DbQueryCollection.prototype = new QueryCollection();
+
 
     /**
      * An implementation of QueryCollection, that is used
@@ -1257,7 +1269,6 @@ persistence.get = function(arg1, arg2) {
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: 'callback', optional: false, check: argspec.isCallback() }
         ]);
-      tx = args.tx;
       callback = args.callback;
 
       if(!callback || callback.executeSql) { // first argument is transaction

@@ -9,9 +9,13 @@ try {
 }
 
 var persistence = (window && window.persistence) ? window.persistence : {}; 
+
+persistence.store.websql = {};
+
 (function() {
 
-    persistence.generatedTables = {}; // set
+    var generatedTables = {}; // set
+
 
     /**
      * Connect to a database
@@ -25,21 +29,14 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      * @param version
      *            the database version
      */
-    persistence.connect = function (dbname, description, size, version, callback) {
-      var conn = persistence.db.connect(dbname, description, size);
-      if(callback) { // We're in session mode
-        var session = new Session(conn);
-        callback(session);
-      } else {
-        persistence._conn =  conn;
-      }
-      if(!conn) {
-        throw {
-          type: "NoSupportedDatabaseFound",
-          message: "No supported database found in this browser."
-        };
+    function Store(dbname, description, size, version) {
+      this.conn = persistence.db.connect(dbname, description, size);
+      if(!this.conn) {
+        throw "No supported database found in this browser.";
       }
     };
+
+    persistence.store.websql = Store;
 
     /**
      * Create a transaction
@@ -48,11 +45,11 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      *            the callback function to be invoked when the transaction
      *            starts, taking the transaction object as argument
      */
-    persistence.transaction = function (callback) {
-      if(!this._conn) {
+    Store.prototype.transaction = function (callback) {
+      if(!this.conn) {
         throw "No ongoing database connection, please connect first.";
       } else {
-        this._conn.transaction(callback);
+        this.conn.transaction(callback);
       }
     };
 
@@ -69,11 +66,13 @@ var persistence = (window && window.persistence) ? window.persistence : {};
      * Synchronize the data model with the database, creates table that had not
      * been defined before
      * 
+     * @param tx
+     *            transaction object to use (optional)
      * @param callback
      *            function to be called when synchronization has completed,
      *            takes started transaction as argument
      */
-    persistence.schemaSync = function (tx, callback, emulate) {
+    Store.prototype.schemaSync = function (tx, callback, emulate) {
       var args = argspec.getArgs(arguments, [
           { name: "tx", optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} },
@@ -84,8 +83,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       emulate = args.emulate;
 
       if(!tx) {
-        var session = this;
-        this.transaction(function(tx) { session.schemaSync(tx, callback, emulate); });
+        var store = this;
+        this.transaction(function(tx) { store.schemaSync(tx, callback, emulate); });
         return;
       }
       var queries = [], meta, rowDef, otherMeta, tableName;
@@ -113,7 +112,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           for (var rel in meta.hasMany) {
             if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
               tableName = meta.hasMany[rel].tableName;
-              if (!persistence.generatedTables[tableName]) {
+              if (!generatedTables[tableName]) {
                 var otherMeta = meta.hasMany[rel].type.meta;
                 queries.push( [
                     //"CREATE INDEX IF NOT EXISTS `" + tableName + "_" + meta.name + "_" + rel + "` ON `"
@@ -128,12 +127,12 @@ var persistence = (window && window.persistence) ? window.persistence : {};
                     "CREATE TABLE IF NOT EXISTS `" + tableName + "` (`" + meta.name + "_" + rel
                     + "` VARCHAR(32), `" + otherMeta.name + '_'
                     + meta.hasMany[rel].inverseProperty + "` VARCHAR(32))", null ]);
-                persistence.generatedTables[tableName] = true;
+                generatedTables[tableName] = true;
               }
             }
           }
           rowDef = rowDef.substring(0, rowDef.length - 2);
-          persistence.generatedTables[meta.name] = true;
+          generatedTables[meta.name] = true;
           queries.push( [
               "CREATE TABLE IF NOT EXISTS `" + meta.name + "` ( id VARCHAR(32) PRIMARY KEY, " + rowDef + ")",
               null ]);
@@ -156,22 +155,17 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     /**
      * Persists all changes to the database
      * 
+     * @param session
+     *            session object
      * @param tx
      *            transaction to use
      * @param callback
      *            function to be called when done
      */
-    persistence.flush = function (tx, callback) {
-      var args = argspec.getArgs(arguments, [
-          { name: "tx", optional: true, check: persistence.isTransaction },
-          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
-        ]);
-      tx = args.tx;
-      callback = args.callback;
-
-      var session = this;
+    Store.prototype.flush = function (session, tx, callback) {
+      var store = this;
       if(!tx) {
-        this.transaction(function(tx) { session.flush(tx, callback); });
+        this.transaction(function(tx) { store.flush(session, tx, callback); });
         return;
       }
       var fns = persistence.flushHooks;
@@ -180,19 +174,19 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       }
 
       var persistObjArray = [];
-      for (var id in this.trackedObjects) {
-        if (this.trackedObjects.hasOwnProperty(id)) {
-          persistObjArray.push(this.trackedObjects[id]);
+      for (var id in session.trackedObjects) {
+        if (session.trackedObjects.hasOwnProperty(id)) {
+          persistObjArray.push(session.trackedObjects[id]);
         }
       }
       var removeObjArray = [];
-      for (var id in this.objectsToRemove) {
-        if (this.objectsToRemove.hasOwnProperty(id)) {
-          removeObjArray.push(this.objectsToRemove[id]);
-          delete this.trackedObjects[id]; // Stop tracking
+      for (var id in session.objectsToRemove) {
+        if (session.objectsToRemove.hasOwnProperty(id)) {
+          removeObjArray.push(session.objectsToRemove[id]);
+          delete session.trackedObjects[id]; // Stop tracking
         }
       }
-      this.objectsToRemove = {};
+      session.objectsToRemove = {};
       if(callback) {
         function removeOneObject() {
           var obj = removeObjArray.pop();
@@ -236,7 +230,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
     /**
      * Remove all tables in the database (as defined by the model)
      */
-    persistence.reset = function (tx, callback) {
+    Store.prototype.reset = function (session, tx, callback) {
       var args = argspec.getArgs(arguments, [
           { name: "tx", optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
@@ -252,8 +246,8 @@ var persistence = (window && window.persistence) ? window.persistence : {};
       // First sync the schema
       session.schemaSync(tx, function() {
           var tableArray = [];
-          for (var p in persistence.generatedTables) {
-            if (persistence.generatedTables.hasOwnProperty(p)) {
+          for (var p in generatedTables) {
+            if (generatedTables.hasOwnProperty(p)) {
               tableArray.push(p);
             }
           }
@@ -274,7 +268,7 @@ var persistence = (window && window.persistence) ? window.persistence : {};
           }
 
           session.clean();
-          persistence.generatedTables = {};
+          generatedTables = {};
         }, true);
     };
 

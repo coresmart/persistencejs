@@ -1,5 +1,5 @@
 $(document).ready(function(){
-  persistence.store.websql.setup(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
   persistence.db.log = true;
 
   var Project = persistence.define('Project', {

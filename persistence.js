@@ -84,6 +84,9 @@ persistence.get = function(arg1, arg2) {
     persistence.flushHooks = [];
     persistence.schemaSyncHooks = [];
 
+    // Enable debugging
+    persistence.debug = true;
+
     persistence.subscribeToGlobalPropertyListener = function(coll, entityName, property) {
       var key = entityName + '__' + property;
       if(key in this.globalPropertyListeners) {
@@ -150,7 +153,7 @@ persistence.get = function(arg1, arg2) {
       this.objectsToRemove = {};
       this.globalPropertyListeners = {}; // EntityType__prop -> QueryColleciton obj
       this.queryCollectionCache = {}; // entityName -> uniqueString -> QueryCollection
-      this._conn = conn;
+      this.conn = conn;
     }
 
     Session.prototype = persistence; // Inherit everything from the root persistence object
@@ -1383,6 +1386,8 @@ var argspec = {};
       };
     }
   }());
+
+persistence.argspec = argspec;
 
 // JSON2 library, source: http://www.JSON.org/js.html
 // Most modern browsers already support this natively, but mobile

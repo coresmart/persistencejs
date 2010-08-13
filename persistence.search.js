@@ -24,176 +24,185 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-if(!window.persistence) { // persistence.js not loaded!
-  throw "persistence.js should be loaded before persistence.search.js"
+try {
+  if(!window) {
+    window = {};
+  }
+} catch(e) {
+  window = {};
+  exports.console = console;
 }
 
-(function() {
-    var filteredWords = {'and':true, 'the': true, 'are': true};
+var persistence = (window && window.persistence) ? window.persistence : {}; 
 
-    function normalizeWord(word, filterShortWords) {
-      if(!(word in filteredWords || (filterShortWords && word.length < 3))) {
-          word = word.replace(/ies$/, 'y');
-          word = word.replace(/s$/, '');
-          return word;
-      } else {
-        return false;
-      }
-    }
-    /**
-     * Does extremely basic tokenizing of text. Also includes some basic stemming.
-     */
-    function searchTokenizer(text) {
-      var words = text.toLowerCase().split(/\W+/);
-      var wordDict = {};
-      // Prefixing words with _ to also index Javascript keywords and special fiels like 'constructor'
-      for(var i = 0; i < words.length; i++) {
-        var normalizedWord = normalizeWord(words[i]);
-        if(normalizedWord) {
-          var word = '_' + normalizedWord;
-          // Some extremely basic stemming
-          if(word in wordDict) {
-            wordDict[word]++;
-          } else {
-            wordDict[word] = 1;
-          }
-        }
-      }
-      return wordDict;
-    }
+persistence.search = {};
 
-    /**
-     * Parses a search query and returns it as list SQL parts later to be OR'ed or AND'ed.
-     */
-    function searchPhraseParser(query, indexTbl, prefixByDefault) {
-      query = query.toLowerCase().replace(/['"]/, '').replace(/(^\s+|\s+$)/g, '');
-      var words = query.split(/\s+/);
-      var sqlParts = [];
-      var restrictedToColumn = null;
-      for(var i = 0; i < words.length; i++) {
-        var word = normalizeWord(words[i], !prefixByDefault);
-        if(!word) {
-          continue;
-        }
-        if(word.search(/:$/) !== -1) {
-          restrictedToColumn = word.substring(0, word.length-1);
-          continue;
-        } 
-        var sql = '(';
-        if(word.search(/\*/) !== -1) {
-          sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%');
-        } else if(prefixByDefault) {
-          sql += "`" + indexTbl + "`.`word` LIKE '" + word + "%'";
+persistence.search.config = function(persistence, dialect) {
+  var filteredWords = {'and':true, 'the': true, 'are': true};
+
+  function normalizeWord(word, filterShortWords) {
+    if(!(word in filteredWords || (filterShortWords && word.length < 3))) {
+      word = word.replace(/ies$/, 'y');
+      word = word.replace(/s$/, '');
+      return word;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * Does extremely basic tokenizing of text. Also includes some basic stemming.
+   */
+  function searchTokenizer(text) {
+    var words = text.toLowerCase().split(/\W+/);
+    var wordDict = {};
+    // Prefixing words with _ to also index Javascript keywords and special fiels like 'constructor'
+    for(var i = 0; i < words.length; i++) {
+      var normalizedWord = normalizeWord(words[i]);
+      if(normalizedWord) {
+        var word = '_' + normalizedWord;
+        // Some extremely basic stemming
+        if(word in wordDict) {
+          wordDict[word]++;
         } else {
-          sql += "`" + indexTbl + "`.`word` = '" + word + "'";
+          wordDict[word] = 1;
         }
-        if(restrictedToColumn) {
-          sql += ' AND `' + indexTbl + "`.`prop` = '" + restrictedToColumn + "'";
-        }
-        sql += ')';
-        sqlParts.push(sql);
-      }
-      return sqlParts;
-    }
-
-    function SearchQueryCollection(session, entityName, query, prefixByDefault) {
-      this.init(session, entityName, SearchQueryCollection);
-
-      if(query) {
-        this._additionalJoinSqls.push(', `' + entityName + '_Index`');
-        this._additionalWhereSqls.push('`root`.id = `' + entityName + '_Index`.`entityId`');
-        this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index', prefixByDefault).join(' OR ') + ')');
-        this._additionalGroupSqls.push(' GROUP BY (`' + entityName + '_Index`.`entityId`)');
-        this._additionalGroupSqls.push(' ORDER BY SUM(`' + entityName + '_Index`.`occurrences`) DESC');
       }
     }
+    return wordDict;
+  }
 
-    SearchQueryCollection.prototype = new persistence.DbQueryCollection();
+  /**
+   * Parses a search query and returns it as list SQL parts later to be OR'ed or AND'ed.
+   */
+  function searchPhraseParser(query, indexTbl, prefixByDefault) {
+    query = query.toLowerCase().replace(/['"]/, '').replace(/(^\s+|\s+$)/g, '');
+    var words = query.split(/\s+/);
+    var sqlParts = [];
+    var restrictedToColumn = null;
+    for(var i = 0; i < words.length; i++) {
+      var word = normalizeWord(words[i], !prefixByDefault);
+      if(!word) {
+        continue;
+      }
+      if(word.search(/:$/) !== -1) {
+        restrictedToColumn = word.substring(0, word.length-1);
+        continue;
+      } 
+      var sql = '(';
+      if(word.search(/\*/) !== -1) {
+        sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%');
+      } else if(prefixByDefault) {
+        sql += "`" + indexTbl + "`.`word` LIKE '" + word + "%'";
+      } else {
+        sql += "`" + indexTbl + "`.`word` = '" + word + "'";
+      }
+      if(restrictedToColumn) {
+        sql += ' AND `' + indexTbl + "`.`prop` = '" + restrictedToColumn + "'";
+      }
+      sql += ')';
+      sqlParts.push(sql);
+    }
+    return sqlParts;
+  }
 
-    SearchQueryCollection.prototype.order = function() {
-      throw "Imposing additional orderings is not support for search query collections.";
-    };
+  function SearchQueryCollection(session, entityName, query, prefixByDefault) {
+    this.init(session, entityName, SearchQueryCollection);
 
-    persistence.entityDecoratorHooks.push(function(Entity) {
-        /**
-         * Declares a property to be full-text indexed.
-         */
-        Entity.textIndex = function(prop) {
-          if(!Entity.meta.textIndex) {
-            Entity.meta.textIndex = {};
-          }
-          Entity.meta.textIndex[prop] = true;
-        };
+    if(query) {
+      this._additionalJoinSqls.push(', `' + entityName + '_Index`');
+      this._additionalWhereSqls.push('`root`.id = `' + entityName + '_Index`.`entityId`');
+      this._additionalWhereSqls.push('(' + searchPhraseParser(query, entityName + '_Index', prefixByDefault).join(' OR ') + ')');
+      this._additionalGroupSqls.push(' GROUP BY (`' + entityName + '_Index`.`entityId`)');
+      this._additionalGroupSqls.push(' ORDER BY SUM(`' + entityName + '_Index`.`occurrences`) DESC');
+    }
+  }
 
-        /**
-         * Returns a query collection representing the result of a search
-         * @param query an object with the following fields:
-         */
-        Entity.search = function(session, query, prefixByDefault) {
-          var args = argspec.getArgs(arguments, [
-              { name: 'session', optional: true, check: function(obj) { return obj.schemaSync; }, defaultValue: persistence },
-              { name: 'query', optional: false, check: argspec.hasType('string') },
-              { name: 'prefixByDefault', optional: false }
-            ]);
-          session = args.session;
-          query = args.query;
-          prefixByDefault = args.prefixByDefault;
+  SearchQueryCollection.prototype = new persistence.DbQueryCollection();
 
-          return session.uniqueQueryCollection(new SearchQueryCollection(session, Entity.meta.name, query, prefixByDefault));
-        };
-      });
+  SearchQueryCollection.prototype.order = function() {
+    throw "Imposing additional orderings is not support for search query collections.";
+  };
 
-    persistence.schemaSyncHooks.push(function(tx) {
-        var entityMeta = persistence.getEntityMeta();
-        var queries = [];
-        for(var entityName in entityMeta) {
-          var meta = entityMeta[entityName];
+  persistence.entityDecoratorHooks.push(function(Entity) {
+      /**
+       * Declares a property to be full-text indexed.
+       */
+      Entity.textIndex = function(prop) {
+        if(!Entity.meta.textIndex) {
+          Entity.meta.textIndex = {};
+        }
+        Entity.meta.textIndex[prop] = true;
+      };
+
+      /**
+       * Returns a query collection representing the result of a search
+       * @param query an object with the following fields:
+       */
+      Entity.search = function(session, query, prefixByDefault) {
+        var args = argspec.getArgs(arguments, [
+            { name: 'session', optional: true, check: function(obj) { return obj.schemaSync; }, defaultValue: persistence },
+            { name: 'query', optional: false, check: argspec.hasType('string') },
+            { name: 'prefixByDefault', optional: false }
+          ]);
+        session = args.session;
+        query = args.query;
+        prefixByDefault = args.prefixByDefault;
+
+        return session.uniqueQueryCollection(new SearchQueryCollection(session, Entity.meta.name, query, prefixByDefault));
+      };
+    });
+
+  persistence.schemaSyncHooks.push(function(tx) {
+      var entityMeta = persistence.getEntityMeta();
+      var queries = [];
+      for(var entityName in entityMeta) {
+        var meta = entityMeta[entityName];
+        if(meta.textIndex) {
+          queries.push([dialect.createTable(entityName + + '_Index', [['entityId', 'VARCHAR(32)'], ['prop', 'VARCHAR(30)'], ['word', 'VARCHAR(100)'], ['occurences', 'INT']]), null]);
+          queries.push([dialect.createIndex(entityName, ['prop', 'word']), null]);
+          queries.push([dialect.createIndex(entityName, ['word']), null]);
+          persistence.generatedTables[entityName + '_Index'] = true;
+        }
+      }
+      queries.reverse();
+      persistence.executeQueriesSeq(tx, queries);
+    });
+
+
+  persistence.flushHooks.push(function(session, tx) {
+      var queries = [];
+      for (var id in session.getTrackedObjects()) {
+        if (session.getTrackedObjects().hasOwnProperty(id)) {
+          var obj = session.getTrackedObjects()[id];
+          var meta = session.define(obj._type).meta;
+          var indexTbl = obj._type + '_Index';
           if(meta.textIndex) {
-            queries.push(['CREATE TABLE IF NOT EXISTS `' + entityName + '_Index` (`entityId`, `prop`, `word`, `occurrences`)']);
-            queries.push(['CREATE INDEX IF NOT EXISTS `' + entityName + '_Index_1` ON `' + entityName + '_Index` (`prop`, `word`)']);
-            queries.push(['CREATE INDEX IF NOT EXISTS `' + entityName + '_Index_2` ON `' + entityName + '_Index` (`word`)']);
-            persistence.generatedTables[entityName + '_Index'] = true;
-          }
-        }
-        queries.reverse();
-        persistence.executeQueriesSeq(tx, queries);
-      });
-
-
-    persistence.flushHooks.push(function(session, tx) {
-        var queries = [];
-        for (var id in session.getTrackedObjects()) {
-          if (session.getTrackedObjects().hasOwnProperty(id)) {
-            var obj = session.getTrackedObjects()[id];
-            var meta = session.define(obj._type).meta;
-            var indexTbl = obj._type + '_Index';
-            if(meta.textIndex) {
-              for ( var p in obj._dirtyProperties) {
-                if (obj._dirtyProperties.hasOwnProperty(p) && p in meta.textIndex) {
-                  queries.push(['DELETE FROM `' + indexTbl + '` WHERE `entityId` = ? AND `prop` = ?', [id, p]]);
-                  var occurrences = searchTokenizer(obj._data[p]);
-                  for(var word in occurrences) {
-                    if(occurrences.hasOwnProperty(word)) {
-                      queries.push(['INSERT INTO `' + indexTbl + '` VALUES (?, ?, ?, ?)', [obj.id, p, word.substring(1), occurrences[word]]]);
-                    }
+            for ( var p in obj._dirtyProperties) {
+              if (obj._dirtyProperties.hasOwnProperty(p) && p in meta.textIndex) {
+                queries.push(['DELETE FROM `' + indexTbl + '` WHERE `entityId` = ? AND `prop` = ?', [id, p]]);
+                var occurrences = searchTokenizer(obj._data[p]);
+                for(var word in occurrences) {
+                  if(occurrences.hasOwnProperty(word)) {
+                    queries.push(['INSERT INTO `' + indexTbl + '` VALUES (?, ?, ?, ?)', [obj.id, p, word.substring(1), occurrences[word]]]);
                   }
                 }
               }
             }
           }
         }
-        for (var id in persistence.getObjectsToRemove()) {
-          if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
-            var obj = persistence.getObjectsToRemove()[id];
-            var meta = persistence.getEntityMeta()[obj._type];
-            if(meta.textIndex) {
-              queries.push(['DELETE FROM `' + obj._type + '_Index` WHERE `entityId` = ?', [id]]);
-            }
+      }
+      for (var id in persistence.getObjectsToRemove()) {
+        if (persistence.getObjectsToRemove().hasOwnProperty(id)) {
+          var obj = persistence.getObjectsToRemove()[id];
+          var meta = persistence.getEntityMeta()[obj._type];
+          if(meta.textIndex) {
+            queries.push(['DELETE FROM `' + obj._type + '_Index` WHERE `entityId` = ?', [id]]);
           }
         }
-        queries.reverse();
-        persistence.executeQueriesSeq(tx, queries);
-      });
-
-  }());
+      }
+      queries.reverse();
+      persistence.executeQueriesSeq(tx, queries);
+    });
+};
 

@@ -1,0 +1,3 @@
+Changes:
+
+* persistence.db.log is now called persistence.debug

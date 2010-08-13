@@ -1,6 +1,6 @@
 $(document).ready(function(){
-  persistence.connect('persistencetest', 'My db', 5 * 1024 * 1024);
-  persistence.db.log = true;
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.debug = true;
 
   var Project = persistence.define('Project', {
       name: "TEXT"

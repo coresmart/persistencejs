@@ -70,7 +70,7 @@ exports.config = function(persistence, hostname, db, username, password) {
     };
     return that;
   }
-  var mysqlDialect = {
+  exports.mysqlDialect = {
     columnTypeToSql: function(type) {
       switch(type) {
       case 'JSON': return 'TEXT';
@@ -103,6 +103,6 @@ exports.config = function(persistence, hostname, db, username, password) {
     }
   };
 
-  sql.config(persistence, mysqlDialect);
+  sql.config(persistence, exports.mysqlDialect);
 };
 

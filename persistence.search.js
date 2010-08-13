@@ -91,7 +91,7 @@ persistence.search.config = function(persistence, dialect) {
       } 
       var sql = '(';
       if(word.search(/\*/) !== -1) {
-        sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%');
+        sql += "`" + indexTbl + "`.`word` LIKE '" + word.replace(/\*/g, '%') + "'";
       } else if(prefixByDefault) {
         sql += "`" + indexTbl + "`.`word` LIKE '" + word + "%'";
       } else {
@@ -159,9 +159,9 @@ persistence.search.config = function(persistence, dialect) {
       for(var entityName in entityMeta) {
         var meta = entityMeta[entityName];
         if(meta.textIndex) {
-          queries.push([dialect.createTable(entityName + + '_Index', [['entityId', 'VARCHAR(32)'], ['prop', 'VARCHAR(30)'], ['word', 'VARCHAR(100)'], ['occurences', 'INT']]), null]);
-          queries.push([dialect.createIndex(entityName, ['prop', 'word']), null]);
-          queries.push([dialect.createIndex(entityName, ['word']), null]);
+          queries.push([dialect.createTable(entityName + '_Index', [['entityId', 'VARCHAR(32)'], ['prop', 'VARCHAR(30)'], ['word', 'VARCHAR(100)'], ['occurrences', 'INT']]), null]);
+          queries.push([dialect.createIndex(entityName + '_Index', ['prop', 'word']), null]);
+          queries.push([dialect.createIndex(entityName + '_Index', ['word']), null]);
           persistence.generatedTables[entityName + '_Index'] = true;
         }
       }

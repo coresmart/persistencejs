@@ -17,7 +17,7 @@ if(!persistence.store) {
 persistence.store.websql = {};
 
 
-persistence.store.websql.config = function(dbname, description, size) {
+persistence.store.websql.config = function(persistence, dbname, description, size) {
   var conn = null;
 
   /**
@@ -175,7 +175,7 @@ persistence.store.websql.config = function(dbname, description, size) {
 
   ///////////////////////// SQLite dialect
 
-  var sqliteDialect = {
+  persistence.store.websql.sqliteDialect = {
     columnTypeToSql: function(type) {
       switch(type) {
       case 'JSON': return 'TEXT';
@@ -209,7 +209,7 @@ persistence.store.websql.config = function(dbname, description, size) {
   };
 
   // Configure persistence for generic sql persistence, using sqliteDialect
-  persistence.store.sql.config(persistence, sqliteDialect);
+  persistence.store.sql.config(persistence, persistence.store.websql.sqliteDialect);
 
   // Make the connection
   conn = persistence.db.connect(dbname, description, size);

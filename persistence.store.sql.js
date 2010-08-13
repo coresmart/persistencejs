@@ -17,8 +17,9 @@ if(!persistence.store) {
 persistence.store.sql = {};
 
 persistence.store.sql.config = function(persistence, dialect) {
-  var generatedTables = {}; // set
   var argspec = persistence.argspec;
+
+  persistence.generatedTables = {}; // set
 
   /**
    * Synchronize the data model with the database, creates table that had not
@@ -67,28 +68,28 @@ persistence.store.sql.config = function(persistence, dialect) {
         for (var rel in meta.hasMany) {
           if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
             tableName = meta.hasMany[rel].tableName;
-            if (!generatedTables[tableName]) {
+            if (!persistence.generatedTables[tableName]) {
               var otherMeta = meta.hasMany[rel].type.meta;
               queries.push([dialect.createIndex(tableName, [meta.name + "_" + rel]), null]);
               queries.push([dialect.createIndex(tableName, [otherMeta.name + "_" + meta.hasMany[rel].inverseProperty]), null]);
               queries.push([dialect.createTable(tableName, [[meta.name + "_" + rel, "VARCHAR(32)"], [otherMeta.name + "_" + meta.hasMany[rel].inverseProperty, "VARCHAR(32)"]]), null]);
-              generatedTables[tableName] = true;
+              persistence.generatedTables[tableName] = true;
             }
           }
         }
         colDefs.push(["id", "VARCHAR(32)", "PRIMARY KEY"]);
-        generatedTables[meta.name] = true;
+        persistence.generatedTables[meta.name] = true;
         queries.push([dialect.createTable(meta.name, colDefs), null]);
       }
+    }
+    var fns = persistence.schemaSyncHooks;
+    for(var i = 0; i < fns.length; i++) {
+      fns[i](tx);
     }
     if(emulate) {
       // Done
       callback(tx);
     } else {
-      var fns = persistence.schemaSyncHooks;
-      for(var i = 0; i < fns.length; i++) {
-        fns[i](tx);
-      }
       executeQueriesSeq(tx, queries, function() {
           callback(tx);
         });
@@ -194,8 +195,8 @@ persistence.store.sql.config = function(persistence, dialect) {
     // First emulate syncing the schema (to know which tables were created)
     this.schemaSync(tx, function() {
         var tableArray = [];
-        for (var p in generatedTables) {
-          if (generatedTables.hasOwnProperty(p)) {
+        for (var p in persistence.generatedTables) {
+          if (persistence.generatedTables.hasOwnProperty(p)) {
             tableArray.push(p);
           }
         }
@@ -216,7 +217,7 @@ persistence.store.sql.config = function(persistence, dialect) {
         }
 
         session.clean();
-        generatedTables = {};
+        persistence.generatedTables = {};
       }, true);
   };
 
@@ -395,6 +396,8 @@ persistence.store.sql.config = function(persistence, dialect) {
       callback.apply(this, callbackArgs);
     }
   }
+
+  persistence.executeQueriesSeq = executeQueriesSeq;
 
   /////////////////////////// QueryCollection patches to work in SQL environment
   persistence.NullFilter.prototype.sql = function (alias, values) {

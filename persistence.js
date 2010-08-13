@@ -547,25 +547,6 @@ persistence.get = function(arg1, arg2) {
       return Entity;
     }
 
-    persistence.flush = function (tx, callback) {
-      var args = argspec.getArgs(arguments, [
-          { name: "tx", optional: true, check: persistence.isTransaction },
-          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
-        ]);
-
-      this.store.flush(this, args.tx, args.callback);
-    };
-
-    persistence.reset = function(tx, callback) {
-      var args = argspec.getArgs(arguments, [
-          { name: "tx", optional: true, check: persistence.isTransaction, defaultValue: null },
-          { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
-        ]);
-
-      this.store.reset(this, args.tx, args.callback);
-    };
-
-
     /**
      * Dumps the entire database into an object (that can be serialized to JSON for instance)
      * @param tx transaction to use, use `null` to start a new one

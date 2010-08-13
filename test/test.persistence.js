@@ -1,5 +1,5 @@
 $(document).ready(function(){
-  persistence.connect('persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.store.websql.setup(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
   persistence.db.log = true;
 
   var Project = persistence.define('Project', {
@@ -97,7 +97,7 @@ $(document).ready(function(){
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
-  test("Property contructor property value assignment", 5, function() {
+  test("Property constructor property value assignment", 5, function() {
       var now = new Date();
       var meta = {starRating: 5};
       var t1 = new Task({
@@ -117,7 +117,9 @@ $(document).ready(function(){
   asyncTest("Empty object persistence", function() {
       var t1 = new Task();
       persistence.add(t1);
+      console.warn("Here");
       persistence.flush(function() {
+          console.warn("Here");
           persistence.clean();
           Task.all().one(function(t1db) {
               equals(t1db.id, t1.id, "TEXT properties default to ''");

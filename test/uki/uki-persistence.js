@@ -45,13 +45,14 @@ persistence.defineProp = function(scope, field, setterCallback, getterCallback) 
             return scope;
         }
     };
-};      
+};
 
 /**
- * uki implementation for entity-property setter  
+ * uki implementation for entity-property setter
  */
-persistence.set = function(scope, field, value) { 
-    scope[field](value);
+persistence.set = function(scope, fieldName, value) {
+    if (persistence.isImmutable(fieldName)) throw "immutable field: "+fieldName;
+    scope[fieldName](value);
     return scope; 
 }; 
 
@@ -61,7 +62,6 @@ persistence.set = function(scope, field, value) {
 persistence.get = function(arg1, arg2) {
     var val = (arguments.length == 1) ? arg1 : arg1[arg2];
     return (typeof val === "function") ? val() : val;
-    //return val();
 };
  
 /**

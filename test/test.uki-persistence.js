@@ -191,7 +191,7 @@ $(document).ready(function(){
           var task2 = new Task({name: "Laundry"});
 
           // Adding in two ways
-          p.tasks().add(task1); // bad
+          p.tasks().add(task1);
           task2.project(p);
 
           p.tasks().order('name', true).list(function(tasks) {

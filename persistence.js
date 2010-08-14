@@ -37,6 +37,13 @@ try {
 var persistence = (window && window.persistence) ? window.persistence : {}; 
 
 /**
+ * Check for immutable fields
+ */
+persistence.isImmutable = function(fieldName) {
+	return (fieldName == "id");
+};
+ 
+/**
  * Default implementation for entity-property 
  */
 persistence.defineProp = function(scope, field, setterCallback, getterCallback) {
@@ -52,7 +59,8 @@ persistence.defineProp = function(scope, field, setterCallback, getterCallback) 
  * Default implementation for entity-property setter  
  */
 persistence.set = function(scope, fieldName, value) { 
-  scope[fieldName] = value; 
+    if (persistence.isImmutable(fieldName)) throw "immutable field: "+fieldName;
+    scope[fieldName] = value; 
 };
 
 /**
@@ -61,7 +69,6 @@ persistence.set = function(scope, fieldName, value) {
 persistence.get = function(arg1, arg2) { 
   return (arguments.length == 1) ? arg1 : arg1[arg2];
 };
-
 
 
 (function () {
@@ -633,7 +640,11 @@ persistence.get = function(arg1, arg2) {
             var ent = new Entity();
             for(var p in instance) {
               if(instance.hasOwnProperty(p)) {
-                ent[p] = instance[p];
+                if (persistence.isImmutable(p)) {
+                  ent[p] = instance[p];  
+                } else {
+                  persistence.set(ent, p, instance[p])
+                }  
               }
             }
             this.add(ent);

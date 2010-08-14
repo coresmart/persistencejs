@@ -1015,8 +1015,8 @@ persistence.get = function(arg1, arg2) {
       /**
        * Loads data from a JSON string (as dumped by `dumpToJson`)
        * @param tx transaction to use, use `null` to start a new one
-       * @param entities a list of entity constructor functions to serialize, use `null` for all
-       * @param callback (jsonDump) the callback function called with the results.
+       * @param jsonDump JSON string
+       * @param callback the callback function called when done.
        */
       persistence.loadFromJson = function(tx, jsonDump, callback) {
         this.load(tx, JSON.parse(jsonDump), callback);

@@ -352,12 +352,12 @@ persistence.get = function(arg1, arg2) {
                         var queryColl = new ManyToManyDbQueryCollection(session, inverseMeta.name);
                         queryColl.initManyToMany(that, coll);
                         // TODO: Get rid of SQL here
-                        queryColl._additionalJoinSqls.push("LEFT JOIN `"
-                          + meta.hasMany[coll].tableName + "` AS mtm ON mtm.`"
-                          + inverseMeta.name + '_' + meta.hasMany[coll].inverseProperty
-                          + "` = `root`.`id` ");
-                        queryColl._additionalWhereSqls.push("mtm.`" + meta.name + '_' + coll
-                          + "` = '" + that.id + "'");
+                        queryColl._manyToManyFetch = {
+                            table: meta.hasMany[coll].tableName,
+                            prop: meta.name + '_' + coll,
+                            inverseProp: inverseMeta.name + '_' + meta.hasMany[coll].inverseProperty,
+                            id: that.id
+                          };
                         that._data[coll] = queryColl;
                         return session.uniqueQueryCollection(queryColl);
                       }
@@ -955,9 +955,6 @@ persistence.get = function(arg1, arg2) {
       this._filter = new NullFilter();
       this._orderColumns = []; // tuples of [column, ascending]
       this._prefetchFields = [];
-      this._additionalJoinSqls = [];
-      this._additionalWhereSqls = [];
-      this._additionalGroupSqls = [];
       this._entityName = entityName;
       this._constructor = constructor;
       this._limit = -1;
@@ -985,18 +982,6 @@ persistence.get = function(arg1, arg2) {
       for(var i = 0; i < this._prefetchFields.length; i++) {
         s += this._prefetchFields[i];
       }
-      s += '|JoinSQLs:';
-      for(var i = 0; i < this._additionalJoinSqls.length; i++) {
-        s += this._additionalJoinSqls[i];
-      }
-      s += '|WhereSQLs:';
-      for(var i = 0; i < this._additionalWhereSqls.length; i++) {
-        s += this._additionalWhereSqls[i];
-      }
-      s += '|GroupSQLs:';
-      for(var i = 0; i < this._additionalGroupSqls.length; i++) {
-        s += this._additionalGroupSqls[i];
-      }
       s += '|Limit:';
       s += this._limit;
       s += '|Skip:';
@@ -1013,9 +998,6 @@ persistence.get = function(arg1, arg2) {
       c._filter = this._filter;
       c._prefetchFields = this._prefetchFields.slice(0); // clone
       c._orderColumns = this._orderColumns.slice(0);
-      c._additionalJoinSqls = this._additionalJoinSqls.slice(0);
-      c._additionalWhereSqls = this._additionalWhereSqls.slice(0);
-      c._additionalGroupSqls = this._additionalGroupSqls.slice(0);
       c._limit = this._limit;
       c._skip = this._skip;
       if(cloneSubscribers) {

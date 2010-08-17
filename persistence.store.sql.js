@@ -400,6 +400,50 @@ persistence.store.sql.config = function(persistence, dialect) {
   persistence.executeQueriesSeq = executeQueriesSeq;
 
   /////////////////////////// QueryCollection patches to work in SQL environment
+  var oldQCClone = persistence.QueryCollection.prototype.clone;
+
+  persistence.QueryCollection.prototype.clone = function (cloneSubscribers) {
+    var c = oldQCClone.call(this, cloneSubscribers);
+    c._additionalJoinSqls = this._additionalJoinSqls.slice(0);
+    c._additionalWhereSqls = this._additionalWhereSqls.slice(0);
+    c._additionalGroupSqls = this._additionalGroupSqls.slice(0);
+    c._manyToManyFetch = this._manyToManyFetch;
+    return c;
+  };
+
+  var oldQCInit = persistence.QueryCollection.prototype.init;
+
+  persistence.QueryCollection.prototype.init = function(session, entityName, constructor) {
+    oldQCInit.call(this, session, entityName, constructor);
+    this._manyToManyFetch = null;
+    this._additionalJoinSqls = [];
+    this._additionalWhereSqls = [];
+    this._additionalGroupSqls = [];
+  };
+
+  var oldQCToUniqueString = persistence.QueryCollection.prototype.toUniqueString;
+
+  persistence.QueryCollection.prototype.toUniqueString = function() {
+    var s = oldQCToUniqueString.call(this);
+    s += '|JoinSQLs:';
+    for(var i = 0; i < this._additionalJoinSqls.length; i++) {
+      s += this._additionalJoinSqls[i];
+    }
+    s += '|WhereSQLs:';
+    for(var i = 0; i < this._additionalWhereSqls.length; i++) {
+      s += this._additionalWhereSqls[i];
+    }
+    s += '|GroupSQLs:';
+    for(var i = 0; i < this._additionalGroupSqls.length; i++) {
+      s += this._additionalGroupSqls[i];
+    }
+    if(this._manyToManyFetch) {
+      s += '|ManyToManyFetch:';
+      s += JSON.stringify(this._manyToManyFetch); // TODO: Do something more efficient
+    }
+    return s;
+  };
+
   persistence.NullFilter.prototype.sql = function (alias, values) {
     return "1=1";
   };
@@ -500,7 +544,15 @@ persistence.store.sql.config = function(persistence, dialect) {
     var mainAlias = 'root';
     var selectFields = selectAll(meta, mainAlias, mainPrefix);
 
-    var joinSql = this._additionalJoinSqls.join(' ');
+    var joinSql = '';
+    var additionalWhereSqls = this._additionalWhereSqls.slice(0);
+    var mtm = this._manyToManyFetch;
+    if(mtm) {
+      joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+    }
+
+    joinSql += this._additionalJoinSqls.join(' ');
 
     for ( var i = 0; i < this._prefetchFields.length; i++) {
       var prefetchField = this._prefetchFields[i];
@@ -514,8 +566,7 @@ persistence.store.sql.config = function(persistence, dialect) {
     }
 
     var whereSql = "WHERE "
-    + [ this._filter.sql(mainAlias, args) ].concat(
-      this._additionalWhereSqls).join(' AND ');
+    + [ this._filter.sql(mainAlias, args) ].concat(additionalWhereSqls).join(' AND ');
 
     var sql = "SELECT " + selectFields.join(", ") + " FROM `" + entityName
     + "` AS `" + mainAlias + "` " + joinSql + " " + whereSql;
@@ -585,8 +636,7 @@ persistence.store.sql.config = function(persistence, dialect) {
 
     var args = [];
     var whereSql = "WHERE "
-    + [ this._filter.sql("", args) ].concat(
-      this._additionalWhereSqls).join(' AND ');
+    + [ this._filter.sql("", args) ].concat(this._additionalWhereSqls).join(' AND ');
 
     var sql = "DELETE FROM `" + entityName + "` " + whereSql;
 

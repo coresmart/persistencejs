@@ -1,6 +1,6 @@
 $(document).ready(function(){
-  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
-  //persistence.store.memory.config(persistence);
+  //persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.store.memory.config(persistence);
   persistence.debug = true;
 
   var Project = persistence.define('Project', {
@@ -219,8 +219,8 @@ $(document).ready(function(){
                   equals(tagTasks.length, 1, "Tag has one task");
                   equals(tagTasks[0].id, t.id, "Correct task");
                   oneTag.tasks.remove(tagTasks[0]);
-                  t.tags.list(function(newTags) {
-                      equals(newTags.length, 1, "Tag removed task, task has only one tag left");
+                  t.tags.count(function(cnt) {
+                      equals(cnt, 1, "Tag removed task, task has only one tag left");
                       start();
                     });
                 });

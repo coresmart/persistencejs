@@ -349,7 +349,7 @@ persistence.get = function(arg1, arg2) {
                       } else {
                         var inverseMeta = meta.hasMany[coll].type.meta;
 
-                        var queryColl = new ManyToManyDbQueryCollection(session, inverseMeta.name);
+                        var queryColl = new persistence.ManyToManyDbQueryCollection(session, inverseMeta.name);
                         queryColl.initManyToMany(that, coll);
                         // TODO: Get rid of SQL here
                         queryColl._manyToManyFetch = {
@@ -1199,14 +1199,14 @@ persistence.get = function(arg1, arg2) {
     ManyToManyDbQueryCollection.prototype.initManyToMany = function(obj, coll) {
       this._obj = obj;
       this._coll = coll;
-    }
+    };
 
     ManyToManyDbQueryCollection.prototype.add = function(obj) {
       if(!arrayContains(this._localAdded, obj)) {
         this._session.add(obj);
         this._localAdded.push(obj);
       }
-    }
+    };
 
     ManyToManyDbQueryCollection.prototype.clone = function() {
       var c = DbQueryCollection.prototype.clone.call(this);
@@ -1215,7 +1215,7 @@ persistence.get = function(arg1, arg2) {
       c._obj = this._obj;
       c._coll = this._coll;
       return c;
-    }
+    };
 
     ManyToManyDbQueryCollection.prototype.remove = function(obj) {
       if(arrayContains(this._localAdded, obj)) { // added locally, can just remove it from there
@@ -1223,7 +1223,7 @@ persistence.get = function(arg1, arg2) {
       } else if(!arrayContains(this._localRemoved, obj)) {
         this._localRemoved.push(obj);
       }
-    }
+    };
 
     ////////// Local implementation of QueryCollection \\\\\\\\\\\\\\\\
 

@@ -151,6 +151,25 @@ persistence.store.memory.config = function(persistence) {
     coll.count(null, callback);
   };
 
+  persistence.ManyToManyDbQueryCollection = function(session, entityName) {
+    this.init(session, entityName, persistence.ManyToManyDbQueryCollection);
+    this._items = [];
+  };
+
+  persistence.ManyToManyDbQueryCollection.prototype = new persistence.LocalQueryCollection();
+
+  persistence.ManyToManyDbQueryCollection.prototype.initManyToMany = function(obj, coll) {
+    this._obj = obj;
+    this._coll = coll; // column name
+  };
+
+  persistence.ManyToManyDbQueryCollection.add = function(item) {
+    persistence.LocalQueryCollection.prototype.add.call(this, item);
+    // Let's find the inverse collection
+    var meta = persistence.getMeta(this._obj._type);
+
+
+  };
 };
 
 try {

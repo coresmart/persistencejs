@@ -400,6 +400,13 @@ persistence.store.sql.config = function(persistence, dialect) {
   persistence.executeQueriesSeq = executeQueriesSeq;
 
   /////////////////////////// QueryCollection patches to work in SQL environment
+
+  /**
+   * Function called when session is flushed, returns list of SQL queries to execute 
+   * (as [query, arg] tuples)
+   */
+  QueryCollection.prototype.persistQueries = function() { return []; };
+
   var oldQCClone = persistence.QueryCollection.prototype.clone;
 
   persistence.QueryCollection.prototype.clone = function (cloneSubscribers) {
@@ -634,11 +641,21 @@ persistence.store.sql.config = function(persistence, dialect) {
     } 
     var entityName = this._entityName;
 
+    var joinSql = '';
+    var additionalWhereSqls = this._additionalWhereSqls.slice(0);
+    var mtm = this._manyToManyFetch;
+    if(mtm) {
+      joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+    }
+
+    joinSql += this._additionalJoinSqls.join(' ');
+
     var args = [];
     var whereSql = "WHERE "
-    + [ this._filter.sql("", args) ].concat(this._additionalWhereSqls).join(' AND ');
+    + [ this._filter.sql("", args) ].concat(additionalWhereSqls).join(' AND ');
 
-    var sql = "DELETE FROM `" + entityName + "` " + whereSql;
+    var sql = "DELETE FROM `" + entityName + "` " + joinSql + ' ' + whereSql;
 
     session.flush(tx, function () {
         tx.executeSql(sql, args, callback);
@@ -672,12 +689,19 @@ persistence.store.sql.config = function(persistence, dialect) {
     } 
     var entityName = this._entityName;
 
-    var args = [];
-    var whereSql = "WHERE "
-    + [ this._filter.sql("root", args) ].concat(
-      this._additionalWhereSqls).join(' AND ');
+    var joinSql = '';
+    var additionalWhereSqls = this._additionalWhereSqls.slice(0);
+    var mtm = this._manyToManyFetch;
+    if(mtm) {
+      joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+    }
 
-    var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` AS `root` " + whereSql;
+    joinSql += this._additionalJoinSqls.join(' ');
+    var args = [];
+    var whereSql = "WHERE " + [ this._filter.sql("root", args) ].concat(additionalWhereSqls).join(' AND ');
+
+    var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` AS `root` " + joinSql + " " + whereSql;
 
     session.flush(tx, function () {
         tx.executeSql(sql, args, function(results) {

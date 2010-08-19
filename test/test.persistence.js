@@ -1,6 +1,6 @@
 $(document).ready(function(){
-  //persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
-  persistence.store.memory.config(persistence);
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  //persistence.store.memory.config(persistence);
   persistence.debug = true;
 
   var Project = persistence.define('Project', {
@@ -24,6 +24,10 @@ $(document).ready(function(){
 
   Project.hasMany('tasks', Task, 'project');
 
+  window.Project = Project;
+  window.Task = Task
+  window.Project = Project;
+
   module("Setup");
 
   asyncTest("setting up database", 1, function() {
@@ -32,37 +36,6 @@ $(document).ready(function(){
           start();
         });
     });
-
-  /*
-  asyncTest("check Project table created", 2, function() {
-      tableExists('Project', function() {
-          columnExists('Project', 'name', 'TEXT', start);
-        });
-    });
-
-  asyncTest("check Task table created", 7, function() {
-      tableExists('Task', function() {
-          columnExists('Task', 'name', 'TEXT', function() {
-              columnExists('Task', 'done', 'INT', function() {
-                  columnExists('Task', 'counter', 'INT', function() {
-                      columnExists('Task', 'dateAdded', 'INT', function() {
-                          columnExists('Task', 'metaData', 'TEXT', function() {
-                              // Foreign key
-                              columnExists('Task', 'project', 'VARCHAR(32)', start);
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-  asyncTest("check Tag table created", 2, function() {
-      tableExists('Tag', function() {
-          columnExists('Tag', 'name', 'TEXT', start);
-        });
-    });
-    */
 
   module("Entity manipulation", {
       setup: function() {

@@ -163,12 +163,24 @@ persistence.store.memory.config = function(persistence) {
     this._coll = coll; // column name
   };
 
-  persistence.ManyToManyDbQueryCollection.add = function(item) {
+  persistence.ManyToManyDbQueryCollection.prototype.add = function(item, recursing) {
     persistence.LocalQueryCollection.prototype.add.call(this, item);
-    // Let's find the inverse collection
-    var meta = persistence.getMeta(this._obj._type);
+    if(!recursing) { // prevent recursively adding to one another
+      // Let's find the inverse collection
+      var meta = persistence.getMeta(this._obj._type);
+      var inverseProperty = meta.hasMany[this._coll].inverseProperty;
+      item[inverseProperty].add(this._obj, true);
+    }
+  };
 
-
+  persistence.ManyToManyDbQueryCollection.prototype.remove = function(item, recursing) {
+    persistence.LocalQueryCollection.prototype.remove.call(this, item);
+    if(!recursing) { // prevent recursively adding to one another
+      // Let's find the inverse collection
+      var meta = persistence.getMeta(this._obj._type);
+      var inverseProperty = meta.hasMany[this._coll].inverseProperty;
+      item[inverseProperty].remove(this._obj, true);
+    }
   };
 };
 

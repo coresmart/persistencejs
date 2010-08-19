@@ -405,7 +405,7 @@ persistence.store.sql.config = function(persistence, dialect) {
    * Function called when session is flushed, returns list of SQL queries to execute 
    * (as [query, arg] tuples)
    */
-  QueryCollection.prototype.persistQueries = function() { return []; };
+  persistence.QueryCollection.prototype.persistQueries = function() { return []; };
 
   var oldQCClone = persistence.QueryCollection.prototype.clone;
 

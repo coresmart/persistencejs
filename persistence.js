@@ -312,9 +312,9 @@ persistence.get = function(arg1, arg2) {
                     that.triggerEvent('change', that, ref, val);
                   }, function() {
                     // getterCallback 
-                    if (that._data[ref] === null || that._data_obj[ref] !== undefined) {
+                    if (!that._data[ref] || that._data_obj[ref] !== undefined) {
                       return that._data_obj[ref];
-                    } else if(that._data[ref] !== null && session.trackedObjects[that._data[ref]]) {
+                    } else if(that._data[ref] && session.trackedObjects[that._data[ref]]) {
                       that._data_obj[ref] = session.trackedObjects[that._data[ref]];
                       return that._data_obj[ref];
                     } else {
@@ -362,7 +362,7 @@ persistence.get = function(arg1, arg2) {
                         return session.uniqueQueryCollection(queryColl);
                       }
                     });
-                } else {
+                } else { // one to many
                   persistence.defineProp(that, coll, function(val) {
                       // setterCallback
                       if(val && val._items) { 
@@ -380,7 +380,7 @@ persistence.get = function(arg1, arg2) {
                       if (that._data[coll]) {
                         return that._data[coll];
                       } else {
-                        var queryColl = session.uniqueQueryCollection(new DbQueryCollection(session, meta.hasMany[coll].type.meta.name).filter(meta.hasMany[coll].inverseProperty, '=', that));
+                        var queryColl = session.uniqueQueryCollection(new persistence.DbQueryCollection(session, meta.hasMany[coll].type.meta.name).filter(meta.hasMany[coll].inverseProperty, '=', that));
                         that._data[coll] = queryColl;
                         return queryColl;
                       }
@@ -1189,7 +1189,7 @@ persistence.get = function(arg1, arg2) {
      * @constructor
      */
     function ManyToManyDbQueryCollection (session, entityName) {
-      this.init(session, entityName, ManyToManyDbQueryCollection);
+      this.init(session, entityName, persistence.ManyToManyDbQueryCollection);
       this._localAdded = [];
       this._localRemoved = [];
     }
@@ -1241,9 +1241,11 @@ persistence.get = function(arg1, arg2) {
     };
 
     LocalQueryCollection.prototype.add = function(obj) {
-      this._items.push(obj);
-      this.triggerEvent('add', this, obj);
-      this.triggerEvent('change', this, obj);
+      if(!arrayContains(this._items, obj)) {
+        this._items.push(obj);
+        this.triggerEvent('add', this, obj);
+        this.triggerEvent('change', this, obj);
+      }
     };
 
     LocalQueryCollection.prototype.remove = function(obj) {

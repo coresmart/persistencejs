@@ -1,6 +1,7 @@
 $(document).ready(function(){
-  persistence.connect('persistencetest', 'My db', 5 * 1024 * 1024);
-  persistence.db.log = true;
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  //persistence.store.memory.config(persistence);
+  persistence.debug = true;
 
   var Project = persistence.define('Project', {
       name: "TEXT"
@@ -23,52 +24,25 @@ $(document).ready(function(){
 
   Project.hasMany('tasks', Task, 'project');
 
+  window.Project = Project;
+  window.Task = Task
+  window.Project = Project;
+
   module("Setup");
 
   asyncTest("setting up database", 1, function() {
       persistence.schemaSync(function(tx){
-          ok(tx.executeSql, 'schemaSync passed transaction as argument to callback');
+          ok(true, 'schemaSync called callback function');
           start();
-        });
-    });
-
-  asyncTest("check Project table created", 2, function() {
-      tableExists('Project', function() {
-          columnExists('Project', 'name', 'TEXT', start);
-        });
-    });
-
-  asyncTest("check Task table created", 7, function() {
-      tableExists('Task', function() {
-          columnExists('Task', 'name', 'TEXT', function() {
-              columnExists('Task', 'done', 'INT', function() {
-                  columnExists('Task', 'counter', 'INT', function() {
-                      columnExists('Task', 'dateAdded', 'INT', function() {
-                          columnExists('Task', 'metaData', 'TEXT', function() {
-                              // Foreign key
-                              columnExists('Task', 'project', 'VARCHAR(32)', start);
-                            });
-                        });
-                    });
-                });
-            });
-        });
-    });
-
-  asyncTest("check Tag table created", 2, function() {
-      tableExists('Tag', function() {
-          columnExists('Tag', 'name', 'TEXT', start);
         });
     });
 
   module("Entity manipulation", {
       setup: function() {
         stop();
-        persistence.schemaSync(start);
-      },
-      teardown: function() {
-        stop();
-        persistence.reset(start);
+        persistence.reset(function() {
+            persistence.schemaSync(start);
+          });
       }
     });
 
@@ -97,7 +71,7 @@ $(document).ready(function(){
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
-  test("Property contructor property value assignment", 5, function() {
+  test("Property constructor property value assignment", 5, function() {
       var now = new Date();
       var meta = {starRating: 5};
       var t1 = new Task({
@@ -118,7 +92,7 @@ $(document).ready(function(){
       var t1 = new Task();
       persistence.add(t1);
       persistence.flush(function() {
-          persistence.clean();
+          //persistence.clean();
           Task.all().one(function(t1db) {
               equals(t1db.id, t1.id, "TEXT properties default to ''");
               equals(t1db.name, "", "TEXT properties default to ''");
@@ -143,12 +117,12 @@ $(document).ready(function(){
         });
       persistence.add(t1);
       persistence.flush(function() {
-          persistence.clean();
+          //persistence.clean();
           Task.all().one(function(t1db) {
               equals(t1db.name, 'Task 1', "Persistence of TEXT properties");
               equals(t1db.done, false, "Persistence of BOOL properties");
               equals(t1db.counter, 7, "Persistence of INT properties");
-              equals(t1db.dateAdded.getTime(), Math.round(now.getTime()/1000)*1000, "Persistence of DATE properties");
+              equals(Math.round(t1db.dateAdded.getTime()/1000)*1000, Math.round(now.getTime()/1000)*1000, "Persistence of DATE properties");
               same(t1db.metaData, meta, "Persistence of JSON properties");
               start();
             });
@@ -170,7 +144,7 @@ $(document).ready(function(){
               for(var i = 0; i < 25; i++) {
                 ok(results[i] === objs[i], 'Cache works OK');
               }
-              persistence.clean(); // Clean out local cache
+              //persistence.clean(); // Clean out local cache
               Task.all().order('counter', true).list(function(results) {
                   for(var i = 0; i < 25; i++) {
                     ok(results[i].id === objs[i].id, 'Retrieving from DB ok');
@@ -218,8 +192,8 @@ $(document).ready(function(){
                   equals(tagTasks.length, 1, "Tag has one task");
                   equals(tagTasks[0].id, t.id, "Correct task");
                   oneTag.tasks.remove(tagTasks[0]);
-                  t.tags.list(function(newTags) {
-                      equals(newTags.length, 1, "Tag removed task, task has only one tag left");
+                  t.tags.count(function(cnt) {
+                      equals(cnt, 1, "Tag removed task, task has only one tag left");
                       start();
                     });
                 });
@@ -230,12 +204,8 @@ $(document).ready(function(){
   module("Query collections", {
       setup: function() {
         stop();
-        persistence.schemaSync(start);
-      },
-      teardown: function() {
-        stop();
         persistence.reset(function() {
-            start();
+            persistence.schemaSync(start);
           });
       }
     });
@@ -332,7 +302,7 @@ $(document).ready(function(){
         coll.filter("dateAdded", "=", dateInDays(1)).list(function(results) {
             equals(results.length, 1, "= filter test");
             coll.filter("dateAdded", "!=", dateInDays(1)).list(function(results) {
-                equals(results.length, 23, "= filter test");
+                equals(results.length, 23, "!= filter test");
                 coll.filter("dateAdded", ">", dateInDays(12)).list(function(results) {
                     equals(results.length, 11, "> filter test");
                     start();

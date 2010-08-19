@@ -33,11 +33,11 @@ var connect = require('connect');
 var express = require('express');
 
 var persistence = require('../persistence').persistence;
-var persistenceBackend = require('../persistence.backend.mysql');
+var persistenceStore = require('../persistence.store.mysql');
 var persistenceSync = require('../persistence.sync.server');
 
 // Database configuration
-persistenceBackend.configure('synctest', 'test', 'test');
+persistenceStore.config(persistence, 'localhost', 'synctest', 'test', 'test');
 
 // Switch off query logging:
 //persistence.db.log = false;
@@ -46,7 +46,7 @@ function log(o) {
   sys.print(sys.inspect(o) + "\n");
 }
 
-persistenceSync.setupSync(persistence);
+persistenceSync.config(persistence);
 
 // Data model
 var Project = persistence.define('Project', {
@@ -78,7 +78,7 @@ var app = express.createServer(
   function(req, res, next) {
     var end = res.end;
 
-    req.conn = persistenceBackend.getSession();
+    req.conn = persistenceStore.getSession();
     res.end = function() {
       req.conn.close();
       end.apply(res, arguments);

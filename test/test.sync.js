@@ -1,6 +1,6 @@
 $(document).ready(function(){
-  persistence.connect('persistencetest', 'My db', 5 * 1024 * 1024);
-  persistence.db.log = true;
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.debug = true;
 
   var Project = persistence.define('Project', {
       name: "TEXT"
@@ -114,7 +114,7 @@ $(document).ready(function(){
   asyncTest("resetting local db and resyncing", function() {
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
-              equals(13, n, "right number of tasks done.");
+              equals(13, n, "right number of tasks done");
               start();
             });
         });
@@ -134,6 +134,7 @@ $(document).ready(function(){
               Task.syncAll(noConflictsHandler, function() {
                   ok(true, "returned from task sync");
                   p.tasks.list(function(tasks) {
+                      equals(tasks.length, 10, 'check collection size');
                       tasks.forEach(function(task) {
                           task.done = true;
                         });

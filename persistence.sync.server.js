@@ -137,7 +137,7 @@ exports.receiveUpdates = function(session, tx, Entity, updates, validator, callb
     });
 };
 
-exports.setupSync = function(persistence) {
+exports.config = function(persistence) {
     persistence.entityDecoratorHooks.push(function(Entity) {
         /**
          * Declares an entity to be tracked for changes

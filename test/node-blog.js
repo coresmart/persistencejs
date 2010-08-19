@@ -32,10 +32,10 @@ var sys = require('sys');
 var parseUrl = require('url').parse;
 
 var persistence = require('../persistence').persistence;
-var persistenceBackend = require('../persistence.backend.mysql');
+var persistenceStore = require('../persistence.store.mysql');
 
 // Database configuration
-persistenceBackend.configure('nodejs_mysql', 'test', 'test');
+persistenceStore.config(persistence, 'localhost', 'nodejs_mysql', 'test', 'test');
 
 // Switch off query logging:
 //persistence.db.log = false;
@@ -183,7 +183,7 @@ http.createServer(function (req, res) {
   var parsed = parseUrl(req.url, true);
   var fn = urlMap[parsed.pathname];
   if(fn) {
-    var session = persistenceBackend.getSession();
+    var session = persistenceStore.getSession();
     session.transaction(function(tx) {
       fn(session, tx, req, res, function() {
           session.close();

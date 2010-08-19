@@ -27,6 +27,18 @@ frameworks, other than the Google Gears [initialization
 script](http://code.google.com/apis/gears/gears_init.js), in case you
 want to enable Gears support.
 
+Plug-ins
+--------
+
+There are a few `persistence.js` plug-ins available that add functionality:
+
+* `persistence.search.js`, adds simple full-text search capabilities,
+  see `docs/search.md` for more information.
+* `persistence.migrations.js`, supports data migrations (changes to
+  the database schema), see `docs/migrations.md` for more information.
+* `persistence.sync.js`, supports database synchronization with a
+  remote server, see `docs/sync.md` for more information.
+
 A Brief Intro to Async Programming
 ----------------------------------
 
@@ -516,7 +528,7 @@ License
 This work is licensed under the [MIT license](http://en.wikipedia.org/wiki/MIT_License).
 
 Support this work
-=================
+-----------------
 
 You can support this project by flattering it:
 

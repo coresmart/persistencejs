@@ -127,7 +127,6 @@ $(document).ready(function(){
         var t = new Task({name: "Local task " + i});
         p.tasks.add(t);
       }
-      window.p = p;
       persistence.flush(function() {
           ok(true, "project and tasks added locally");
           Project.syncAll(noConflictsHandler, function() {

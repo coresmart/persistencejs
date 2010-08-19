@@ -908,7 +908,7 @@ persistence.get = function(arg1, arg2) {
     PropertyFilter.prototype.toUniqueString = function() {
       var val = this.value;
       if(val && val._type) {
-        val = val._id;
+        val = val.id;
       }
       return this.property + this.operator + val;
     };

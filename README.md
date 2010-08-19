@@ -1,24 +1,34 @@
 persistence.js
 ==============
-`persistence.js` is a simple asynchronous Javascript object-relational
-mapper library. In the browser it works with the HTML5 SQLite database as
-well as Google Gears' local data store. It may be used to develop
-offline-capable web applications.
+`persistence.js` is a asynchronous Javascript object-relational
+mapper library. It can be used both in the web browser and on
+the server using [node.js](http://nodejs.org). It currently
+supports 4 types of data stores:
 
-`persistence.js` may also be used on the server, in particular in
-[node.js](http://nodejs.org) environments. The support for this is
-currently under heavy development. There is currently a MySQL back-end
-available. The API to be used in node.js is slightly different than
-described in this README, be sure to check out the
-`docs/backend.mysql.md` document to see how it differs.
+* [HTML5 WebSQL database](http://dev.w3.org/html5/webdatabase/), a
+  somewhat controversial part of HTML5 that is supported in Webkit
+  browsers, specifically on mobile devices, including iPhone, Android
+  and Palm's WebOS. 
+* [Google Gears](http://gears.google.com), a browser plug-in that adds
+  a number of feature to the browser, including a in-browser database.
+* [MySQL](http://www.mysql.com), using the
+  [node-mysql](http://github.com/stevebest/node-mysql), node.js module
+  on the server.
+* In-memory, as a fallback. Keeps the database in memory and is cleaned
+  upon a page refresh (or server restart).
+
+There is also an experimental support for [Qt 4.7 Declarative UI
+framework
+(QML)](http://doc.trolltech.org/4.7-snapshot/declarativeui.html) which
+is an extension to JavaScript.
 
 For browser use, `persistence.js` has no dependencies on any other
 frameworks, other than the Google Gears [initialization
 script](http://code.google.com/apis/gears/gears_init.js), in case you
 want to enable Gears support.
 
-About asynchronous programming
-------------------------------
+A Brief Intro to Async Programming
+----------------------------------
 
 In browsers, Javascript and the web page's rendering engine share
 a single thread. The result of this is that only one thing can happen
@@ -60,6 +70,9 @@ Although one could assume this would print "hello", followed by
 query are available. This is a tricky thing about asynchronous
 programming that a Javascript developer will have to get used to.
 
+Using persistence.js in the browser
+===================================
+
 Browser support
 ---------------
 
@@ -69,21 +82,47 @@ Browser support
 * iPhone browser (iPhone OS 3+)
 * Palm WebOS (tested on 1.4.0)
 
-There is also an experimental support for [Qt 4.7 Declarative UI framework (QML)](http://doc.trolltech.org/4.7-snapshot/declarativeui.html) which is an extension to JavaScript.
-
+(The following is being worked on:)
 Internet Explorer is likely not supported (untested) because it
 lacks `__defineGetter__` and `__defineSetter__` support, which
 `persistence.js` uses heavily. This may change in IE 8.
 
-Connecting to a database
--------------------------
+Setting up
+----------
 
-There is one global database connection, which is
-initialized with a `persistence.connect` call.  Its first argument is
-the database name, the second a database description and third the
-maximum database size (in bytes):
+To use `persistence.js` you need to clone the git repository:
 
-    persistence.connect('testdb', 'My test db', 5 * 1024 * 1024);
+    git clone git://github.com/zefhemel/persistencejs.git
+
+To use it you need to copy `persistence.js` to your web directory,
+as well as any data stores you want to use. Note that the `mysql` and
+`websql` stores both depend on the `sql` store. A typical setup
+requires you to copy at least `persistence.js`,
+`persistence.store.sql.js` and `persistence.store.websql.js` to your
+web directory. You can then load them as follows:
+
+    <script src="persistence.js" type="application/javascript"></script>
+    <script src="persistence.store.sql.js" type="application/javascript"></script>
+    <script src="persistence.store.websql.js" type="application/javascript"></script>
+
+
+Setup your database
+-------------------
+
+You need to explicitly configure the data store you want to use,
+configuration of the data store is store-specific. The WebSQL store
+(which includes Google Gears support) is configured as follows:
+
+    persistence.store.websql.config(persistence, 'yourdbname', 'A database description', 5 * 1024 * 1024);
+
+The first argument is always supposed to be `persistence`. The second
+in your database name (it will create it if it does not already exist,
+the third is a description for you database, the last argument is the
+maximum size of your database in bytes (5MB in this example).
+
+If you're using the in-memory store, you can configure it as follows:
+
+    persistence.store.memory.config(persistence);
 
 Schema definition
 -----------------
@@ -91,8 +130,8 @@ Schema definition
 A data model is declared using `persistence.define`. The following two
 definitions define a `Task` and `Category` entity with a few simple
 properties. The property types are based on [SQLite
-types](http://www.sqlite.org/datatype3.html), currently supported
-types are:
+types](http://www.sqlite.org/datatype3.html), specifically supported
+types are (but any SQLite type is supported):
 
 * `TEXT`: for textual data 
 * `INT`: for numeric values
@@ -364,8 +403,98 @@ Example:
         });
     });
 
-Bugs and Contributions
+Using persistence.js on the server
+==================================
+
+Sadly the node.js server environment requires slight changes to
+`persistence.js` to make it work with multiple database connections:
+
+* A `Session` object needs to be passed as an extra argument to
+  certain method calls, typically as a first argument.
+* Methods previously called on the `persistence` object itself are now
+  called on the `Session` object.
+
+An example `node.js` application is included in `test/node-blog.js`. 
+
+Setup
+-----
+You need to `require` two modules, the `persistence.js` library itself
+and the MySQL backend module. Also make sure the MySQL library
+is located (or symlinked) from the current directory:
+
+    var persistence = require('./persistence').persistence;
+    var persistenceStore = require('./persistence.store.mysql');
+
+Then, you configure the database settings to use:
+
+    persistenceStore.config(persistence, 'localhost', 'dbname', 'username', 'password');
+
+Subsequently, for every connection you handle (assuming you're
+building a sever), you call the `persistenceStore.getSession()`
+method:
+
+    var session = persistenceBackend.getSession();
+
+This session is what you pass around, typically together with a
+transaction object. Note that currently you can only have one
+transaction open per session and transactions cannot be nested.
+
+    session.transaction(function(tx) {
+      ...
+    });
+
+Defining your data model
+------------------------
+
+Defining your data model is done in exactly the same way as regular `persistence.js`:
+
+    var Task = persistence.define('Task', {
+      name: "TEXT",
+      description: "TEXT",
+      done: "BOOL"
+    });
+
+A `schemaSync` is typically performed as follows:
+
+    session.schemaSync(tx, function() {
+      ...
+    });
+
+Creating and manipulating objects
+---------------------------------
+
+Creating and manipulating objects is done much the same way as with
+regular `persistence.js`, except that in the entity's constructor you
+need to reference the `Session` again:
+
+    var t = new Task(session);
+    ...
+    session.add(t);
+
+    session.flush(tx, function() {
+      ...
+    });
+
+Query collections
 -----------------
+
+Query collections work the same way as in regular `persistence.js`
+with the exception of the `Entity.all()` method that now also requires
+a `Session` to be passed to it:
+
+    Task.all(session).filter('done', '=', true).list(tx, function(tasks) {
+      ...
+    });
+
+Closing the session
+-------------------
+
+After usage, you need to close your session:
+
+    session.close();
+
+Bugs and Contributions
+======================
 
 If you find a bug, please [report it](http://yellowgrass.org/project/persistence.js).
 or fork the project, fix the problem and send me a pull request. For
@@ -382,12 +511,12 @@ Toolkit), be sure to have a look at [Dennis Z. Jiang's GWT persistence.js
 wrapper](http://github.com/dennisjzh/gwt-persistence).
 
 License
--------
+=======
 
 This work is licensed under the [MIT license](http://en.wikipedia.org/wiki/MIT_License).
 
 Support this work
------------------
+=================
 
 You can support this project by flattering it:
 

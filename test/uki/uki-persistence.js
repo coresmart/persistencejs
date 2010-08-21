@@ -5,11 +5,14 @@
  * persistencejs integration (http://www.persistencejs.org)
  * 
  **/ 
- 
+
 // Example
 // =======
 // // persistence engine
-// include('path/to/persistence.js'); 
+// include('path/to/persistence.js');
+// include('path/to/persistence.store.sql.js');
+// include('path/to/persistence.store.websql.js');
+// include('path/to/persistence.store.memory.js');
 // include('path/to/persistence.sync.js'); // optional
 // include('path/to/persistence.search.js'); // optional
 // include('path/to/persistence.migrations.js'); // optional

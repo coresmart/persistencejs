@@ -18,7 +18,7 @@
 // include('path/to/persistence.migrations.js'); // optional
 // include('path/to/uki-data/uki-persistence.js');
 //                  
-// persistence.connect('myDbName', 'database', 5 * 1024 * 1024, '1.0'); 
+// persistence.store.websql.config(persistence, 'myDbName', 'database', 5 * 1024 * 1024);
 //                          
 // var User = uki.persistence.define('User', {
 //   firstname: "TEXT",

@@ -1204,6 +1204,8 @@ persistence.get = function(arg1, arg2) {
       if(!arrayContains(this._localAdded, obj)) {
         this._session.add(obj);
         this._localAdded.push(obj);
+        this.triggerEvent('add', this, obj);
+        this.triggerEvent('change', this, obj);
       }
     };
 
@@ -1222,6 +1224,8 @@ persistence.get = function(arg1, arg2) {
       } else if(!arrayContains(this._localRemoved, obj)) {
         this._localRemoved.push(obj);
       }
+      this.triggerEvent('remove', this, obj);
+      this.triggerEvent('change', this, obj);
     };
 
     ////////// Local implementation of QueryCollection \\\\\\\\\\\\\\\\

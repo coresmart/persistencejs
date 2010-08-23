@@ -351,7 +351,6 @@ persistence.get = function(arg1, arg2) {
 
                         var queryColl = new persistence.ManyToManyDbQueryCollection(session, inverseMeta.name);
                         queryColl.initManyToMany(that, coll);
-                        // TODO: Get rid of SQL here
                         queryColl._manyToManyFetch = {
                             table: meta.hasMany[coll].tableName,
                             prop: meta.name + '_' + coll,
@@ -1262,7 +1261,7 @@ persistence.get = function(arg1, arg2) {
     LocalQueryCollection.prototype.list = function(tx, callback) {
       var args = argspec.getArgs(arguments, [
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
-          { name: 'callback', optional: false, check: argspec.isCallback() }
+          { name: 'callback', optional: true, check: argspec.isCallback() }
         ]);
       callback = args.callback;
 
@@ -1320,10 +1319,12 @@ persistence.get = function(arg1, arg2) {
       tx = args.tx;
       callback = args.callback;
 
+      var result = this.list();
+
       if(callback) {
-        callback(this._items.length);
+        callback(result.length);
       } else {
-        return this._items.length;
+        return result.length;
       }
     };
 

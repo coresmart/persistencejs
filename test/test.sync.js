@@ -1,5 +1,6 @@
 $(document).ready(function(){
-  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  //persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  persistence.store.memory.config(persistence);
   persistence.debug = true;
 
   var Project = persistence.define('Project', {
@@ -28,8 +29,8 @@ $(document).ready(function(){
 
   asyncTest("setting up local database", function() {
       persistence.reset(function() {
-          persistence.schemaSync(function(tx){
-              ok(tx.executeSql, 'schemaSync passed transaction as argument to callback');
+          persistence.schemaSync(function(){
+              ok(true, 'came back from schemaSync');
               start();
             });
         });
@@ -114,7 +115,7 @@ $(document).ready(function(){
   asyncTest("resetting local db and resyncing", function() {
       resetResync(function() {
           Task.all().filter("done", "=", true).count(function(n) {
-              equals(13, n, "right number of tasks done");
+              equals(n, 13, "right number of tasks done");
               start();
             });
         });
@@ -168,6 +169,7 @@ $(document).ready(function(){
             });
         });
     });
+  return;
 
   module("Conflicts");
 

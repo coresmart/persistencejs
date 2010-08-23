@@ -117,6 +117,7 @@ persistence.sync.postJSON = function(uri, data, callback) {
     };
 
     function synchronize(session, uri, Entity, conflictCallback, callback) {
+      console.log("New sync");
       session.flush(function() {
           persistence.sync.Sync.findBy(session, 'entity', Entity.meta.name, function(sync) {
               var lastServerSyncTime = sync ? persistence.get(sync, 'serverDate') : 0;
@@ -141,7 +142,7 @@ persistence.sync.postJSON = function(uri, data, callback) {
                   result.updates.forEach(function(item) {
                       ids.push(item.id);
                       lookupTbl[item.id] = item;
-                    })
+                    });
                   // Step 1: Look at local versions of remotely updated entities
                   Entity.all(session).filter("id", "in", ids).list(function(existingItems) {
                       existingItems.forEach(function(localItem) {
@@ -150,6 +151,9 @@ persistence.sync.postJSON = function(uri, data, callback) {
                           delete lookupTbl[localItem.id];
 
                           var localChangedSinceSync = lastLocalSyncTime < localItem._lastChange;
+                          if(localChangedSinceSync) {
+                            console.log("Local changed since sync", lastLocalSyncTime, localItem._lastChange);
+                          }
 
                           var itemUpdatedFields = { id: localItem.id };
                           var itemUpdated = false;
@@ -260,6 +264,7 @@ persistence.sync.postJSON = function(uri, data, callback) {
               var isDirty = obj._new;
               for ( var p in obj._dirtyProperties) {
                 if (obj._dirtyProperties.hasOwnProperty(p)) {
+                  console.log("Dirrrrty: ", obj);
                   isDirty = true;
                 }
               }

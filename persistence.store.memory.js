@@ -21,6 +21,8 @@ persistence.store.memory.config = function(persistence) {
 
   var allObjects = {}; // entityName -> LocalQueryCollection
 
+  persistence.getAllObjects = function() { return allObjects; };
+
   var defaultAdd = persistence.add;
 
   persistence.add = function(obj) {
@@ -58,6 +60,16 @@ persistence.store.memory.config = function(persistence) {
         { name: "callback", optional: true, check: argspec.isCallback(), defaultValue: function(){} }
       ]);
 
+    var fns = persistence.flushHooks;
+    for(var i = 0; i < fns.length; i++) {
+      fns[i](this, args.tx);
+    }
+    var trackedObjects = this.trackedObjects;
+    for(var id in trackedObjects) {
+      if(trackedObjects.hasOwnProperty(id)) {
+        trackedObjects[id]._dirtyProperties = {};
+      }
+    }
     args.callback();
   };
 
@@ -187,3 +199,4 @@ persistence.store.memory.config = function(persistence) {
 try {
   exports.config = persistence.store.memory.config;
 } catch(e) {}
+

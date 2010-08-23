@@ -5,17 +5,20 @@
  * persistencejs integration (http://www.persistencejs.org)
  * 
  **/ 
- 
+
 // Example
 // =======
 // // persistence engine
-// include('path/to/persistence.js'); 
+// include('path/to/persistence.js');
+// include('path/to/persistence.store.sql.js');
+// include('path/to/persistence.store.websql.js');
+// include('path/to/persistence.store.memory.js');
 // include('path/to/persistence.sync.js'); // optional
 // include('path/to/persistence.search.js'); // optional
 // include('path/to/persistence.migrations.js'); // optional
 // include('path/to/uki-data/uki-persistence.js');
 //                  
-// persistence.connect('myDbName', 'database', 5 * 1024 * 1024, '1.0'); 
+// persistence.store.websql.config(persistence, 'myDbName', 'database', 5 * 1024 * 1024);
 //                          
 // var User = uki.persistence.define('User', {
 //   firstname: "TEXT",

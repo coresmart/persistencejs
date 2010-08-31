@@ -605,7 +605,7 @@ persistence.store.sql.config = function(persistence, dialect) {
               for ( var j = 0; j < that._prefetchFields.length; j++) {
                 var prefetchField = that._prefetchFields[j];
                 var thisMeta = meta.hasOne[prefetchField].type.meta;
-                e[prefetchField] = rowToEntity(session, thisMeta.name, r, prefetchField + '_');
+                e._data_obj[prefetchField] = rowToEntity(session, thisMeta.name, r, prefetchField + '_');
               }
               results.push(e);
               session.add(e);

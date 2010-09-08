@@ -263,7 +263,13 @@ persistence.store.sql.config = function(persistence, dialect) {
       // SQL is in seconds and JS in miliseconds
       return new Date(parseInt(val, 10) * 1000);
     case 'BOOL':
-      return val == 1;
+      return val === 1 || val === '1';
+      break;
+    case 'INT':
+      return +val;
+      break;
+    case 'BIGINT':
+      return +val;
       break;
     case 'JSON':
       if(val) {
@@ -599,6 +605,9 @@ persistence.store.sql.config = function(persistence, dialect) {
     session.flush(tx, function () {
         tx.executeSql(sql, args, function (rows) {
             var results = [];
+            if(that._reverse) {
+              rows.reverse();
+            }
             for ( var i = 0; i < rows.length; i++) {
               var r = rows[i];
               var e = rowToEntity(session, entityName, r, mainPrefix);

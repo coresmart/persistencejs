@@ -107,6 +107,7 @@ persistence.store.memory.config = function(persistence) {
     coll._orderColumns = otherColl._orderColumns;
     coll._limit = otherColl._limit;
     coll._skip = otherColl._skip;
+    coll._reverse = otherColl._reverse;
     return coll;
   }
   /**

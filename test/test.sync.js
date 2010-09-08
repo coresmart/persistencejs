@@ -1,6 +1,6 @@
 $(document).ready(function(){
-  //persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
-  persistence.store.memory.config(persistence);
+  persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
+  //persistence.store.memory.config(persistence);
   persistence.debug = true;
 
   var Project = persistence.define('Project', {

@@ -958,6 +958,7 @@ persistence.get = function(arg1, arg2) {
       this._constructor = constructor;
       this._limit = -1;
       this._skip = 0;
+      this._reverse = false;
       this._session = session || persistence;
       // For observable
       this.subscribers = {};
@@ -985,6 +986,8 @@ persistence.get = function(arg1, arg2) {
       s += this._limit;
       s += '|Skip:';
       s += this._skip;
+      s += '|Reverse:';
+      s += this._reverse;
       return s;
     };
 
@@ -999,6 +1002,7 @@ persistence.get = function(arg1, arg2) {
       c._orderColumns = this._orderColumns.slice(0);
       c._limit = this._limit;
       c._skip = this._skip;
+      c._reverse = this._reverse;
       if(cloneSubscribers) {
         var subscribers = {};
         for(var eventType in this.subscribers) {
@@ -1063,6 +1067,16 @@ persistence.get = function(arg1, arg2) {
     QueryCollection.prototype.skip = function(n) {
       var c = this.clone();
       c._skip = n;
+      return this._session.uniqueQueryCollection(c);
+    };
+
+    /**
+     * Returns a new query collection which reverse the order of the result set
+     * @return the query collection that will reverse its items
+     */
+    QueryCollection.prototype.reverse = function() {
+      var c = this.clone();
+      c._reverse = true;
       return this._session.uniqueQueryCollection(c);
     };
 
@@ -1299,6 +1313,9 @@ persistence.get = function(arg1, arg2) {
       }
       if(this._limit > -1) {
         results = results.slice(0, this._limit);
+      }
+      if(this._reverse) {
+        results.reverse();
       }
       if(callback) {
         callback(results);

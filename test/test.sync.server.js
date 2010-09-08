@@ -112,7 +112,7 @@ app.get('/reset', function(req, res) {
 });
 
 app.get('/projectUpdates',  function(req, res) {
-    persistenceSync.pushUpdates(req.conn, req.tx, Project, req.params.get.since, function(updates) {
+    persistenceSync.pushUpdates(req.conn, req.tx, Project, req.query.since, function(updates) {
         res.send(updates);
       });
 });
@@ -124,7 +124,7 @@ app.post('/projectUpdates',  function(req, res) {
   });
 
 app.get('/taskUpdates',  function(req, res) {
-    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.params.get.since, function(updates) {
+    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, function(updates) {
         res.send(updates);
       });
 });
@@ -136,7 +136,7 @@ app.post('/taskUpdates',  function(req, res) {
   });
 
 app.get('/tagUpdates',  function(req, res) {
-    persistenceSync.pushUpdates(req.conn, req.tx, Tag, req.params.get.since, function(updates) {
+    persistenceSync.pushUpdates(req.conn, req.tx, Tag, req.query.since, function(updates) {
         res.send(updates);
       });
 });

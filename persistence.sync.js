@@ -264,7 +264,6 @@ persistence.sync.postJSON = function(uri, data, callback) {
               var isDirty = obj._new;
               for ( var p in obj._dirtyProperties) {
                 if (obj._dirtyProperties.hasOwnProperty(p)) {
-                  console.log("Dirrrrty: ", obj);
                   isDirty = true;
                 }
               }

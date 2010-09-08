@@ -1,6 +1,6 @@
 /**
  * This back-end depends on the node.js asynchronous MySQL driver as found on:
- * http://github.com/stevebest/node-mysql
+ * http://github.com/felixge/node-mysql/
  * Easy install using npm:
  *   npm install mysql
  */
@@ -24,7 +24,11 @@ exports.config = function(persistence, hostname, db, username, password) {
 
   exports.getSession = function() {
     var that = {};
-    var conn = new mysql.Connection(hostname, username, password, db);
+    var conn = new mysql.Client();
+    conn.host = hostname
+    conn.user = username;
+    conn.password = password;
+    conn.database = db;
     conn.connect();
 
     var session = new persistence.Session(that);
@@ -33,7 +37,7 @@ exports.config = function(persistence, hostname, db, username, password) {
     };
 
     session.close = function() {
-      conn.close();
+      conn.end();
     };
     return session;
   };
@@ -44,29 +48,23 @@ exports.config = function(persistence, hostname, db, username, password) {
       if(persistence.debug) {
         sys.print(query + "\n");
       }
-      var queryArg;
-      if(query.indexOf('?') != -1) {
-        queryArg = [query].concat(args);
-      } else {
-        queryArg = query;
-      }
-      //log(queryArg);
-      conn.query(queryArg, function (result) {
-          if (successFn) {
-            var results = [];
-            if(result.records) {
-              for ( var i = 0; i < result.records.length; i++) {
-                results.push(result.toHash(result.records[i]));
-              }
-            }
-            successFn(results);
-          }
-        }, function(err) {
+      function cb(err, result) {
+        if(err) {
           log(err);
           log(err.message);
           sys.print(err.stack);
           errorFn(null, err);
-        });
+          return;
+        }
+        if (successFn) {
+          successFn(result);
+        }
+      }
+      if(!args) {
+        conn.query(query, cb);
+      } else {
+        conn.query(query, args, cb);
+      }
     };
     return that;
   }

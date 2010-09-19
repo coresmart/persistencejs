@@ -568,6 +568,34 @@ persistence.get = function(arg1, arg2) {
       return Entity;
     }
 
+    persistence.jsonToEntityVal = function(value, type) {
+      if(type) {
+        switch(type) {
+        case 'DATE': 
+          return new Date(value * 1000); 
+          break;
+        default:
+          return value;
+        }
+      } else {
+        return value;
+      }
+    };
+
+    persistence.entityValToJson = function(value, type) {
+      if(type) {
+        switch(type) {
+        case 'DATE': 
+          return Math.round(value.getTime() / 1000);
+          break;
+        default:
+          return value;
+        }
+      } else {
+        return value;
+      }
+    };
+
     /**
      * Dumps the entire database into an object (that can be serialized to JSON for instance)
      * @param tx transaction to use, use `null` to start a new one
@@ -577,7 +605,7 @@ persistence.get = function(arg1, arg2) {
     persistence.dump = function(tx, entities, callback) {
       var args = argspec.getArgs(arguments, [
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
-          { name: 'entities', optional: true, check: function(obj) { return entities.length; } },
+          { name: 'entities', optional: true, check: function(obj) { return obj && obj.length; }, defaultValue: null },
           { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
         ]);
       tx = args.tx;
@@ -604,7 +632,7 @@ persistence.get = function(arg1, arg2) {
                     var fields = Entity.meta.fields;
                     for(var f in fields) {
                       if(fields.hasOwnProperty(f)) {
-                        rec[f] = e._data[f];
+                        rec[f] = persistence.entityValToJson(e._data[f], fields[f]);
                       }
                     }
                     var refs = Entity.meta.hasOne;
@@ -635,7 +663,7 @@ persistence.get = function(arg1, arg2) {
       var args = argspec.getArgs(arguments, [
           { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
           { name: 'dump', optional: false },
-          { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
+          { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
         ]);
       tx = args.tx;
       dump = args.dump;
@@ -645,6 +673,7 @@ persistence.get = function(arg1, arg2) {
       for(var entityName in dump) {
         if(dump.hasOwnProperty(entityName)) {
           var Entity = getEntity(entityName);
+          var fields = Entity.meta.fields;
           var instances = dump[entityName];
           for(var i = 0; i < instances.length; i++) {
             var instance = instances[i];
@@ -654,7 +683,7 @@ persistence.get = function(arg1, arg2) {
                 if (persistence.isImmutable(p)) {
                   ent[p] = instance[p];  
                 } else {
-                  persistence.set(ent, p, instance[p])
+                  persistence.set(ent, p, persistence.jsonToEntityVal(instance[p], fields[p]));
                 }  
               }
             }
@@ -672,6 +701,14 @@ persistence.get = function(arg1, arg2) {
      * @param callback (jsonDump) the callback function called with the results.
      */
     persistence.dumpToJson = function(tx, entities, callback) {
+      var args = argspec.getArgs(arguments, [
+          { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
+          { name: 'entities', optional: true, check: function(obj) { return obj && obj.length; }, defaultValue: null },
+          { name: 'callback', optional: false, check: argspec.isCallback(), defaultValue: function(){} }
+        ]);
+      tx = args.tx;
+      entities = args.entities;
+      callback = args.callback;
       this.dump(tx, entities, function(obj) {
           callback(JSON.stringify(obj));
         });
@@ -684,6 +721,14 @@ persistence.get = function(arg1, arg2) {
      * @param callback the callback function called when done.
      */
     persistence.loadFromJson = function(tx, jsonDump, callback) {
+      var args = argspec.getArgs(arguments, [
+          { name: 'tx', optional: true, check: persistence.isTransaction, defaultValue: null },
+          { name: 'jsonDump', optional: false },
+          { name: 'callback', optional: true, check: argspec.isCallback(), defaultValue: function(){} }
+        ]);
+      tx = args.tx;
+      jsonDump = args.jsonDump;
+      callback = args.callback;
       this.load(tx, JSON.parse(jsonDump), callback);
     };
 
@@ -707,9 +752,15 @@ persistence.get = function(arg1, arg2) {
     function defaultValue(type) {
       switch(type) {
       case "TEXT": return "";
-      case "INT": return 0;
       case "BOOL": return false;
-      default: return null;
+      default: 
+        if(type.indexOf("INT") !== -1) {
+          return 0;
+        } else if(type.indexOf("CHAR") !== -1) {
+          return "";
+        } else {
+          return null;
+        }
       }
     }
 

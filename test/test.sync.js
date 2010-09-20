@@ -169,7 +169,6 @@ $(document).ready(function(){
             });
         });
     });
-  return;
 
   module("Conflicts");
 

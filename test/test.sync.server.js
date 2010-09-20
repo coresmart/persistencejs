@@ -124,7 +124,8 @@ app.post('/projectUpdates',  function(req, res) {
   });
 
 app.get('/taskUpdates',  function(req, res) {
-    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, function(updates) {
+    properties = {name: true, done: true, project: {name: true}};
+    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, properties, function(updates) {
         res.send(updates);
       });
 });

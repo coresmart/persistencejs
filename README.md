@@ -106,11 +106,11 @@ To use `persistence.js` you need to clone the git repository:
 
     git clone git://github.com/zefhemel/persistencejs.git
 
-To use it you need to copy `persistence.js` to your web directory,
+To use it you need to copy `lib/persistence.js` to your web directory,
 as well as any data stores you want to use. Note that the `mysql` and
 `websql` stores both depend on the `sql` store. A typical setup
-requires you to copy at least `persistence.js`,
-`persistence.store.sql.js` and `persistence.store.websql.js` to your
+requires you to copy at least `lib/persistence.js`,
+`lib/persistence.store.sql.js` and `lib/persistence.store.websql.js` to your
 web directory. You can then load them as follows:
 
     <script src="persistence.js" type="application/javascript"></script>

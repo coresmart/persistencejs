@@ -290,9 +290,9 @@ if(!window.persistence) { // persistence.js not loaded!
     persistence.migrations = {};
     persistence.migrations.Migrator = Migrator;
     persistence.migrations.Migration = Migration;
-    persistence.migrations.init = Migrator.setup;
+    persistence.migrations.init = function() { Migrator.setup.apply(Migrator, Array.prototype.slice.call(arguments, 0))};
     
-    persistence.migrate = Migrator.migrate;
-    persistence.defineMigration = Migrator.migration;
+    persistence.migrate = function() { Migrator.migrate.apply(Migrator, Array.prototype.slice.call(arguments, 0))};
+    persistence.defineMigration = function() { Migrator.migration.apply(Migrator, Array.prototype.slice.call(arguments, 0))};
     
 }());

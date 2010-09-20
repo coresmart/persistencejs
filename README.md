@@ -418,6 +418,10 @@ Example:
 Using persistence.js on the server
 ==================================
 
+Installing `persistence.js` on node is easy using [npm](http://npmjs.org):
+
+    npm install persistencejs
+
 Sadly the node.js server environment requires slight changes to
 `persistence.js` to make it work with multiple database connections:
 
@@ -431,11 +435,10 @@ An example `node.js` application is included in `test/node-blog.js`.
 Setup
 -----
 You need to `require` two modules, the `persistence.js` library itself
-and the MySQL backend module. Also make sure the MySQL library
-is located (or symlinked) from the current directory:
+and the MySQL backend module.
 
-    var persistence = require('./persistence').persistence;
-    var persistenceStore = require('./persistence.store.mysql');
+    var persistence = require('persistencejs/persistence').persistence;
+    var persistenceStore = require('persistencejs/persistence.store.mysql');
 
 Then, you configure the database settings to use:
 

@@ -364,7 +364,10 @@ should be aware of:
    is invoked with the result, the result is also cached in the entity
    object itself.
 * `obj.selectJSON([tx], propertySpec, callback)`, sometime you need to extract
-  a subset of data from an entity. You for instance need to post a JSON representation of your entity, but do not want to include all properties. `selectJSON` allows you to do that. The `propertySpec` arguments expects an array with property names. Some examples:
+  a subset of data from an entity. You for instance need to post a
+  JSON representation of your entity, but do not want to include all
+  properties. `selectJSON` allows you to do that. The `propertySpec`
+  arguments expects an array with property names. Some examples:
    * `['id', 'name']`, will return an object with the id and name property of this entity
    * `['*']`, will return an object with all the properties of this entity, not recursive
    * `['project.name']`, will return an object with a project property which has a name 

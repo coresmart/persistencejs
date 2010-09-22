@@ -347,6 +347,35 @@ And of course the methods to define relationships to other entities:
 * `EntityName.hasOne(property, Entity)` defines a 1:1 or N:1
   relationship
 
+
+Entity objects
+--------------
+
+Entity instances also have a few predefined properties and methods you
+should be aware of:
+
+* `obj.id`, contains the identifier of your entity, this is a
+  automatically generated (approximation of a) UUID. You should
+  never write to this property.
+* `obj.fetch(prop, callback)`, if an object has a `hasOne`
+   relationship to another which has not yet been fetched from the
+   database (e.g. when `prefetch` wasn't used), you can fetch in manually
+   using `fetch`. When the property object is retrieved the callback function
+   is invoked with the result, the result is also cached in the entity
+   object itself.
+* `obj.selectJSON([tx], propertySpec, callback)`, sometime you need to extract
+  a subset of data from an entity. You for instance need to post a JSON representation of your entity, but do not want to include all properties. `selectJSON` allows you to do that. The `propertySpec` arguments expects an array with property names. Some examples:
+   * `['id', 'name']`, will return an object with the id and name property of this entity
+   * `['*']`, will return an object with all the properties of this entity, not recursive
+   * `['project.name']`, will return an object with a project property which has a name 
+                         property containing the project name (hasOne relationship)
+   * `['project.[id, name]']`, will return an object with a project property which has an
+                               id and name property containing the project name
+                               (hasOne relationship)
+   * `['tags.name']`, will return an object with an array `tags` property containing 
+                      objects each with a single property: name
+       
+
 Query collections
 -----------------
 

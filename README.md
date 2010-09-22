@@ -368,12 +368,11 @@ should be aware of:
    * `['id', 'name']`, will return an object with the id and name property of this entity
    * `['*']`, will return an object with all the properties of this entity, not recursive
    * `['project.name']`, will return an object with a project property which has a name 
-                         property containing the project name (hasOne relationship)
+     property containing the project name (hasOne relationship)
    * `['project.[id, name]']`, will return an object with a project property which has an
-                               id and name property containing the project name
-                               (hasOne relationship)
+     id and name property containing the project name (hasOne relationship)
    * `['tags.name']`, will return an object with an array `tags` property containing 
-                      objects each with a single property: name
+     objects each with a single property: name
        
 
 Query collections

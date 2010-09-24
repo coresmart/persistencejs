@@ -45,25 +45,52 @@ exports.config = function(persistence, hostname, db, username, password) {
 
   function transaction(conn) {
     var that = {};
+	var started;
     that.executeSql = function (query, args, successFn, errorFn) {
-      if(persistence.debug) {
-        sys.print(query + "\n");
-      }
+	  
+	  function doIt(query, args, cb) {
+	  	if (persistence.debug)
+		  sys.print(query + "\n");
+        if(!args) {
+          conn.query(query, cb);
+        } else {
+          conn.query(query, args, cb);
+        }
+	  }
+
       function cb(err, result) {
         if(err) {
+		  if (that.explicitCommit && started) {
+      		doIt("ROLLBACK", null, function() {
+				started = false;
+				cb(err);
+			});
+			return;
+		  }
           log(err.message);
-          errorFn(null, err);
+		  that.errorHandler && that.errorHandler(err);
+          errorFn && errorFn(null, err);
           return;
         }
         if (successFn) {
           successFn(result);
         }
       }
-      if(!args) {
-        conn.query(query, cb);
-      } else {
-        conn.query(query, args, cb);
-      }
+	  if (that.explicitCommit && !started) {
+		doIt("START TRANSACTION", null, function(err) {
+			if (err)
+				cb(err);
+			else {
+				started = true;
+				that.executeSql(query, args, successFn, errorFn);
+			}
+		});
+		return;
+	  }
+	  if (query == "COMMIT")
+	  	started = false;
+		
+	  doIt(query, args, cb);
     };
     return that;
   }
@@ -87,7 +114,7 @@ exports.config = function(persistence, hostname, db, username, password) {
         defs.push("`" + column[0] + "` " + this.columnTypeToSql(column[1]) + (column[2] ? " " + column[2] : ""));
       }
       sql += defs.join(", ");
-      sql += ')';
+      sql += ') ENGINE=InnoDB DEFAULT CHARSET=utf8';
       return sql;
     },
 

@@ -19,6 +19,31 @@ persistence.store.sql = {};
 persistence.store.sql.config = function(persistence, dialect) {
   var argspec = persistence.argspec;
 
+  persistence.typeMapper = {
+	idType: "VARCHAR(32)",
+	columnType: function(type){
+		return type;
+	},
+	inVar: function(str, type){
+		return str;
+	},
+	inId: function(str){
+		return str;
+	},
+	outVar: function(str, type) {
+		return str;
+	},
+	outIdVar: function(str) {
+		return str;
+	},
+	outId: function(str){
+		return "'" + str + "'";
+	},
+	entityIdToDbId: function(id){
+		return id;
+	}
+  }
+
   persistence.generatedTables = {}; // set
 
   /**
@@ -47,7 +72,8 @@ persistence.store.sql.config = function(persistence, dialect) {
       return;
     }
     var queries = [], meta, colDefs, otherMeta, tableName;
-
+	
+	var tm = persistence.typeMapper;
     var entityMeta = persistence.getEntityMeta();
     for (var entityName in entityMeta) {
       if (entityMeta.hasOwnProperty(entityName)) {
@@ -61,7 +87,7 @@ persistence.store.sql.config = function(persistence, dialect) {
         for (var rel in meta.hasOne) {
           if (meta.hasOne.hasOwnProperty(rel)) {
             otherMeta = meta.hasOne[rel].type.meta;
-            colDefs.push([rel, "VARCHAR(32)"]);
+            colDefs.push([rel, tm.idType]);
             queries.push([dialect.createIndex(meta.name, [rel]), null]);
           }
         }
@@ -72,12 +98,12 @@ persistence.store.sql.config = function(persistence, dialect) {
               var otherMeta = meta.hasMany[rel].type.meta;
               queries.push([dialect.createIndex(tableName, [meta.name + "_" + rel]), null]);
               queries.push([dialect.createIndex(tableName, [otherMeta.name + "_" + meta.hasMany[rel].inverseProperty]), null]);
-              queries.push([dialect.createTable(tableName, [[meta.name + "_" + rel, "VARCHAR(32)"], [otherMeta.name + "_" + meta.hasMany[rel].inverseProperty, "VARCHAR(32)"]]), null]);
+              queries.push([dialect.createTable(tableName, [[meta.name + "_" + rel, tm.idType], [otherMeta.name + "_" + meta.hasMany[rel].inverseProperty, tm.idType]]), null]);
               persistence.generatedTables[tableName] = true;
             }
           }
         }
-        colDefs.push(["id", "VARCHAR(32)", "PRIMARY KEY"]);
+        colDefs.push(["id", tm.idType, "PRIMARY KEY"]);
         persistence.generatedTables[meta.name] = true;
         queries.push([dialect.createTable(meta.name, colDefs), null]);
       }
@@ -97,7 +123,7 @@ persistence.store.sql.config = function(persistence, dialect) {
   };
 
   /**
-   * Persists all changes to the database
+   * Persists all changes to the database transaction
    * 
    * @param tx
    *            transaction to use
@@ -177,6 +203,20 @@ persistence.store.sql.config = function(persistence, dialect) {
   };
 
   /**
+   * Commits all changes to the database
+   * 
+   * @param tx
+   *            transaction to use
+   * @param callback
+   *            function to be called when done
+   */
+  persistence.commit = function(tx, callback){
+  	this.flush(tx, function() {
+		tx.executeSql("COMMIT", null, callback);
+	});
+  }
+  
+  /**
    * Remove all tables in the database (as defined by the model)
    */
   persistence.reset = function (tx, callback) {
@@ -202,7 +242,7 @@ persistence.store.sql.config = function(persistence, dialect) {
         }
         function dropOneTable () {
           var tableName = tableArray.pop();
-          tx.executeSql("DROP TABLE IF EXISTS " + tableName, null, function () {
+          tx.executeSql("DROP TABLE IF EXISTS `" + tableName + "`", null, function () {
               if (tableArray.length > 0) {
                 dropOneTable();
               } else {
@@ -229,20 +269,21 @@ persistence.store.sql.config = function(persistence, dialect) {
     if (session.trackedObjects[row[prefix + "id"]]) { // Cached version
       return session.trackedObjects[row[prefix + "id"]];
     }
+	var tm = persistence.typeMapper;
     var rowMeta = persistence.getMeta(entityName);
     var ent = persistence.define(entityName); // Get entity
     if(!row[prefix+'id']) { // null value, no entity found
       return null;
     }
     var o = new ent();
-    o.id = row[prefix + 'id'];
+    o.id = tm.dbValToEntityVal(row[prefix + 'id'], tm.idType);
     o._new = false;
     for ( var p in row) {
       if (row.hasOwnProperty(p)) {
         if (p.substring(0, prefix.length) === prefix) {
           var prop = p.substring(prefix.length);
           if (prop != 'id') {
-            o._data[prop] = dbValToEntityVal(row[p], rowMeta.fields[prop]);
+            o._data[prop] = tm.dbValToEntityVal(row[p], rowMeta.fields[prop] || tm.idType);
           }
         }
       }
@@ -254,7 +295,7 @@ persistence.store.sql.config = function(persistence, dialect) {
    * Converts a value from the database to a value suitable for the entity
    * (also does type conversions, if necessary)
    */
-  function dbValToEntityVal(val, type) {
+  persistence.typeMapper.dbValToEntityVal = function(val, type) {
     if(val === null || val === undefined) {
       return val;
     }
@@ -287,7 +328,7 @@ persistence.store.sql.config = function(persistence, dialect) {
    * Converts an entity value to a database value, inverse of
    *   dbValToEntityVal
    */
-  function entityValToDbVal(val, type) {
+  persistence.typeMapper.entityValToDbVal = function(val, type) {
     if (val === undefined || val === null) {
       return null;
     } else if (type === 'JSON' && val) {
@@ -311,6 +352,7 @@ persistence.store.sql.config = function(persistence, dialect) {
    */
   function save(obj, tx, callback) {
     var meta = persistence.getMeta(obj._type);
+	var tm = persistence.typeMapper;
     var properties = [];
     var values = [];
     var qs = [];
@@ -325,9 +367,10 @@ persistence.store.sql.config = function(persistence, dialect) {
     for ( var p in obj._dirtyProperties) {
       if (obj._dirtyProperties.hasOwnProperty(p)) {
         properties.push("`" + p + "`");
-        values.push(entityValToDbVal(obj._data[p], meta.fields[p]));
-        qs.push('?');
-        propertyPairs.push("`" + p + "` = ?");
+		var type = meta.fields[p] || tm.idType;
+        values.push(tm.entityValToDbVal(obj._data[p], type));
+        qs.push(tm.outVar("?", type));
+        propertyPairs.push("`" + p + "` = " + tm.outVar("?", type));
       }
     }
     var additionalQueries = [];
@@ -344,26 +387,27 @@ persistence.store.sql.config = function(persistence, dialect) {
         obj._dirtyProperties = {};
         if (obj._new) {
           properties.push('id');
-          values.push(obj.id);
-          qs.push('?');
+          values.push(tm.entityIdToDbId(obj.id));
+          qs.push(tm.outIdVar('?'));
           var sql = "INSERT INTO `" + obj._type + "` (" + properties.join(", ") + ") VALUES (" + qs.join(', ') + ")";
           obj._new = false;
           tx.executeSql(sql, values, callback);
         } else {
-          var sql = "UPDATE `" + obj._type + "` SET " + propertyPairs.join(',') + " WHERE id = '" + obj.id + "'";
+          var sql = "UPDATE `" + obj._type + "` SET " + propertyPairs.join(',') + " WHERE id = " + tm.outId(obj.id);
           tx.executeSql(sql, values, callback);
         }
       });
   }
 
   function remove (obj, tx, callback) {
-    var queries = [["DELETE FROM `" + obj._type + "` WHERE id = '" + obj.id + "'", null]];
     var meta = persistence.getMeta(obj._type);
+	var tm = persistence.typeMapper;
+    var queries = [["DELETE FROM `" + obj._type + "` WHERE id = " + tm.outId(obj.id), null]];
     for (var rel in meta.hasMany) {
       if (meta.hasMany.hasOwnProperty(rel) && meta.hasMany[rel].manyToMany) {
         var tableName = meta.hasMany[rel].tableName;
         //var inverseProperty = meta.hasMany[rel].inverseProperty;
-        queries.push(["DELETE FROM `" + tableName + "` WHERE `" + meta.name + '_' + rel + "` = '" + obj.id + "'", null]);
+        queries.push(["DELETE FROM `" + tableName + "` WHERE `" + meta.name + '_' + rel + "` = " + tm.outId(obj.id), null]);
       }
     }
     executeQueriesSeq(tx, queries, callback);
@@ -457,16 +501,18 @@ persistence.store.sql.config = function(persistence, dialect) {
     return s;
   };
 
-  persistence.NullFilter.prototype.sql = function (alias, values) {
+  persistence.NullFilter.prototype.sql = function (meta, alias, values) {
     return "1=1";
   };
 
-  persistence.AndFilter.prototype.sql = function (alias, values) {
-    return "(" + this.left.sql(alias, values) + " AND "
-    + this.right.sql(alias, values) + ")";
+  persistence.AndFilter.prototype.sql = function (meta, alias, values) {
+    return "(" + this.left.sql(meta, alias, values) + " AND "
+    + this.right.sql(meta, alias, values) + ")";
   };
 
-  persistence.PropertyFilter.prototype.sql = function (alias, values) {
+  persistence.PropertyFilter.prototype.sql = function (meta, alias, values) {
+	var tm = persistence.typeMapper;
+  	var sqlType = meta.fields[this.property] || tm.idType;
     if (this.operator === '=' && this.value === null) {
       return "`" + alias + '`.`' + this.property + "` IS NULL";
     } else if (this.operator === '!=' && this.value === null) {
@@ -476,7 +522,7 @@ persistence.store.sql.config = function(persistence, dialect) {
       var qs = [];
       for(var i = 0; i < vals.length; i++) {
         qs.push('?');
-        values.push(entityValToDbVal(vals[i]));
+        values.push(tm.entityValToDbVal(vals[i], sqlType));
       }
       if(vals.length === 0) {
         // Optimize this a little
@@ -489,7 +535,7 @@ persistence.store.sql.config = function(persistence, dialect) {
       var qs = [];
       for(var i = 0; i < vals.length; i++) {
         qs.push('?');
-        values.push(entityValToDbVal(vals[i]));
+        values.push(tm.entityValToDbVal(vals[i], sqlType));
       }
 
       if(vals.length === 0) {
@@ -503,9 +549,9 @@ persistence.store.sql.config = function(persistence, dialect) {
       if(value === true || value === false) {
         value = value ? 1 : 0;
       }
-      values.push(entityValToDbVal(value));
-      return "`" + alias + '`.`' + this.property + "` " + this.operator + " ?";
-    }
+      values.push(tm.entityValToDbVal(value, sqlType));
+ 	  return "`" + alias + '`.`' + this.property + "` " + this.operator + " " + tm.outVar("?", sqlType);
+   }
   };
 
   // QueryColleciton's list
@@ -534,18 +580,19 @@ persistence.store.sql.config = function(persistence, dialect) {
     }
     var entityName = this._entityName;
     var meta = persistence.getMeta(entityName);
+	var tm = persistence.typeMapper;
 
     function selectAll (meta, tableAlias, prefix) {
-      var selectFields = [ "`" + tableAlias + "`.id AS " + prefix + "id" ];
+      var selectFields = [ tm.inId("`" + tableAlias + "`.id") + " AS " + prefix + "id" ];
       for ( var p in meta.fields) {
         if (meta.fields.hasOwnProperty(p)) {
-          selectFields.push("`" + tableAlias + "`.`" + p + "` AS `"
+          selectFields.push(tm.inVar("`" + tableAlias + "`.`" + p + "`", meta.fields[p]) + " AS `"
             + prefix + p + "`");
         }
       }
       for ( var p in meta.hasOne) {
         if (meta.hasOne.hasOwnProperty(p)) {
-          selectFields.push("`" + tableAlias + "`.`" + p + "` AS `"
+          selectFields.push(tm.inId("`" + tableAlias + "`.`" + p + "`") + " AS `"
             + prefix + p + "`");
         }
       }
@@ -562,7 +609,7 @@ persistence.store.sql.config = function(persistence, dialect) {
     var mtm = this._manyToManyFetch;
     if(mtm) {
       joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
-      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = " + tm.outId(mtm.id));
     }
 
     joinSql += this._additionalJoinSqls.join(' ');
@@ -579,7 +626,7 @@ persistence.store.sql.config = function(persistence, dialect) {
     }
 
     var whereSql = "WHERE "
-    + [ this._filter.sql(mainAlias, args) ].concat(additionalWhereSqls).join(' AND ');
+    + [ this._filter.sql(meta, mainAlias, args) ].concat(additionalWhereSqls).join(' AND ');
 
     var sql = "SELECT " + selectFields.join(", ") + " FROM `" + entityName
     + "` AS `" + mainAlias + "` " + joinSql + " " + whereSql;
@@ -649,20 +696,21 @@ persistence.store.sql.config = function(persistence, dialect) {
       return;
     } 
     var entityName = this._entityName;
+    var meta = persistence.getMeta(entityName);
 
     var joinSql = '';
     var additionalWhereSqls = this._additionalWhereSqls.slice(0);
     var mtm = this._manyToManyFetch;
     if(mtm) {
       joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
-      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = " + tm.outId(mtm.id));
     }
 
     joinSql += this._additionalJoinSqls.join(' ');
 
     var args = [];
     var whereSql = "WHERE "
-    + [ this._filter.sql("", args) ].concat(additionalWhereSqls).join(' AND ');
+    + [ this._filter.sql(meta, "", args) ].concat(additionalWhereSqls).join(' AND ');
 
     var selectSql = "SELECT id FROM `" + entityName + "` " + joinSql + ' ' + whereSql;
     var deleteSql = "DELETE FROM `" + entityName + "` " + joinSql + ' ' + whereSql;
@@ -703,24 +751,25 @@ persistence.store.sql.config = function(persistence, dialect) {
       return;
     } 
     var entityName = this._entityName;
+    var meta = persistence.getMeta(entityName);
 
     var joinSql = '';
     var additionalWhereSqls = this._additionalWhereSqls.slice(0);
     var mtm = this._manyToManyFetch;
     if(mtm) {
       joinSql += "LEFT JOIN `" + mtm.table + "` AS mtm ON mtm.`" + mtm.inverseProp + "` = `root`.`id` ";
-      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = '" + mtm.id + "'");
+      additionalWhereSqls.push("mtm.`" + mtm.prop + "` = " + tm.outId(mtm.id));
     }
 
     joinSql += this._additionalJoinSqls.join(' ');
     var args = [];
-    var whereSql = "WHERE " + [ this._filter.sql("root", args) ].concat(additionalWhereSqls).join(' AND ');
+    var whereSql = "WHERE " + [ this._filter.sql(meta, "root", args) ].concat(additionalWhereSqls).join(' AND ');
 
     var sql = "SELECT COUNT(*) AS cnt FROM `" + entityName + "` AS `root` " + joinSql + " " + whereSql;
 
     session.flush(tx, function () {
         tx.executeSql(sql, args, function(results) {
-            callback(results[0].cnt);
+            callback(parseInt(results[0].cnt, 10));
           });
       });
   };
@@ -729,20 +778,22 @@ persistence.store.sql.config = function(persistence, dialect) {
     var queries = [];
     var meta = persistence.getMeta(this._obj._type);
     var inverseMeta = meta.hasMany[this._coll].type.meta;
+	var tm = persistence.typeMapper;
+
     // Added
     for(var i = 0; i < this._localAdded.length; i++) {
       queries.push(["INSERT INTO " + meta.hasMany[this._coll].tableName + 
             " (`" + meta.name + "_" + this._coll + "`, `" + 
             inverseMeta.name + '_' + meta.hasMany[this._coll].inverseProperty +
-            "`) VALUES (?, ?)", [this._obj.id, this._localAdded[i].id]]);
+            "`) VALUES (" + tm.outIdVar("?") + "," + tm.outIdVar("?") + ")", [tm.entityIdToDbId(this._obj.id), tm.entityIdToDbId(this._localAdded[i].id)]]);
     }
     this._localAdded = [];
     // Removed
     for(var i = 0; i < this._localRemoved.length; i++) {
     queries.push(["DELETE FROM  " + meta.hasMany[this._coll].tableName + 
-          " WHERE `" + meta.name + "_" + this._coll + "` = ? AND `" + 
+          " WHERE `" + meta.name + "_" + this._coll + "` = " + tm.outIdVar("?") + " AND `" + 
           inverseMeta.name + '_' + meta.hasMany[this._coll].inverseProperty +
-          "` = ?", [this._obj.id, this._localRemoved[i].id]]);
+          "` = " + tm.outIdVar("?"), [tm.entityIdToDbId(this._obj.id), tm.entityIdToDbId(this._localRemoved[i].id)]]);
     }
     this._localRemoved = [];
     return queries;

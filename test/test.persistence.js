@@ -496,4 +496,25 @@ $(document).ready(function(){
       var coll = new persistence.LocalQueryCollection();
       collectionSkipTests(coll, start);
     });
+
+  module("Dumping/restoring");
+
+  asyncTest("Dumping", function() {
+      for(var i = 0; i < 10; i++) {
+        persistence.add(new Task({name: "Task " + i, dateAdded: new Date()}));
+      }
+      persistence.flush(function() {
+          persistence.dumpToJson([Task], function(dumps) {
+              console.log(dumps);
+              Task.all().destroyAll(function() {
+                  persistence.loadFromJson(dumps, function() {
+                      Task.all().count(function(n) {
+                          equals(10, n, "restored successfully");
+                          start();
+                        });
+                    });
+                });
+            });
+        });
+    });
 });

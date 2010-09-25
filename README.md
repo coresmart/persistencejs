@@ -106,11 +106,11 @@ To use `persistence.js` you need to clone the git repository:
 
     git clone git://github.com/zefhemel/persistencejs.git
 
-To use it you need to copy `persistence.js` to your web directory,
+To use it you need to copy `lib/persistence.js` to your web directory,
 as well as any data stores you want to use. Note that the `mysql` and
 `websql` stores both depend on the `sql` store. A typical setup
-requires you to copy at least `persistence.js`,
-`persistence.store.sql.js` and `persistence.store.websql.js` to your
+requires you to copy at least `lib/persistence.js`,
+`lib/persistence.store.sql.js` and `lib/persistence.store.websql.js` to your
 web directory. You can then load them as follows:
 
     <script src="persistence.js" type="application/javascript"></script>
@@ -347,6 +347,37 @@ And of course the methods to define relationships to other entities:
 * `EntityName.hasOne(property, Entity)` defines a 1:1 or N:1
   relationship
 
+
+Entity objects
+--------------
+
+Entity instances also have a few predefined properties and methods you
+should be aware of:
+
+* `obj.id`, contains the identifier of your entity, this is a
+  automatically generated (approximation of a) UUID. You should
+  never write to this property.
+* `obj.fetch(prop, callback)`, if an object has a `hasOne`
+   relationship to another which has not yet been fetched from the
+   database (e.g. when `prefetch` wasn't used), you can fetch in manually
+   using `fetch`. When the property object is retrieved the callback function
+   is invoked with the result, the result is also cached in the entity
+   object itself.
+* `obj.selectJSON([tx], propertySpec, callback)`, sometime you need to extract
+  a subset of data from an entity. You for instance need to post a
+  JSON representation of your entity, but do not want to include all
+  properties. `selectJSON` allows you to do that. The `propertySpec`
+  arguments expects an array with property names. Some examples:
+   * `['id', 'name']`, will return an object with the id and name property of this entity
+   * `['*']`, will return an object with all the properties of this entity, not recursive
+   * `['project.name']`, will return an object with a project property which has a name 
+     property containing the project name (hasOne relationship)
+   * `['project.[id, name]']`, will return an object with a project property which has an
+     id and name property containing the project name (hasOne relationship)
+   * `['tags.name']`, will return an object with an array `tags` property containing 
+     objects each with a single property: name
+       
+
 Query collections
 -----------------
 
@@ -418,6 +449,10 @@ Example:
 Using persistence.js on the server
 ==================================
 
+Installing `persistence.js` on node is easy using [npm](http://npmjs.org):
+
+    npm install persistencejs
+
 Sadly the node.js server environment requires slight changes to
 `persistence.js` to make it work with multiple database connections:
 
@@ -431,11 +466,10 @@ An example `node.js` application is included in `test/node-blog.js`.
 Setup
 -----
 You need to `require` two modules, the `persistence.js` library itself
-and the MySQL backend module. Also make sure the MySQL library
-is located (or symlinked) from the current directory:
+and the MySQL backend module.
 
-    var persistence = require('./persistence').persistence;
-    var persistenceStore = require('./persistence.store.mysql');
+    var persistence = require('persistencejs/persistence').persistence;
+    var persistenceStore = require('persistencejs/persistence.store.mysql');
 
 Then, you configure the database settings to use:
 

@@ -90,7 +90,7 @@ Browser support
 
 * Modern webkit browsers (Google Chrome and Safari)
 * Firefox (through Google Gears)
-* Android browser (tested on 1.6 and 2.1)
+* Android browser (tested on 1.6 and 2.x)
 * iPhone browser (iPhone OS 3+)
 * Palm WebOS (tested on 1.4.0)
 
@@ -286,7 +286,9 @@ using the `list(...)` method on a database `QueryCollection`, which also
 flushes first, although this behavior may change in the future. 
 
 Dumping and restoring data
---------------------------------
+--------------------------
+
+The library supports two kinds of dumping and restoring data.
 
 `persistence.dump` can be used to create an object containing a full
 dump of a database. Naturally, it is adviced to only do this with

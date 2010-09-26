@@ -2,6 +2,9 @@ $(document).ready(function(){
   persistence.store.websql.config(persistence, 'persistencetest', 'My db', 5 * 1024 * 1024);
   //persistence.store.memory.config(persistence);
   persistence.debug = true;
+  //persistence.debug = false;
+
+  var startTime = new Date().getTime();
 
   var Project = persistence.define('Project', {
       name: "TEXT"
@@ -499,18 +502,55 @@ $(document).ready(function(){
 
   module("Dumping/restoring");
 
-  asyncTest("Dumping", function() {
+  asyncTest("Full dump/restore", function() {
       for(var i = 0; i < 10; i++) {
         persistence.add(new Task({name: "Task " + i, dateAdded: new Date()}));
       }
       persistence.flush(function() {
           persistence.dumpToJson([Task], function(dumps) {
-              console.log(dumps);
               Task.all().destroyAll(function() {
                   persistence.loadFromJson(dumps, function() {
                       Task.all().count(function(n) {
                           equals(10, n, "restored successfully");
                           start();
+                        });
+                    });
+                });
+            });
+        });
+    });
+
+  asyncTest("Select dump/restore", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              var project = new Project({name: "My project"});
+              persistence.add(project);
+              var tags = [];
+              for(var i = 0; i < 5; i++) {
+                var tag = new Tag({name: "Tag " + i});
+                persistence.add(tag);
+                tags.push(tag);
+              }
+              for(var i = 0; i < 1000; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = true;
+                task.tags = new persistence.LocalQueryCollection(tags);
+                project.tasks.add(task);
+              }
+              Project.all().selectJSON(['id', 'name', 'tasks.[id,name]', 'tasks.tags.[id, name]'], function(result) {
+                  persistence.reset(function() {
+                      persistence.schemaSync(function() {
+                          Project.fromSelectJSON(result[0], function(obj) {
+                              persistence.add(obj);
+                              Task.all().list(function(tasks) {
+                                  equals(tasks.length, 10, "number of restored tasks ok");
+                                  tasks.forEach(function(task) {
+                                      equals(task.done, false, "done still default value");
+                                    });
+                                  start();
+                                  console.log(new Date().getTime() - startTime);
+                                });
+                            });
                         });
                     });
                 });

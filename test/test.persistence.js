@@ -531,7 +531,7 @@ $(document).ready(function(){
                 persistence.add(tag);
                 tags.push(tag);
               }
-              for(var i = 0; i < 1000; i++) {
+              for(var i = 0; i < 10; i++) {
                 var task = new Task({name: "Task " + i});
                 task.done = true;
                 task.tags = new persistence.LocalQueryCollection(tags);

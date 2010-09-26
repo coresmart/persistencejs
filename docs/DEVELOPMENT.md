@@ -41,39 +41,3 @@ Extension hooks
 * `persistence.flushHooks`: a list of functions to be called before flushing.
 * `persistence.schemaSyncHooks`: a list of functions to be called before syncing the schema.
 
-Idioms
-------
-
-Because persistence.js is an asynchronous library, a lot happens
-asynchronously (shocker). The way I typically handle an unknown
-sequence of asynchronous calls is as follows, I know it's expensive on
-the stack (it makes a lot of recursive calls), but it's the best I've
-been able to come up with.
-
-Let's say we have an array `myArray` of values and we have to invoke a
-function `someAsyncFunction` on each item sequentially. Except, the
-function is asynchronous, and thus does not return a value
-immediately, but instead has a callback that is called with the
-result. This is how I typically implement that in persistence.js, note
-that this destroys `myArray`, at the end the array is empty, so if you 
-care about its value, `.slice(0)` it first.
-
-    var myArray = [1, 2, 3, 4, 5];
-
-    function processOne() {
-      var item = myArray.pop(); // pop (last) item from the array
-      someAsyncFunction(item, function(result) {
-        // do something with result
-        if(myArray.length > 0) {
-          processOne();
-        } else {
-          // Do whatever you need when you're completely done
-        }
-      });
-    }
-
-    if(myArray.length > 0) {
-      processOne();
-    } else {
-      // Do whatever you need when you're completely done
-    }

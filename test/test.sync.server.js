@@ -32,9 +32,9 @@ var sys = require('sys');
 var connect = require('connect');
 var express = require('express');
 
-var persistence = require('../persistence').persistence;
-var persistenceStore = require('../persistence.store.mysql');
-var persistenceSync = require('../persistence.sync.server');
+var persistence = require('../lib/persistence').persistence;
+var persistenceStore = require('../lib/persistence.store.mysql');
+var persistenceSync = require('../lib/persistence.sync.server');
 
 // Database configuration
 persistenceStore.config(persistence, 'localhost', 'synctest', 'test', 'test');

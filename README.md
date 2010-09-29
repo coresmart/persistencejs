@@ -12,7 +12,7 @@ supports 4 types of data stores:
 * [Google Gears](http://gears.google.com), a browser plug-in that adds
   a number of feature to the browser, including a in-browser database.
 * [MySQL](http://www.mysql.com), using the
-  [node-mysql](http://github.com/stevebest/node-mysql), node.js module
+  [node-mysql](http://github.com/felixge/node-mysql), node.js module
   on the server.
 * In-memory, as a fallback. Keeps the database in memory and is cleaned
   upon a page refresh (or server restart).

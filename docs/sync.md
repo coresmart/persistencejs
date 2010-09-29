@@ -54,8 +54,15 @@ are no database consistencies after a sync, e.g. if you only sync `Task`s that
 refer to a `Project` object and that `Project` object has not (yet) been synced,
 the database will be (temporarily) inconsistent.
 
-Server-side
------------
+Server-side (Java, Slim3, AppEngine)
+------------------------------------
+
+Roberto Saccon developed a [Java server-side implementation of
+persistence sync using the Slim3
+framework](http://github.com/rsaccon/Slim3PersistenceSync).
+
+Server-side (node.js)
+---------------------
 
 The server must expose a resource located at the given URI that responds to:
 

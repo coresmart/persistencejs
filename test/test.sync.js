@@ -178,6 +178,9 @@ $(document).ready(function(){
           Task.all().list(function(tasks) {
               for(var i = 0; i < tasks.length; i++) {
                 if(i % 2 === 0) {
+                  // Force a dirty flag
+                  tasks[i].done = true;
+                  tasks[i].done = false;
                   tasks[i].done = true;
                 }
               }
@@ -207,6 +210,9 @@ $(document).ready(function(){
           Task.all().list(function(tasks) {
               for(var i = 0; i < tasks.length; i++) {
                 if(i % 2 === 0) {
+                  // Force a dirty flag
+                  tasks[i].done = true;
+                  tasks[i].done = false;
                   tasks[i].done = true;
                 }
               }

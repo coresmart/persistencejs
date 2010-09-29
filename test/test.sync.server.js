@@ -118,20 +118,19 @@ app.get('/projectUpdates',  function(req, res) {
 });
 
 app.post('/projectUpdates',  function(req, res) {
-    persistenceSync.receiveUpdates(req.conn, req.tx, Project, req.body, undefined, function(result) {
+    persistenceSync.receiveUpdates(req.conn, req.tx, Project, req.body, function(result) {
         res.send(result);
       });
   });
 
 app.get('/taskUpdates',  function(req, res) {
-    properties = {name: true, done: true, project: {name: true}};
-    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, properties, function(updates) {
+    persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, function(updates) {
         res.send(updates);
       });
 });
 
 app.post('/taskUpdates',  function(req, res) {
-    persistenceSync.receiveUpdates(req.conn, req.tx, Task, req.body, undefined, function(result) {
+    persistenceSync.receiveUpdates(req.conn, req.tx, Task, req.body, function(result) {
         res.send(result);
       });
   });
@@ -143,7 +142,7 @@ app.get('/tagUpdates',  function(req, res) {
 });
 
 app.post('/tagUpdates',  function(req, res) {
-    persistenceSync.receiveUpdates(req.conn, req.tx, Tag, req.body, undefined, function(result) {
+    persistenceSync.receiveUpdates(req.conn, req.tx, Tag, req.body, function(result) {
         res.send(result);
       });
   });

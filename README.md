@@ -475,7 +475,7 @@ and the MySQL backend module.
 
 Then, you configure the database settings to use:
 
-    persistenceStore.config(persistence, 'localhost', 'dbname', 'username', 'password');
+    persistenceStore.config(persistence, 'localhost', 3306, 'dbname', 'username', 'password');
 
 Subsequently, for every connection you handle (assuming you're
 building a sever), you call the `persistenceStore.getSession()`

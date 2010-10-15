@@ -395,6 +395,19 @@ A `QueryCollection` has the following methods:
   certain property based on an operator and value. Supported operators
   are '=', '!=', '<', '<=', '>', '>=', 'in' and 'not in'. Example:
   `.filter('done', '=', true)`
+* `or(filter)`  
+  Returns a new `QueryCollection` that contains items either matching
+  the filters specified before calling `or`, or the filter represented
+  in the argument. The `filter` argument is of a `Filter` type, there
+  are three types of filters:
+  - `persistence.PropertyFilter`, which filters on properties (internally called when `filter(...)` is used.  
+    Example: `new persistence.PropertyFilter('done', '=', true)`
+  - `persistence.AndFilter`, which is passed two filter objects as arguments, both of which should be true.
+    Example: `new persistence.AndFilter(new persistence.PropertyFilter('done', '=', true), new persistence.PropertyFilter('archived', '=', true))`
+  - `persistence.OrFilter`, which is passed two filter objects as arguments, one of which should be true.
+    Example: `new persistence.OrFilter(new persistence.PropertyFilter('done', '=', true), new persistence.PropertyFilter('archived', '=', true))`
+* `and(filter)`  
+  same as `or(filter)` except that both conditions should hold for items to be in the collection. 
 * `order(property, ascending)`  
   Returns a new `QueryCollection` that will order its results by the
   property specified in either an ascending (ascending === true) or

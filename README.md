@@ -504,6 +504,40 @@ transaction open per session and transactions cannot be nested.
       ...
     });
 
+Commit and Rollback
+-------------------
+
+`persistence.js` works in autocommit mode by default. 
+
+You can override this behavior and enable explicit commit and rollback 
+by passing true as first argument to `persistence.transaction`. 
+You can then use the following two methods to control the transaction:
+
+* `transaction.commit(session, callback)` commits the changes.
+* `transaction.rollback(session, callback)` rollbacks the changes.
+
+Typical code will look like:
+ 
+    session.transaction(true, function(tx) {
+      // create/update/delete objects
+      modifyThings(session, tx, function(err, result) {
+        if (err) {
+          // something went wrong
+          tx.rollback(session, function() {
+            console.log('changes have been rolled back: ' + ex.message);
+          });
+        }
+        else {
+          // success
+          tx.commit(session, function() {
+            console.log('changes have been committed: ' result);
+        });
+      });
+    });
+
+Explicit commit and rollback is only supported on MySQL (server side) 
+for now.
+
 Defining your data model
 ------------------------
 

@@ -210,6 +210,45 @@ optional.
 There is also a migrations plugin you can check out, documentation can be found
 in [persistence.migrations.docs.md](migrations/persistence.migrations.docs.md) file.
 
+Mix-ins
+-------
+
+You can also define mix-ins and apply them to entities of the model. 
+
+A mix-in definition is similar to an entity definition. Just pass an additional `true` 
+argument to the `persistence.define` function, to indicate that you are defining
+a mix-in. For example:
+
+    var Annotatable = persistence.define('Annotatable', {
+      lastAnnotated: "DATE"
+    }, true);
+
+You can define relationships between mix-in and entities. For example:
+
+    // A normal entity
+    var Note = persistence.define('Note', {
+      text: "TEXT"
+    });
+  
+    // relationship between a mix-in and a normal entity
+    Annotatable.hasMany('notes', Note, 'annotated');
+
+Once you have defined a mix-in, you can apply it to any entity of your model, 
+with the `Entity.is(mixin)` method. For example:
+
+    Project.is(Annotable);
+    Task.is(Annotable);
+    
+Now, your `Project` and `Task` entities have an additional `lastAnnotated` property.
+They also have a one to many relationship called `notes` to the `Note` entity. 
+And you can also traverse the reverse relationship from a `Note` to its `annotated` object 
+
+Note that `annotated` is a polymorphic relationship as it may yield either a `Project` 
+or a `Task` (or any other entity which is `Annotatable').
+    
+Notes: this feature is very experimental at this stage. It needs more testing.
+  Support for "is a" relationships (classical inheritence) is also in the works.
+
 Creating and manipulating objects
 ---------------------------------
 

@@ -557,4 +557,23 @@ $(document).ready(function(){
             });
         });
     });
+
+  asyncTest("AND and OR filters", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              for(var i = 0; i < 10; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = i % 2 === 0;
+                persistence.add(task);
+              }
+              Task.all().filter("done", "=", true).or(new persistence.PropertyFilter("done", "=", false)).list(function(results) {
+                  equals(results.length, 10, "right number of results");
+                  Task.all().filter("done", "=", true).and(new persistence.PropertyFilter("done", "=", false)).list(function(results) {
+                      equals(results.length, 0, "right number of results");
+                      start();
+                    });
+                });
+            });
+        });
+    });
 });

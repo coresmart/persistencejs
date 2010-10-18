@@ -60,7 +60,7 @@ persistence.defineProp = function(scope, field, setterCallback, getterCallback) 
 persistence.set = function(scope, fieldName, value) {
     if (persistence.isImmutable(fieldName)) throw "immutable field: "+fieldName;
     scope[fieldName](value);
-    return scope; 
+    return scope;
 }; 
 
 /**

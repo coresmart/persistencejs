@@ -215,7 +215,8 @@ Mix-ins
 
 You can also define mix-ins and apply them to entities of the model. 
 
-A mix-in definition is similar to an entity definition. For example:
+A mix-in definition is similar to an entity definition, except using
+`defineMixin` rather than just `define`. For example:
 
     var Annotatable = persistence.defineMixin('Annotatable', {
       lastAnnotated: "DATE"
@@ -248,7 +249,7 @@ Note: Prefetch is not allowed (yet) on a relationship that targets a mixin. In t
 you cannot prefetch the `annotated` relationship when querying the `Note` entity.
     
 Notes: this feature is very experimental at this stage. It needs more testing.
-  Support for "is a" relationships (classical inheritence) is also in the works.
+  Support for "is a" relationships (classical inheritance) is also in the works.
 
 Creating and manipulating objects
 ---------------------------------

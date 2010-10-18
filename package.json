@@ -1,8 +1,8 @@
 {
   "name": "persistencejs",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "engine": "node >=0.2.0",
   "author": "Zef Hemel",
   "directories": {"lib": "./lib"},
-  "dependencies": {"mysql": ">=0.1.27-12"}
+  "dependencies": {"mysql": ">=0.7.0"}
 }

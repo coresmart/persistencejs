@@ -246,7 +246,7 @@ Note that `annotated` is a polymorphic relationship as it may yield either a `Pr
 or a `Task` (or any other entity which is `Annotatable').
     
 Notes: this feature is very experimental at this stage. It needs more testing.
-  Support for "is a" relationships (classical inheritence) is also in the works.
+  Support for "is a" relationships (classical inheritance) is also in the works.
 
 Creating and manipulating objects
 ---------------------------------

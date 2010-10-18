@@ -27,9 +27,9 @@ $(document).ready(function(){
     text: "TEXT"
   });
   
-  var Annotatable = persistence.define('Annotatable', {
+  var Annotatable = persistence.defineMixin('Annotatable', {
     lastAnnotated: "DATE"
-  }, true);
+  });
   
   Annotatable.hasMany('notes', Note, 'annotated');
   

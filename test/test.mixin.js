@@ -27,9 +27,9 @@ $(document).ready(function(){
     text: "TEXT"
   });
   
-  var Annotatable = persistence.define('Annotatable', {
+  var Annotatable = persistence.defineMixin('Annotatable', {
     lastAnnotated: "DATE"
-  }, true);
+  });
   
   Annotatable.hasMany('notes', Note, 'annotated');
   
@@ -41,15 +41,15 @@ $(document).ready(function(){
   Task.is(Annotatable);
   Project.is(Annotatable);
   
-  var M1 = persistence.define('M1', {
+  var M1 = persistence.defineMixin('M1', {
     seq: "INT",
     m1: "TEXT"
-  }, true);
+  });
   
-  var M2 = persistence.define('M2', {
+  var M2 = persistence.defineMixin('M2', {
     seq: "INT",
     m2: "TEXT"
-  }, true);
+  });
   
   M1.hasOne('oneM2', M2);
   M1.hasMany('manyM2', M2, 'oneM1');
@@ -134,7 +134,7 @@ $(document).ready(function(){
       });
     });
   
-    asyncTest("many to many with mixins", 8, function(){
+    asyncTest("many to many with mixins", 16, function(){
       var a1 = new A1({
         seq: 1,
         a1: "a1"
@@ -172,17 +172,40 @@ $(document).ready(function(){
         A1.all().list(function(a1s){
           equals(a1s.length, 1, "A1 list ok")
           var a1 = a1s[0];
-          a1.fetch("oneM2", function(m2) {
+          a1.fetch("oneM2", function(m2){
             ok(m2 != null, "oneM2 not null");
             equals(m2.b2, "b2x", "oneM2 ok");
-            a1.manyM2.order('seq', true).list(function(m2s) {
+            a1.manyM2.order('seq', true).list(function(m2s){
               equals(m2s.length, 2, "manyM2 length ok");
               equals(m2s[0].a2, "a2x", "manyM2[0] ok");
               equals(m2s[1].b2, "b2x", "manyM2[1] ok");
-              m2s[1].fetch("oneM1", function(m1) {
+              m2s[1].fetch("oneM1", function(m1){
                 ok(m1 != null, "manyM2[1].oneM1 not null");
                 ok(m1.a1, "a1", "manyM2[1].oneM1 ok");
-                start();
+                a1.manyManyM2.add(a2x);
+                a1.manyManyM2.add(b2x);
+                persistence.add(b2y);
+                b2y.manyManyM1.add(a1);
+                b2y.manyManyM1.add(b1);
+                persistence.flush(function(){
+                  persistence.clean();
+                  A1.all().list(function(a1s){
+                    equals(a1s.length, 1, "A1 list ok")
+                    var a1 = a1s[0];
+                    a1.manyManyM2.order('seq', true).list(function(m2s){
+                      equals(m2s.length, 3, "manyManyM2 length ok");
+                      equals(m2s[0].a2, "a2x", "manyManyM2[0] ok");
+                      equals(m2s[1].b2, "b2x", "manyManyM2[1] ok");
+                      equals(m2s[2].b2, "b2y", "manyManyM2[2] ok");
+                      m2s[2].manyManyM1.order('seq', true).list(function(m1s){
+                        equals(m1s.length, 2, "manyManyM1 length ok");
+                        equals(m1s[0].a1, "a1", "manyManyM1[0] ok");
+                        equals(m1s[1].b1, "b1", "manyManyM1[1] ok");
+                        start();
+                      })
+                    });
+                  });
+                })
               });
             });
           });

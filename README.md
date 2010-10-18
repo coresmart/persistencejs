@@ -215,13 +215,11 @@ Mix-ins
 
 You can also define mix-ins and apply them to entities of the model. 
 
-A mix-in definition is similar to an entity definition. Just pass an additional `true` 
-argument to the `persistence.define` function, to indicate that you are defining
-a mix-in. For example:
+A mix-in definition is similar to an entity definition. For example:
 
-    var Annotatable = persistence.define('Annotatable', {
+    var Annotatable = persistence.defineMixin('Annotatable', {
       lastAnnotated: "DATE"
-    }, true);
+    });
 
 You can define relationships between mix-in and entities. For example:
 
@@ -241,12 +239,12 @@ with the `Entity.is(mixin)` method. For example:
     
 Now, your `Project` and `Task` entities have an additional `lastAnnotated` property.
 They also have a one to many relationship called `notes` to the `Note` entity. 
-And you can also traverse the reverse relationship from a `Note` to its `annotated` object 
+And you can also traverse the reverse relationship from a `Note` to its `annotated` object.
 
 Note that `annotated` is a polymorphic relationship as it may yield either a `Project` 
 or a `Task` (or any other entity which is `Annotatable').
 
-Note: Prefetch is not allowed on a relationship that targets a mixin. In the example above
+Note: Prefetch is not allowed (yet) on a relationship that targets a mixin. In the example above
 you cannot prefetch the `annotated` relationship when querying the `Note` entity.
     
 Notes: this feature is very experimental at this stage. It needs more testing.

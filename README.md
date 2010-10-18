@@ -215,13 +215,12 @@ Mix-ins
 
 You can also define mix-ins and apply them to entities of the model. 
 
-A mix-in definition is similar to an entity definition. Just pass an additional `true` 
-argument to the `persistence.define` function, to indicate that you are defining
-a mix-in. For example:
+A mix-in definition is similar to an entity definition, except using
+`defineMixin` rather than just `define`. For example:
 
-    var Annotatable = persistence.define('Annotatable', {
+    var Annotatable = persistence.defineMixin('Annotatable', {
       lastAnnotated: "DATE"
-    }, true);
+    });
 
 You can define relationships between mix-in and entities. For example:
 

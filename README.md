@@ -210,6 +210,44 @@ optional.
 There is also a migrations plugin you can check out, documentation can be found
 in [persistence.migrations.docs.md](migrations/persistence.migrations.docs.md) file.
 
+Mix-ins
+-------
+
+You can also define mix-ins and apply them to entities of the model. 
+
+A mix-in definition is similar to an entity definition, except using
+`defineMixin` rather than just `define`. For example:
+
+    var Annotatable = persistence.defineMixin('Annotatable', {
+      lastAnnotated: "DATE"
+    });
+
+You can define relationships between mix-in and entities. For example:
+
+    // A normal entity
+    var Note = persistence.define('Note', {
+      text: "TEXT"
+    });
+  
+    // relationship between a mix-in and a normal entity
+    Annotatable.hasMany('notes', Note, 'annotated');
+
+Once you have defined a mix-in, you can apply it to any entity of your model, 
+with the `Entity.is(mixin)` method. For example:
+
+    Project.is(Annotatable);
+    Task.is(Annotatable);
+    
+Now, your `Project` and `Task` entities have an additional `lastAnnotated` property.
+They also have a one to many relationship called `notes` to the `Note` entity. 
+And you can also traverse the reverse relationship from a `Note` to its `annotated` object 
+
+Note that `annotated` is a polymorphic relationship as it may yield either a `Project` 
+or a `Task` (or any other entity which is `Annotatable').
+    
+Notes: this feature is very experimental at this stage. It needs more testing.
+  Support for "is a" relationships (classical inheritance) is also in the works.
+
 Creating and manipulating objects
 ---------------------------------
 
@@ -503,6 +541,40 @@ transaction open per session and transactions cannot be nested.
     session.transaction(function(tx) {
       ...
     });
+
+Commit and Rollback
+-------------------
+
+`persistence.js` works in autocommit mode by default. 
+
+You can override this behavior and enable explicit commit and rollback 
+by passing true as first argument to `persistence.transaction`. 
+You can then use the following two methods to control the transaction:
+
+* `transaction.commit(session, callback)` commits the changes.
+* `transaction.rollback(session, callback)` rollbacks the changes.
+
+Typical code will look like:
+ 
+    session.transaction(true, function(tx) {
+      // create/update/delete objects
+      modifyThings(session, tx, function(err, result) {
+        if (err) {
+          // something went wrong
+          tx.rollback(session, function() {
+            console.log('changes have been rolled back: ' + ex.message);
+          });
+        }
+        else {
+          // success
+          tx.commit(session, function() {
+            console.log('changes have been committed: ' result);
+        });
+      });
+    });
+
+Explicit commit and rollback is only supported on MySQL (server side) 
+for now.
 
 Defining your data model
 ------------------------

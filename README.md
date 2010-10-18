@@ -236,8 +236,8 @@ You can define relationships between mix-in and entities. For example:
 Once you have defined a mix-in, you can apply it to any entity of your model, 
 with the `Entity.is(mixin)` method. For example:
 
-    Project.is(Annotable);
-    Task.is(Annotable);
+    Project.is(Annotatable);
+    Task.is(Annotatable);
     
 Now, your `Project` and `Task` entities have an additional `lastAnnotated` property.
 They also have a one to many relationship called `notes` to the `Note` entity. 

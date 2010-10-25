@@ -35,7 +35,7 @@ var persistence = require('persistencejs/persistence').persistence;
 var persistenceStore = require('persistencejs/persistence.store.mysql');
 
 // Database configuration
-persistenceStore.config(persistence, 'localhost', 'nodejs_mysql', 'test', 'test');
+persistenceStore.config(persistence, 'localhost', 3306, 'nodejs_mysql', 'test', 'test');
 
 // Switch off query logging:
 //persistence.db.log = false;

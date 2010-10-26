@@ -3,15 +3,15 @@
   <head>
     <title>jQuery mobile / persistencejs integration</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" href="demos/jquerymobile/jquery.mobile-102610.min.css" />
-    <script src="demos/jquerymobile/jquery-1.4.4pre.js" type="application/javascript"></script>
-    <script src="demos/jquerymobile/jquery.mobile-102610.min.js" type="application/javascript"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.css" />
+    <script src="http://code.jquery.com/jquery-1.4.3.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.js"></script>
     <script src="http://code.google.com/apis/gears/gears_init.js"></script>
-    <script src="lib/persistence.js" type="application/javascript"></script>
-    <script src="lib/persistence.store.sql.js" type="application/javascript"></script>
-    <script src="lib/persistence.store.websql.js" type="application/javascript"></script>
-    <script src="lib/persistence.store.memory.js" type="application/javascript"></script>
-    <script src="lib/jquery.persistence.js" type="application/javascript"></script>
+    <script src="lib/persistence.js"></script>
+    <script src="lib/persistence.store.sql.js"></script>
+    <script src="lib/persistence.store.websql.js"></script>
+    <script src="lib/persistence.store.memory.js"></script>
+    <script src="lib/jquery.persistence.js"></script>
     <script type="text/javascript">
       if (window.openDatabase) {
         persistence.store.websql.config(persistence, "jquerymobile", 'database', 5 * 1024 * 1024);
@@ -21,10 +21,11 @@
       		
       var Doc = persistence.define('Docs', {
         path: "TEXT",
-        data: "TEXT"
+        data: "TEXT",
+        mime: "TEXT"
       });   
       
-      persistence.leftStripPathElements = 2;
+      persistence.pathPrefix = "demo-pages";
       
       //persistence.reset(function(tx) {		
         persistence.schemaSync(function(tx) {
@@ -39,8 +40,8 @@
         <h2>(Needs to run on a server)</h2>
         <ul data-role="listview" data-inset="true" data-theme="c" data-dividertheme="b">
           <li data-role="list-divider">Pages</li>
-          <li><a href="demos/jquerymobile/docs/foo.html">Foo</a></li>
-          <li><a href="demos/jquerymobile/docs/bar.html">Bar</a></li>
+          <li><a href="demo-pages/docs/foo.html">Foo</a></li>
+          <li><a href="demo-pages/docs/bar.html">Bar</a></li>
         </ul>
       </div>
     </div>

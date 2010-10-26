@@ -18,19 +18,13 @@
       } else {
         persistence.store.memory.config(persistence);
       }
-      		
       var Doc = persistence.define('Docs', {
         path: "TEXT",
         data: "TEXT",
         mime: "TEXT"
-      });   
-      
+      });
       persistence.pathPrefix = "demo-pages";
-      
-      //persistence.reset(function(tx) {		
-        persistence.schemaSync(function(tx) {
-        });
-      //});
+      persistence.schemaSync();
     </script>
   </head>
   <body>
@@ -41,9 +35,10 @@
         <ul data-role="listview" data-inset="true" data-theme="c" data-dividertheme="b">
           <li data-role="list-divider">Pages</li>
           <li><a href="demo-pages/docs/foo.html">Foo</a></li>
-          <li><a href="demo-pages/docs/bar.html">Bar</a></li>
-        </ul>
+          <li><a href="demo-pages/docs/bar.html">Bar</a></li> 
+        </ul> 
+        <a href="#" onclick="persistence.reset();persistence.schemaSync();" data-role="button">Reset DB</a>    
       </div>
-    </div>
+    </div> 
   </body>
 </html>

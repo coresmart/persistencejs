@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang='en' >
+  <head>
+    <title>jQuery mobile / persistencejs integration</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.css" />
+    <script src="http://code.jquery.com/jquery-1.4.3.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.js"></script>
+    <script src="http://code.google.com/apis/gears/gears_init.js"></script>
+    <script src="../../lib/persistence.js"></script>
+    <script src="../../lib/persistence.store.sql.js"></script>
+    <script src="../../lib/persistence.store.websql.js"></script>
+    <script src="../../lib/persistence.store.memory.js"></script>
+    <script src="../../lib/jquery.persistence.js"></script>
+    <script type="text/javascript">
+      if (window.openDatabase) {
+        persistence.store.websql.config(persistence, "jquerymobile", 'database', 5 * 1024 * 1024);
+      } else {
+        persistence.store.memory.config(persistence);
+      }
+      var Doc = persistence.define('Docs', {
+        path: "TEXT",
+        data: "TEXT",
+        mime: "TEXT"
+      });
+      persistence.pathPrefix = "demo-pages";
+      persistence.schemaSync();
+    </script>
+  </head>
+  <body>
+    <div data-role="page" data-theme="b">
+      <div data-role="content"> 
+        <h1>jQuery mobile / persistencejs integration</h1>
+        <h2>(Needs to run on a server)</h2>
+        <ul data-role="listview" data-inset="true" data-theme="c" data-dividertheme="b">
+          <li data-role="list-divider">Pages</li>
+          <li><a href="demo-pages/docs/foo.html">Foo</a></li>
+          <li><a href="demo-pages/docs/bar.html">Bar</a></li> 
+        </ul> 
+        <a href="#" onclick="persistence.reset();persistence.schemaSync();" data-role="button">Reset DB</a>    
+      </div>
+    </div> 
+  </body>
+</html>

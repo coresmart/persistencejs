@@ -134,7 +134,7 @@ $(document).ready(function(){
       });
     });
   
-    asyncTest("many to many with mixins", 16, function(){
+    asyncTest("many to many with mixins", 17, function(){
       var a1 = new A1({
         seq: 1,
         a1: "a1"
@@ -201,7 +201,12 @@ $(document).ready(function(){
                         equals(m1s.length, 2, "manyManyM1 length ok");
                         equals(m1s[0].a1, "a1", "manyManyM1[0] ok");
                         equals(m1s[1].b1, "b1", "manyManyM1[1] ok");
-                        start();
+                        a1.manyManyM2.count(function(count){
+                          equals(count, 3, "count ok on polymorphic list");
+                          //a1.manyManyM2.destroyAll(function(){
+                          start();
+                        //})
+                        });
                       })
                     });
                   });

@@ -17,12 +17,15 @@
       } else {
         persistence.store.memory.config(persistence);
       }
-      var Doc = persistence.define('Docs', {
+      persistence.define('Docs', {
         path: "TEXT",
         data: "TEXT"
+      });  
+      persistence.define('Orderform', {
+        shipping: "TEXT"
       });
       persistence.schemaSync();
-      persistence.jqmPagePrefix = "demo-pages";
+      persistence.jqmUrlPathPrefix = "demo-pages";
     </script>
   </head>
   <body>
@@ -34,7 +37,21 @@
           <li data-role="list-divider">Pages</li>
           <li><a href="demo-pages/docs/foo.html">Foo</a></li>
           <li><a href="demo-pages/docs/bar.html">Bar</a></li> 
-        </ul> 
+        </ul>
+        <form action="demo-pages/orderform/form-get-response.html" method="get">
+          <fieldset>
+            <div data-role="fieldcontain">
+              <label for="shipping" class="select">Formsubmission (GET):</label>
+              <select name="shipping" id="shipping">
+                <option value="Standard shipping">Standard: 7 day</option>
+                <option value="Rush shipping">Rush: 3 days</option>
+                <option value="Express shipping">Express: next day</option>
+                <option value="Overnight shipping">Overnight</option>
+              </select>
+            </div>
+          <button type="submit" data-theme="a">Submit</button>
+        </fieldset>
+        </form>  
         <a href="#" onclick="persistence.reset();persistence.schemaSync();" data-role="button">Reset DB</a>    
       </div>
     </div> 

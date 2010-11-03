@@ -25,26 +25,28 @@ Simple example:
 You can find more examples in `test/test.persistence-jquery.js`.
          
 
-jQuery mobile integration
-=========================
-jQuery mobile (jqm) ajax request re-routing to persitencejs for:
+## jQuery mobile integration
+jQuery mobile (jqm) ajax request re-routing to persitencejs for:  
+
 * html page loading (caches the page in local DB)
 * form submission
 
 re-routed URL paths have the following format:
-  `optional/path/prefix  / entity-name / path/to/response-template-key`
+    
+    optional/path/prefix  / entity-name / path/to/response-template-key
 
-URL needs to match the following criteria for re-routing:
+URL needs to match the following criteria for re-routing:  
+
 * path prefix must be equal `persistence.jqmUrlPathPrefix` 
 * entity with given entity-name must exist
   
 Global settings (and it's default values):
-------------------------------------------
-`persistence.jqmUrlPathPrefix  = ""` 
-`persistence.jqmTemplateKeyField = "path"` Page entity template-key field name
-`persistence.jqmDataField`= "data"  Page entity template data field name
 
-*IMPORTANT:* Images need to be embedded into HTML response via data URL's) 
+    persistence.jqmUrlPathPrefix  = "" 
+    persistence.jqmTemplateKeyField = "path"  (Page entity template-key field name)
+    persistence.jqmDataField`= "data"  (Page entity template data field name)
+
+**Images need to be embedded into HTML response via data URL's**
 
 Ajax page loading example:
 

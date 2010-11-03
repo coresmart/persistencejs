@@ -38,6 +38,10 @@ There are a few `persistence.js` plug-ins available that add functionality:
   the database schema), see `docs/migrations.md` for more information.
 * `persistence.sync.js`, supports database synchronization with a
   remote server, see `docs/sync.md` for more information.
+* `jquery.persistence.js`, adds jQuery integration, including 
+  jQuery-mobile ajax request interception and re-routing to persistencejs,
+  see `docs/jquery.md` for more information and `demo/jquerymobile` for a 
+  simple demo.
 
 A Brief Intro to Async Programming
 ----------------------------------

@@ -42,9 +42,9 @@ URL needs to match the following criteria for re-routing:
   
 Global settings (and it's default values):
 
-    persistence.jqmUrlPathPrefix  = "" 
-    persistence.jqmTemplateKeyField = "path"  (Page entity template-key field name)
-    persistence.jqmDataField`= "data"  (Page entity template data field name)
+    persistence.jqmUrlPathPrefix  = ""; 
+    persistence.jqmTemplateKeyField = "path";  // (Page entity template-key field name)
+    persistence.jqmDataField`= "data";  // (Page entity template data field name)
 
 **Images need to be embedded into HTML response via data URL's**
 

@@ -3,9 +3,8 @@
   <head>
     <title>jQuery mobile / persistencejs integration</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.css" />
-    <script src="http://code.jquery.com/jquery-1.4.3.min.js"></script>
-    <script src="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.js"></script>
+    <link rel="stylesheet" href="http://jquerymobile.com/test/themes/default" />
+    <script src="http://jquerymobile.com/test/js/all"></script>
     <script src="http://code.google.com/apis/gears/gears_init.js"></script>
     <script src="../../lib/persistence.js"></script>
     <script src="../../lib/persistence.store.sql.js"></script>
@@ -20,11 +19,10 @@
       }
       var Doc = persistence.define('Docs', {
         path: "TEXT",
-        data: "TEXT",
-        mime: "TEXT"
+        data: "TEXT"
       });
-      persistence.pathPrefix = "demo-pages";
       persistence.schemaSync();
+      persistence.jqmPagePrefix = "demo-pages";
     </script>
   </head>
   <body>

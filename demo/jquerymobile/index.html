@@ -3,9 +3,8 @@
   <head>
     <title>jQuery mobile / persistencejs integration</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.css" />
-    <script src="http://code.jquery.com/jquery-1.4.3.min.js"></script>
-    <script src="http://code.jquery.com/mobile/1.0a1/jquery.mobile-1.0a1.min.js"></script>
+    <link rel="stylesheet" href="http://jquerymobile.com/test/themes/default" />
+    <script src="http://jquerymobile.com/test/js/all"></script>
     <script src="http://code.google.com/apis/gears/gears_init.js"></script>
     <script src="../../lib/persistence.js"></script>
     <script src="../../lib/persistence.store.sql.js"></script>
@@ -18,13 +17,15 @@
       } else {
         persistence.store.memory.config(persistence);
       }
-      var Doc = persistence.define('Docs', {
+      persistence.define('Docs', {
         path: "TEXT",
-        data: "TEXT",
-        mime: "TEXT"
+        data: "TEXT"
+      });  
+      persistence.define('Orderform', {
+        shipping: "TEXT"
       });
-      persistence.pathPrefix = "demo-pages";
       persistence.schemaSync();
+      persistence.jqmUrlPathPrefix = "demo-pages";
     </script>
   </head>
   <body>
@@ -36,7 +37,21 @@
           <li data-role="list-divider">Pages</li>
           <li><a href="demo-pages/docs/foo.html">Foo</a></li>
           <li><a href="demo-pages/docs/bar.html">Bar</a></li> 
-        </ul> 
+        </ul>
+        <form action="demo-pages/orderform/form-get-response.html" method="get">
+          <fieldset>
+            <div data-role="fieldcontain">
+              <label for="shipping" class="select">Formsubmission (GET):</label>
+              <select name="shipping" id="shipping">
+                <option value="Standard shipping">Standard: 7 day</option>
+                <option value="Rush shipping">Rush: 3 days</option>
+                <option value="Express shipping">Express: next day</option>
+                <option value="Overnight shipping">Overnight</option>
+              </select>
+            </div>
+          <button type="submit" data-theme="a">Submit</button>
+        </fieldset>
+        </form>  
         <a href="#" onclick="persistence.reset();persistence.schemaSync();" data-role="button">Reset DB</a>    
       </div>
     </div> 

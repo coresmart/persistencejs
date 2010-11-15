@@ -28,7 +28,8 @@ You can find more examples in `test/test.persistence-jquery.js`.
 ## jQuery mobile integration
 jQuery mobile (jqm) ajax request re-routing to persitencejs for:  
 
-* html page loading (caches the page in local DB)
+* html text: caches ajax-loaded HTML pages in local DB
+* images (in `img` tags of ajax-loaded HTML pages): caches the via-canvas data-urlified img in local DB
 * form submission
 
 re-routed URL paths have the following format:
@@ -43,17 +44,15 @@ URL needs to match the following criteria for re-routing:
 Global settings (and it's default values):
 
     persistence.jqmUrlPathPrefix  = ""; 
-    persistence.jqmTemplateKeyField = "path";  // (Page entity template-key field name)
-    persistence.jqmDataField`= "data";  // (Page entity template data field name)
-
-**Images need to be embedded into HTML response via data URL's**
+    persistence.jqmPathField = "path";  // (Page entity path field name)
+    persistence.jqmDataField`= "data";  // (Page entity data field name)
 
 Ajax page loading example:
 
     URL: "docs_controller/path/docs/about/intro.html"
     persistence.jqmUrlPathPrefix = "docs_controller/path"
     => entity name: "Docs"
-    => templateKey: "about/intro.html"
+    => path: "about/intro.html"
 
 Ajax form submission examples: 
 
@@ -61,10 +60,10 @@ Ajax form submission examples:
     persistence.jqmUrlPathPrefix = "form_controller/path"
     => entity name: "Orderform"
     => entity fields: retrieved from URL
-    => templateKey: "response.html"
+    => path: "response.html"
 
     URL (POST): "form_controller/path/orderform/response.html"
     persistence.jqmUrlPathPrefix = "form_controller/path"
     => entity name: "Orderform" 
     => entity fields: retrieved from POST data
-    => templateKey: "response.html"
+    => path: "response.html"

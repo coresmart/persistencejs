@@ -29,7 +29,7 @@ You can find more examples in `test/test.persistence-jquery.js`.
 jQuery mobile (jqm) ajax request re-routing to persitencejs for:  
 
 * html text: caches ajax-loaded HTML pages in local DB
-* images (in `img` tags of ajax-loaded HTML pages): caches the via-canvas data-urlified img in local DB
+* images (in `img` tags of ajax-loaded HTML pages): grabs/encodes them via `canvas` and caches them as data-URL strings in local DB
 * form submission
 
 re-routed URL paths have the following format:

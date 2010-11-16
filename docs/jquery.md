@@ -44,8 +44,9 @@ URL needs to match the following criteria for re-routing:
 Global settings (and it's default values):
 
     persistence.jqmUrlPathPrefix  = ""; 
-    persistence.jqmPathField = "path";  // (Page entity path field name)
-    persistence.jqmDataField`= "data";  // (Page entity data field name)
+    persistence.jqmPathField = "path";  // (Content entity path field name)
+    persistence.jqmDataField`= "data";  // (Content entity data field name)
+    persistence.jqmTypeField`= "type";  // (Content entity MIME content type field name)
 
 Ajax page loading example:
 

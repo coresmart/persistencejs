@@ -34,16 +34,14 @@ jQuery mobile (jqm) ajax request re-routing to persitencejs for:
 
 re-routed URL paths have the following format:
     
-    optional/path/prefix  / entity-name / path/to/response-template-key
+    entity-name / path1/path2/../pathN
 
 URL needs to match the following criteria for re-routing:  
 
-* path prefix must be equal `persistence.jqmUrlPathPrefix` 
 * entity with given entity-name must exist
   
 Global settings (and it's default values):
 
-    persistence.jqmUrlPathPrefix  = "";   // Optional path before entity-name in URL
     persistence.jqmPathField = "path";    // Entity path-field name
     persistence.jqmDataField`= "data";    // Entity data-field name
     persistence.jqmTypeField`= "type";    // Entity MIME content-type-field name
@@ -51,21 +49,20 @@ Global settings (and it's default values):
 
 Ajax page loading example:
 
-    URL: "docs_controller/path/docs/about/intro.html"
-    persistence.jqmUrlPathPrefix = "docs_controller/path"
+    URL: "docs/about/intro.html"
     => entity name: "Docs"
     => path: "about/intro.html"
 
 Ajax form submission examples: 
 
-    URL (GET): "form_controller/path/orderform/response.html?shipment=express"
-    persistence.jqmUrlPathPrefix = "form_controller/path"
+    URL (GET): "orderform/response.html?shipment=express"
     => entity name: "Orderform"
     => entity fields: retrieved from URL
     => path: "response.html"
+    => type: "application/x-www-form-urlencoded"
 
-    URL (POST): "form_controller/path/orderform/response.html"
-    persistence.jqmUrlPathPrefix = "form_controller/path"
+    URL (POST): "orderform/response.html"
     => entity name: "Orderform" 
     => entity fields: retrieved from POST data
     => path: "response.html"
+    => type: "application/x-www-form-urlencoded"

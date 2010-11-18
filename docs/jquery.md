@@ -51,16 +51,15 @@ Ajax page loading example:
 
     URL: "about/intro.html"
     => entity name: "Page"
-    => entity **path** field: "about/intro.html" 
-    => entity **data** field: (the HTML content of the page)
+    => entity path field: "about/intro.html" 
+    => entity data field: (the HTML content of the page)
     Images:
     => entity name: "Image"
-    => entity **path** field: (src attribute value of the related IMG tag) 
-    => entity **data** field: (the imgae data as Base64 encoded dataURL)
+    => entity path field: (src attribute value of the related IMG tag) 
+    => entity data field: (the imgae data as Base64 encoded dataURL)
 
 Ajax form submission examples: 
 
     URL (POST): "order/response.html"
-    => entity name: "Order" 
-    => entity fields: retrieved from POST data
-    => path: "response.html"
+    => entity name: "Order"
+    => entity fields (other than path): retrieved from POST data

@@ -30,39 +30,37 @@ jQuery mobile (jqm) ajax request re-routing to persitencejs for:
 
 * html text: caches ajax-loaded HTML pages in local DB
 * images (in `img` tags of ajax-loaded HTML pages): grabs/encodes them via `canvas` and caches them as data-URL strings in local DB
-* form submission
+* form submission (only POST requests)
 
-re-routed URL paths have the following format:
+For ajax-loaded HTML pages and images, the content-providing entities get 
+their name from user-overwritable default values. For form submissions, the entity 
+is matched according to the following URL pattern:
     
     entity-name / path1/path2/../pathN
 
-URL needs to match the following criteria for re-routing:  
-
-* entity with given entity-name must exist
+Ajax re-routing to persitencejs only takes place if the required entities exist.
   
 Global settings (and it's default values):
 
-    persistence.jqmPathField = "path";    // Entity path-field name
-    persistence.jqmDataField`= "data";    // Entity data-field name
-    persistence.jqmTypeField`= "type";    // Entity MIME content-type-field name
-    persistence.jqmImageEntityName = "";  // Overwrites default from embedding HTML-page URL
+    persistence.jqmPageEntityName = "Page";    // Html page entity name
+    persistence.jqmImageEntityName = "Image";  // Image entity name
+    persistence.jqmPathField = "path";         // Entity path-field name
+    persistence.jqmDataField`= "data";         // Entity data-field name
 
 Ajax page loading example:
 
-    URL: "docs/about/intro.html"
-    => entity name: "Docs"
-    => path: "about/intro.html"
+    URL: "about/intro.html"
+    => entity name: "Page"
+    => entity **path** field: "about/intro.html" 
+    => entity **data** field: (the HTML content of the page)
+    Images:
+    => entity name: "Image"
+    => entity **path** field: (src attribute value of the related IMG tag) 
+    => entity **data** field: (the imgae data as Base64 encoded dataURL)
 
 Ajax form submission examples: 
 
-    URL (GET): "orderform/response.html?shipment=express"
-    => entity name: "Orderform"
-    => entity fields: retrieved from URL
-    => path: "response.html"
-    => type: "application/x-www-form-urlencoded"
-
-    URL (POST): "orderform/response.html"
-    => entity name: "Orderform" 
+    URL (POST): "order/response.html"
+    => entity name: "Order" 
     => entity fields: retrieved from POST data
     => path: "response.html"
-    => type: "application/x-www-form-urlencoded"

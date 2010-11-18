@@ -35,18 +35,25 @@
       } else {
         persistence.store.memory.config(persistence);
       }
-      persistence.define('Docs', {
+      persistence.define('Page', {
         path: "TEXT",
         data: "TEXT",
-        type: "TEXT"
       });
-      persistence.define('Orderform', {
+      
+      persistence.define('Image', {
+        path: "TEXT",
+        data: "TEXT",
+      });
+      
+      persistence.define('Order', {
         shipping: "TEXT"
       });
+      
       persistence.schemaSync();
 
       $('#reset').click(function() {
-        persistence.reset();persistence.schemaSync();
+        persistence.reset();
+        //persistence.schemaSync();
         return false;
       });
     </script>
@@ -75,7 +82,7 @@
         <h1>Form submission</h1>
       </div><!-- /header -->
       <div data-role="content">
-        <form action="orderform/form-get-response.html" method="get">
+        <form action="order/form-fake-response.html" method="post">
           <fieldset>
             <div data-role="fieldcontain">
               <label for="shipping" class="select">Formsubmission (GET):</label>

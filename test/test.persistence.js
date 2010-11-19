@@ -576,4 +576,51 @@ $(document).ready(function(){
             });
         });
     });
+
+  module("Events");
+
+  asyncTest("all collection", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              var allTasks = Task.all();
+              var changesDetected = 0;
+              allTasks.addEventListener('change', function() {
+                  changesDetected++;
+                });
+              for(var i = 0; i < 10; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = i % 2 === 0;
+                Task.all().add(task);
+              }
+              equals(10, changesDetected, "detected all changes");
+              start();
+            });
+        });
+    });
+
+  asyncTest("filter collection", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              var allTasks = Task.all().filter("done", "=", true);
+              var changesDetected = 0;
+              allTasks.addEventListener('change', function() {
+                  changesDetected++;
+                });
+              for(var i = 0; i < 10; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = i % 2 === 0;
+                Task.all().add(task);
+              }
+              equals(5, changesDetected, "detected all changes");
+              changesDetected = 0;
+              Task.all().filter("done", "=", true).list(function(results) {
+                  results.forEach(function(r) {
+                      r.done = false;
+                    });
+                  equals(5, changesDetected, "detected filter changes");
+                  start();
+                });
+            });
+        });
+    });
 });

@@ -1,11 +1,11 @@
 # persistence.jquery.mobile.js
 
-`persistence.jquery.mobile.js` is a plugin for `persistence.js` and jQuery mobile that
+`persistence.jquery.mobile.js` is a plugin for `persistence.js` and [jQuery mobile](http://jquerymobile.com) that
 allows ajax request re-routing to persitencejs for:
 
-* html text: caches ajax-loaded HTML pages in local DB
-* images (in `img` tags of ajax-loaded HTML pages): grabs/encodes them via `canvas` and caches them as data-URL strings in local DB
-* form submission (only POST requests)
+* Html text: caches ajax-loaded HTML pages in local DB.
+* Images (in `img` tags of ajax-loaded HTML pages): grabs/encodes them via `canvas` and caches them as data-URL strings in local DB.
+* Form submission (only POST requests).
 
 For ajax-loaded HTML pages and images, the content-providing entities get 
 their name from user-overwritable default values. For form submissions, the entity 
@@ -37,9 +37,9 @@ Ajax page loading example:
     => entity name: "Page"
     => entity path field: "about/intro.html" 
     => entity data field: (the HTML content of the page)
-    Images:
+    Images: (all images contained in the page specified above)
     => entity name: "Image"
-    => entity path field: (src attribute value of the related IMG tag) 
+    => entity path field: (src attribute value of IMG tag) 
     => entity data field: (the imgae data as Base64 encoded dataURL)
 
 Ajax form submission examples: 
@@ -47,3 +47,5 @@ Ajax form submission examples:
     URL (POST): "order/response.html"
     => entity name: "Order"
     => entity fields (other than path): retrieved from POST data
+
+You can find a demo at `demo/jquerymobile/index.html` (you must load it from a server).

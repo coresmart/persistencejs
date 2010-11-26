@@ -25,7 +25,8 @@
     <script src="../../lib/persistence.store.sql.js"></script>
     <script src="../../lib/persistence.store.websql.js"></script>
     <script src="../../lib/persistence.store.memory.js"></script>
-    <script src="../../lib/jquery.persistence.js"></script>
+    <script src="../../lib/persistence.jquery.js"></script>
+    <script src="../../lib/persistence.jquery.mobile.js"></script>
     <script type="text/javascript">
       if (location.protocol == "file:") {
         alert("Didn't you read the README ? You need to load this page from a server.");
@@ -53,7 +54,7 @@
 
       $('#reset').click(function() {
         persistence.reset();
-        //persistence.schemaSync();
+        persistence.schemaSync();
         return false;
       });
     </script>
@@ -98,11 +99,5 @@
         </form>
       </div>
     </div>
-    <script type="text/javascript">
-      $('#reset').click(function() {
-        persistence.reset();persistence.schemaSync();
-        return false;
-      });
-    </script>
   </body>
 </html>

@@ -24,6 +24,7 @@ $(document).ready(function(){
 
   Task.hasMany('tags', Tag, 'tasks');
   Tag.hasMany('tasks', Task, 'tags');
+  Task.index('dateAdded');
 
   Project.hasMany('tasks', Task, 'project');
 

@@ -178,8 +178,13 @@ Example use:
     });
 
 The returned values are constructor functions and can be used to
-create new instances of these entities later:
+create new instances of these entities later.
 
+It is possible to create indexes on one or more columns using
+`EntityName.index`, for instance:
+
+    Task.index('done');
+    Task.index('done', 'name');
 
 Relationships between entities are defined using the constructor
 function's `hasMany` call:
@@ -386,6 +391,8 @@ all
   for a particular object based on a property value (this is assumed to
   be unique), the callback function is called with the found object or
   `null` if it has not been found.
+* `EntityName.index(col1, col2, ..., colN)` creates an index on a column
+  of a combination of columns, for faster searching.
 
 And of course the methods to define relationships to other entities:
 

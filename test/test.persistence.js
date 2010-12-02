@@ -668,7 +668,7 @@ $(document).ready(function(){
                 persistence.add(o1);
                 persistence.add(o2);
                 try {
-                    persistence.add(o3);
+                    //persistence.add(o3);
                 } catch (e) {
                     console.log("err",e);
                 }

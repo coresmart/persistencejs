@@ -21,6 +21,18 @@ $(document).ready(function(){
   var Tag = persistence.define('Tag', {
       name: "TEXT"
     });
+    
+  var UniqueIndexTest = persistence.define('UniqueIndexTest', {
+      id1: "INT",
+      id2: "INT",
+      id3p1: "INT",
+      id3p2: "INT"
+    });
+  
+  UniqueIndexTest.index('id1');
+  UniqueIndexTest.index('id2',{unique:true});
+  UniqueIndexTest.index(['id3p1','id3p2'],{unique:true});
+
 
   Task.hasMany('tags', Tag, 'tasks');
   Tag.hasMany('tasks', Task, 'tags');
@@ -31,6 +43,8 @@ $(document).ready(function(){
   window.Project = Project;
   window.Task = Task
   window.Project = Project;
+  window.UniqueIndexTest = UniqueIndexTest;
+
 
   module("Setup");
 
@@ -624,4 +638,61 @@ $(document).ready(function(){
             });
         });
     });
+    
+    
+    
+    module("Indexes");
+    
+    
+    asyncTest("unique indexes", function() {
+        
+        persistence.reset(function() {
+            
+            persistence.schemaSync(function() {
+                
+                var o1 = new UniqueIndexTest({"id1":101,"id2":102,"id3p1":103,"id3p2":104});
+                
+                // id1 is not unique
+                var o2 = new UniqueIndexTest({"id1":101,"id2":202,"id3p1":203,"id3p2":204});
+                
+                //shouldn't work, id2 is unique
+                var o3 = new UniqueIndexTest({"id1":301,"id2":102,"id3p1":303,"id3p2":304});
+                
+                // id3p1 itself is not unique
+                var o4 = new UniqueIndexTest({"id1":401,"id2":402,"id3p1":103,"id3p2":404});
+                
+                //shouldn't work, id3p1+id3p2 are unique
+                var o5 = new UniqueIndexTest({"id1":501,"id2":502,"id3p1":103,"id3p2":104});
+                
+                
+                persistence.add(o1);
+                persistence.add(o2);
+                try {
+                    persistence.add(o3);
+                } catch (e) {
+                    console.log("err",e);
+                }
+                
+                persistence.add(o4);
+                try {
+                    //persistence.add(o5);
+                } catch (e) {
+                    console.log("err",e);
+                }
+                
+                
+                UniqueIndexTest.all().order("id2",true).list(function(results) {
+                    console.log("HAA");
+                    equals(3,results.length,"skipped 2 duplicate rows");
+                    if (results.length==3) {
+                        equals(102,results[0].id2);
+                        equals(202,results[1].id2);
+                        equals(402,results[2].id2);
+                    }
+                    start();
+                });
+              });
+          });
+      });
+    
 });

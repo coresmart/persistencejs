@@ -184,7 +184,11 @@ It is possible to create indexes on one or more columns using
 `EntityName.index`, for instance:
 
     Task.index('done');
-    Task.index('done', 'name');
+    Task.index(['done', 'name']);
+
+These indexes can also be used to impose unique constraints :
+
+    Task.index(['done', 'name'],{unique:true});
 
 Relationships between entities are defined using the constructor
 function's `hasMany` call:
@@ -391,8 +395,9 @@ all
   for a particular object based on a property value (this is assumed to
   be unique), the callback function is called with the found object or
   `null` if it has not been found.
-* `EntityName.index(col1, col2, ..., colN)` creates an index on a column
-  of a combination of columns, for faster searching.
+* `EntityName.index([col1, col2, ..., colN], options)` creates an index on a column
+  of a combination of columns, for faster searching. If options.unique is true,
+  the index will impose a unique constraint on the values of the columns.
 
 And of course the methods to define relationships to other entities:
 

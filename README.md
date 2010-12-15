@@ -551,7 +551,7 @@ Subsequently, for every connection you handle (assuming you're
 building a sever), you call the `persistenceStore.getSession()`
 method:
 
-    var session = persistenceBackend.getSession();
+    var session = persistenceStore.getSession();
 
 This session is what you pass around, typically together with a
 transaction object. Note that currently you can only have one

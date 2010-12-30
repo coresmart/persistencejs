@@ -233,4 +233,23 @@ $(document).ready(function(){
             });
         });
     });
+
+  asyncTest("Object removal", function() {
+      Task.all().list(function(tasks) {
+          for(var i = 0; i < tasks.length; i++) {
+            if(i % 2 === 0) {
+              persistence.remove(tasks[i]);
+            }
+          }
+
+          persistence.flush(function() {
+              console.log("Now going to sync");
+              Task.syncAll(noConflictsHandler, function() {
+                  //Task.syncAll(noConflictsHandler, function() {
+                      start();
+                    //});
+                });
+            });
+        });
+    });
 });

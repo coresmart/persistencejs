@@ -20,8 +20,8 @@ function createMigrations(starting, amount, actions){
 var Migrator = persistence.migrations.Migrator;
 
 $(document).ready(function(){
-  persistence.connect('migrationstest', 'My db', 5 * 1024 * 1024);
-  persistence.db.log = false;
+  persistence.store.websql.config(persistence, 'migrationstest', 'My db', 5 * 1024 * 1024);
+  persistence.debug = true;
   
   persistence.migrations.init(function() {
     

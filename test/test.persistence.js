@@ -682,7 +682,6 @@ $(document).ready(function(){
                 
                 
                 UniqueIndexTest.all().order("id2",true).list(function(results) {
-                    console.log("HAA");
                     equals(3,results.length,"skipped 2 duplicate rows");
                     if (results.length==3) {
                         equals(102,results[0].id2);

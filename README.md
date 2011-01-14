@@ -661,7 +661,7 @@ Thanks goes to the people listed in `AUTHORS` for their contributions.
 
 If you use [GWT](http://code.google.com/webtoolkit/) (the Google Web
 Toolkit), be sure to have a look at [Dennis Z. Jiang's GWT persistence.js
-wrapper](http://github.com/dennisjzh/gwt-persistence).
+wrapper](http://github.com/dennisjzh/GwtMobile-Persistence)
 
 License
 =======

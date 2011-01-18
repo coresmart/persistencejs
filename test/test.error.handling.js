@@ -6,14 +6,14 @@ var persistenceStore = require('../lib/persistence.store.mysql');
 
 persistenceStore.config(persistence, 'localhost', 3306, 'nodejs_mysql', 'test', 'test');
 
-var NotExist = persistence.define('NotExist', {
+var InexistentTable = persistence.define('inexistent_table', {
   name: "TEXT"
 });
 
 var create = function(data, cb) {
   var session = persistenceStore.getSession();
-  var ne = new NotExist(data);
-  session.add(ne);
+  var inexistent_table = new InexistentTable(data);
+  session.add(inexistent_table);
   session.flush(function(result, err) {
     session.close();
     cb && cb(err, result);

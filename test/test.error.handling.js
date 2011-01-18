@@ -1,3 +1,5 @@
+// $ expresso -s test/test.error.handling.js
+
 var assert = require('assert');
 var persistence = require('../lib/persistence').persistence;
 var persistenceStore = require('../lib/persistence.store.mysql');

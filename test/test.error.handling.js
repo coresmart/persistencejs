@@ -58,6 +58,12 @@ module.exports = {
       done();
     });
   },
+  'destroyAll fail': function(done) {
+    InexistentTable.all(session).destroyAll(function(result, err) {
+      assert.isDefined(err);
+      done();
+    });
+  },
   'reset fail': function(done) {
     session.reset(function(result, err) {
       assert.isDefined(err);

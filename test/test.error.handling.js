@@ -30,6 +30,19 @@ var remove = function(inexistent_table, cb) {
 var temp;
 
 module.exports = {
+  'beforeAll': function(done) {
+    session.transaction(function(tx) {
+      tx.executeSql('FLUSH TABLES WITH READ LOCK;', function() {
+        done();
+      });
+    });
+  },
+  'schemaSync fail': function(done) {
+    session.schemaSync(function(tx, err) {
+      assert.isDefined(err);
+      done();
+    });
+  },
   'create fail': function(done) {
     create({
       name: 'test'
@@ -46,7 +59,11 @@ module.exports = {
     });
   },
   afterAll: function(done) {
-    session.close();
-    done();
+    session.transaction(function(tx) {
+      tx.executeSql('UNLOCK TABLES;', function() {
+        session.close();
+        done();
+      });
+    });
   }
 };

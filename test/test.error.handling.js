@@ -10,21 +10,19 @@ var InexistentTable = persistence.define('inexistent_table', {
   name: "TEXT"
 });
 
+var session = persistenceStore.getSession();
+
 var create = function(data, cb) {
-  var session = persistenceStore.getSession();
   var inexistent_table = new InexistentTable(data);
   session.add(inexistent_table);
   session.flush(function(result, err) {
-    session.close();
     cb && cb(err, inexistent_table);
   });
 };
 
 var remove = function(inexistent_table, cb) {
-  var session = persistenceStore.getSession();
   session.remove(inexistent_table);
   session.flush(function(result, err) {
-    session.close();
     cb && cb(err, result);
   });
 };
@@ -46,5 +44,9 @@ module.exports = {
       assert.isDefined(err);
       done();
     });
+  },
+  afterAll: function(done) {
+    session.close();
+    done();
   }
 };

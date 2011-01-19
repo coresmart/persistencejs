@@ -58,6 +58,12 @@ module.exports = {
       done();
     });
   },
+  'reset fail': function(done) {
+    session.reset(function(result, err) {
+      assert.isDefined(err);
+      done();
+    });
+  },
   afterAll: function(done) {
     session.transaction(function(tx) {
       tx.executeSql('UNLOCK TABLES;', function() {

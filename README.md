@@ -143,7 +143,7 @@ in your database name (it will create it if it does not already exist,
 the third is a description for you database, the last argument is the
 maximum size of your database in bytes (5MB in this example).
 
-Additional notes on the in-memory store
+The in-memory store
 ---------------------------------------
 
 The in-memory store is offered as a fallback for browsers that do not

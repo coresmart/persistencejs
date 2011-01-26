@@ -518,16 +518,28 @@ $(document).ready(function(){
   module("Dumping/restoring");
 
   asyncTest("Full dump/restore", function() {
-      for(var i = 0; i < 10; i++) {
-        persistence.add(new Task({name: "Task " + i, dateAdded: new Date()}));
-      }
-      persistence.flush(function() {
-          persistence.dumpToJson([Task], function(dumps) {
-              Task.all().destroyAll(function() {
-                  persistence.loadFromJson(dumps, function() {
-                      Task.all().count(function(n) {
-                          equals(10, n, "restored successfully");
-                          start();
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              for(var i = 0; i < 10; i++) {
+                var t = new Task({name: "Task " + i, dateAdded: new Date()});
+                t.tags.add(new Tag({name: "Some tag: " + i}));
+                t.tags.add(new Tag({name: "Another tag: " + i}));
+                persistence.add(t);
+              }
+              persistence.flush(function() {
+                  persistence.dumpToJson(function(dumps) {
+                      persistence.reset(function() {
+                          persistence.schemaSync(function() {
+                              persistence.loadFromJson(dumps, function() {
+                                  Task.all().list(function(tasks) {
+                                      equals(tasks.length, 10, "tasks restored successfully");
+                                      tasks[0].tags.list(function(tags) {
+                                          equals(tags.length, 2, "tags restored successfully");
+                                          start();
+                                        });
+                                    });
+                                });
+                            });
                         });
                     });
                 });

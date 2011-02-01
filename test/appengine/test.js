@@ -1,3 +1,5 @@
+// Run with RingoJS: http://ringojs.org
+// Set path below to AppEngine Java SDK path
 var appEngineSdkPath = '/Users/zef/Software/appengine-java-sdk';
 
 addToClasspath(appEngineSdkPath + "/lib/impl/appengine-api-stubs.jar");
@@ -390,6 +392,22 @@ var tests = {
     helper.setUp();
     var session = persistenceStore.getSession();
     collectionSkipTests(session, Task.all(session), function() {
+        session.close();
+        helper.tearDown();
+      });
+  },
+
+  testJSON: function() {
+    helper.setUp();
+    var session = persistenceStore.getSession();
+    var p = new Project(session, {name: 'A project'});
+    for(var i = 0; i < 10; i++) {
+      p.tasks.add(new Task(session, {name: "Some task " + i}));
+    }
+    p.selectJSON(['id', 'name', 'tasks.[id,name]'], function(json) {
+        assert.equal(json.id, p.id, "id");
+        assert.equal(json.name, p.name, "name");
+        assert.equal(json.tasks.length, 10, "n tasks");
         session.close();
         helper.tearDown();
       });

@@ -15,6 +15,7 @@ $(document).ready(function(){
       done: "BOOL",
       counter: "INT",
       dateAdded: "DATE",
+      dateAddedInMillis: "BIGINT",
       metaData: "JSON"
     });
 
@@ -64,16 +65,17 @@ $(document).ready(function(){
       }
     });
 
-  test("Property default values", 5, function() {
+  test("Property default values", 6, function() {
       var t1 = new Task();
       QUnit.strictEqual(t1.name, "", "TEXT properties default to ''");
       QUnit.strictEqual(t1.done, false, "BOOL properties default to false");
       QUnit.strictEqual(t1.counter, 0, "INT properties default to 0");
       QUnit.strictEqual(t1.dateAdded, null, "DATE properties default to null");
+      QUnit.strictEqual(t1.dateAddedInMillis, 0, "BIGINT properties default to 0");
       QUnit.strictEqual(t1.metaData, null, "JSON properties default to null");
     });
 
-  test("Property value assignment", 5, function() {
+  test("Property value assignment", 6, function() {
       var t1 = new Task();
       var now = new Date();
       var meta = {starRating: 5};
@@ -81,15 +83,17 @@ $(document).ready(function(){
       t1.done = false;
       t1.counter = 7;
       t1.dateAdded = now;
+      t1.dateAddedInMillis = now.getTime();
       t1.metaData = meta;
       QUnit.strictEqual(t1.name, 'Task 1', "Assignment for TEXT properties");
       QUnit.strictEqual(t1.done, false, "Assignment for BOOL properties");
       QUnit.strictEqual(t1.counter, 7, "Assignment for INT properties");
       QUnit.strictEqual(t1.dateAdded, now, "Assignment for DATE properties");
+      QUnit.strictEqual(t1.dateAddedInMillis, now.getTime(), "Assignment for BIGINT properties");
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
-  test("Property constructor property value assignment", 5, function() {
+  test("Property constructor property value assignment", 6, function() {
       var now = new Date();
       var meta = {starRating: 5};
       var t1 = new Task({
@@ -97,12 +101,14 @@ $(document).ready(function(){
           done: false,
           counter: 7,
           dateAdded: now,
+          dateAddedInMillis: now.getTime(),
           metaData: meta
         });
       QUnit.strictEqual(t1.name, 'Task 1', "Assignment for TEXT properties");
       QUnit.strictEqual(t1.done, false, "Assignment for BOOL properties");
       QUnit.strictEqual(t1.counter, 7, "Assignment for INT properties");
       QUnit.strictEqual(t1.dateAdded, now, "Assignment for DATE properties");
+      QUnit.strictEqual(t1.dateAddedInMillis, now.getTime(), "Assignment for BIGINT properties");
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
@@ -117,6 +123,7 @@ $(document).ready(function(){
               equals(t1db.done, false, "BOOL properties default to false");
               equals(t1db.counter, 0, "INT properties default to 0");
               equals(t1db.dateAdded, null, "DATE properties default to null");
+              equals(t1db.dateAddedInMillis, 0, "BIGINT properties default to 0");
               equals(t1db.metaData, null, "JSON properties default to null");
               start();
             });
@@ -131,16 +138,18 @@ $(document).ready(function(){
           done: false,
           counter: 7,
           dateAdded: now,
+          dateAddedInMillis: 1296802544867,
           metaData: meta
         });
       persistence.add(t1);
       persistence.flush(function() {
-          //persistence.clean();
+          persistence.clean();
           Task.all().one(function(t1db) {
               equals(t1db.name, 'Task 1', "Persistence of TEXT properties");
               equals(t1db.done, false, "Persistence of BOOL properties");
               equals(t1db.counter, 7, "Persistence of INT properties");
               equals(Math.round(t1db.dateAdded.getTime()/1000)*1000, Math.round(now.getTime()/1000)*1000, "Persistence of DATE properties");
+              equals(t1db.dateAddedInMillis, 1296802544867, "Persistence of BIGINT properties");
               same(t1db.metaData, meta, "Persistence of JSON properties");
               start();
             });

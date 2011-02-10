@@ -33,7 +33,7 @@ module.exports = {
     });
   },
   add: function(done) {
-    task = new Task(data);
+    task = new Task(session, data);
     session.add(task);
     session.flush(function(result, err) {
       assert.ifError(err);

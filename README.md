@@ -14,8 +14,9 @@ supports 4 types of data stores:
 * [MySQL](http://www.mysql.com), using the
   [node-mysql](http://github.com/felixge/node-mysql), node.js module
   on the server.
-* In-memory, as a fallback. Keeps the database in memory and is cleaned
-  upon a page refresh (or server restart).
+* In-memory, as a fallback. Keeps the database in memory and is
+  cleaned upon a page refresh (or server restart), unless saved to
+  [localStorage](http://dev.w3.org/html5/webstorage/).
 
 There is also an experimental support for [Qt 4.7 Declarative UI
 framework
@@ -38,6 +39,10 @@ There are a few `persistence.js` plug-ins available that add functionality:
   the database schema), see `docs/migrations.md` for more information.
 * `persistence.sync.js`, supports database synchronization with a
   remote server, see `docs/sync.md` for more information.
+* `jquery.persistence.js`, adds jQuery integration, including 
+  jQuery-mobile ajax request interception and re-routing to persistencejs,
+  see `docs/jquery.md` for more information and `demo/jquerymobile` for a 
+  simple demo.
 
 A Brief Intro to Async Programming
 ----------------------------------
@@ -90,14 +95,16 @@ Browser support
 
 * Modern webkit browsers (Google Chrome and Safari)
 * Firefox (through Google Gears)
+* Opera
 * Android browser (tested on 1.6 and 2.x)
 * iPhone browser (iPhone OS 3+)
 * Palm WebOS (tested on 1.4.0)
+* Other browsers supporting `localStorage` (e.g. Firefox)
 
 (The following is being worked on:)
 Internet Explorer is likely not supported (untested) because it
 lacks `__defineGetter__` and `__defineSetter__` support, which
-`persistence.js` uses heavily. This may change in IE 8.
+`persistence.js` uses heavily. This may change in IE 9.
 
 Setting up
 ----------
@@ -117,6 +124,10 @@ web directory. You can then load them as follows:
     <script src="persistence.store.sql.js" type="application/javascript"></script>
     <script src="persistence.store.websql.js" type="application/javascript"></script>
 
+If you want to use the in-memory store (in combination with
+`localStorage`) you also need the `persistence.store.memory.js`
+included.
+
 
 Setup your database
 -------------------
@@ -132,9 +143,47 @@ in your database name (it will create it if it does not already exist,
 the third is a description for you database, the last argument is the
 maximum size of your database in bytes (5MB in this example).
 
-If you're using the in-memory store, you can configure it as follows:
+The in-memory store
+---------------------------------------
+
+The in-memory store is offered as a fallback for browsers that do not
+support any of the other supported stores (e.g. WebSQL or Gears). In
+principal, it only keeps data in memory, which means that navigating
+away from the page (including a reload or tab close) will result in
+the loss of all data.
+
+A way around this is using the `persistence.saveToLocalStorage` and
+`persistence.loadFromLocalStorage` functions that can save the entire
+database to the [localStorage](http://dev.w3.org/html5/webstorage/), which
+is persisted indefinitely (similar to WebSQL).
+
+If you're going to use the in-memory store, you can configure it as follows:
 
     persistence.store.memory.config(persistence);
+
+Then, if desired, current data can be loaded from the localStorage using:
+
+    persistence.loadFromLocalStorage(function() {
+      alert("All data loaded!");
+    });
+
+And saved using:
+
+    persistence.saveToLocalStorage(function() {
+      alert("All data saved!");
+    });
+
+Drawbacks of the in-memory store:
+
+* Performance: All actions that are typically performed by a database
+  (sorting, filtering), are now all performed in-memory using
+  Javascript.
+* Limited database size: Loading and saving requires serialization of
+  all data from and to JSON, which gets more expensive as your dataset
+  grows. Most browsers have a maximum size of 5MB for `localStorage`.
+* Synchronous behavior: Although the API is asynchronous, all
+  persistence actions will be performed synchronously on the main
+  Javascript thread, which may make the browser less responsive.
 
 Schema definition
 -----------------
@@ -174,8 +223,17 @@ Example use:
     });
 
 The returned values are constructor functions and can be used to
-create new instances of these entities later:
+create new instances of these entities later.
 
+It is possible to create indexes on one or more columns using
+`EntityName.index`, for instance:
+
+    Task.index('done');
+    Task.index(['done', 'name']);
+
+These indexes can also be used to impose unique constraints :
+
+    Task.index(['done', 'name'],{unique:true});
 
 Relationships between entities are defined using the constructor
 function's `hasMany` call:
@@ -382,6 +440,9 @@ all
   for a particular object based on a property value (this is assumed to
   be unique), the callback function is called with the found object or
   `null` if it has not been found.
+* `EntityName.index([col1, col2, ..., colN], options)` creates an index on a column
+  of a combination of columns, for faster searching. If options.unique is true,
+  the index will impose a unique constraint on the values of the columns.
 
 And of course the methods to define relationships to other entities:
 
@@ -535,7 +596,7 @@ Subsequently, for every connection you handle (assuming you're
 building a sever), you call the `persistenceStore.getSession()`
 method:
 
-    var session = persistenceBackend.getSession();
+    var session = persistenceStore.getSession();
 
 This session is what you pass around, typically together with a
 transaction object. Note that currently you can only have one
@@ -632,10 +693,11 @@ After usage, you need to close your session:
 Bugs and Contributions
 ======================
 
-If you find a bug, please [report it](http://yellowgrass.org/project/persistence.js).
-or fork the project, fix the problem and send me a pull request. For
-a list of planned features and open issues, have a look at the [issue
-tracker](http://yellowgrass.org/project/persistence.js).
+If you find a bug, please [report
+it](https://github.com/zefhemel/persistencejs/issues).  or fork the
+project, fix the problem and send me a pull request. For a list of
+planned features and open issues, have a look at the [issue
+tracker](https://github.com/zefhemel/persistencejs/issues).
 
 For support and discussion, please join the [persistence.js Google
 Group](http://groups.google.com/group/persistencejs).
@@ -644,7 +706,7 @@ Thanks goes to the people listed in `AUTHORS` for their contributions.
 
 If you use [GWT](http://code.google.com/webtoolkit/) (the Google Web
 Toolkit), be sure to have a look at [Dennis Z. Jiang's GWT persistence.js
-wrapper](http://github.com/dennisjzh/gwt-persistence).
+wrapper](http://github.com/dennisjzh/GwtMobile-Persistence)
 
 License
 =======

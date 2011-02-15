@@ -15,21 +15,37 @@ $(document).ready(function(){
       done: "BOOL",
       counter: "INT",
       dateAdded: "DATE",
+      dateAddedInMillis: "BIGINT",
       metaData: "JSON"
     });
 
   var Tag = persistence.define('Tag', {
       name: "TEXT"
     });
+    
+  var UniqueIndexTest = persistence.define('UniqueIndexTest', {
+      id1: "INT",
+      id2: "INT",
+      id3p1: "INT",
+      id3p2: "INT"
+    });
+  
+  UniqueIndexTest.index('id1');
+  UniqueIndexTest.index('id2',{unique:true});
+  UniqueIndexTest.index(['id3p1','id3p2'],{unique:true});
+
 
   Task.hasMany('tags', Tag, 'tasks');
   Tag.hasMany('tasks', Task, 'tags');
+  Task.index('dateAdded');
 
   Project.hasMany('tasks', Task, 'project');
 
   window.Project = Project;
   window.Task = Task
   window.Project = Project;
+  window.UniqueIndexTest = UniqueIndexTest;
+
 
   module("Setup");
 
@@ -49,16 +65,17 @@ $(document).ready(function(){
       }
     });
 
-  test("Property default values", 5, function() {
+  test("Property default values", 6, function() {
       var t1 = new Task();
       QUnit.strictEqual(t1.name, "", "TEXT properties default to ''");
       QUnit.strictEqual(t1.done, false, "BOOL properties default to false");
       QUnit.strictEqual(t1.counter, 0, "INT properties default to 0");
       QUnit.strictEqual(t1.dateAdded, null, "DATE properties default to null");
+      QUnit.strictEqual(t1.dateAddedInMillis, 0, "BIGINT properties default to 0");
       QUnit.strictEqual(t1.metaData, null, "JSON properties default to null");
     });
 
-  test("Property value assignment", 5, function() {
+  test("Property value assignment", 6, function() {
       var t1 = new Task();
       var now = new Date();
       var meta = {starRating: 5};
@@ -66,15 +83,17 @@ $(document).ready(function(){
       t1.done = false;
       t1.counter = 7;
       t1.dateAdded = now;
+      t1.dateAddedInMillis = now.getTime();
       t1.metaData = meta;
       QUnit.strictEqual(t1.name, 'Task 1', "Assignment for TEXT properties");
       QUnit.strictEqual(t1.done, false, "Assignment for BOOL properties");
       QUnit.strictEqual(t1.counter, 7, "Assignment for INT properties");
       QUnit.strictEqual(t1.dateAdded, now, "Assignment for DATE properties");
+      QUnit.strictEqual(t1.dateAddedInMillis, now.getTime(), "Assignment for BIGINT properties");
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
-  test("Property constructor property value assignment", 5, function() {
+  test("Property constructor property value assignment", 6, function() {
       var now = new Date();
       var meta = {starRating: 5};
       var t1 = new Task({
@@ -82,12 +101,14 @@ $(document).ready(function(){
           done: false,
           counter: 7,
           dateAdded: now,
+          dateAddedInMillis: now.getTime(),
           metaData: meta
         });
       QUnit.strictEqual(t1.name, 'Task 1', "Assignment for TEXT properties");
       QUnit.strictEqual(t1.done, false, "Assignment for BOOL properties");
       QUnit.strictEqual(t1.counter, 7, "Assignment for INT properties");
       QUnit.strictEqual(t1.dateAdded, now, "Assignment for DATE properties");
+      QUnit.strictEqual(t1.dateAddedInMillis, now.getTime(), "Assignment for BIGINT properties");
       QUnit.strictEqual(t1.metaData, meta, "Assignment for JSON properties");
     });
 
@@ -102,6 +123,7 @@ $(document).ready(function(){
               equals(t1db.done, false, "BOOL properties default to false");
               equals(t1db.counter, 0, "INT properties default to 0");
               equals(t1db.dateAdded, null, "DATE properties default to null");
+              equals(t1db.dateAddedInMillis, 0, "BIGINT properties default to 0");
               equals(t1db.metaData, null, "JSON properties default to null");
               start();
             });
@@ -116,16 +138,18 @@ $(document).ready(function(){
           done: false,
           counter: 7,
           dateAdded: now,
+          dateAddedInMillis: 1296802544867,
           metaData: meta
         });
       persistence.add(t1);
       persistence.flush(function() {
-          //persistence.clean();
+          persistence.clean();
           Task.all().one(function(t1db) {
               equals(t1db.name, 'Task 1', "Persistence of TEXT properties");
               equals(t1db.done, false, "Persistence of BOOL properties");
               equals(t1db.counter, 7, "Persistence of INT properties");
               equals(Math.round(t1db.dateAdded.getTime()/1000)*1000, Math.round(now.getTime()/1000)*1000, "Persistence of DATE properties");
+              equals(t1db.dateAddedInMillis, 1296802544867, "Persistence of BIGINT properties");
               same(t1db.metaData, meta, "Persistence of JSON properties");
               start();
             });
@@ -503,16 +527,28 @@ $(document).ready(function(){
   module("Dumping/restoring");
 
   asyncTest("Full dump/restore", function() {
-      for(var i = 0; i < 10; i++) {
-        persistence.add(new Task({name: "Task " + i, dateAdded: new Date()}));
-      }
-      persistence.flush(function() {
-          persistence.dumpToJson([Task], function(dumps) {
-              Task.all().destroyAll(function() {
-                  persistence.loadFromJson(dumps, function() {
-                      Task.all().count(function(n) {
-                          equals(10, n, "restored successfully");
-                          start();
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              for(var i = 0; i < 10; i++) {
+                var t = new Task({name: "Task " + i, dateAdded: new Date()});
+                t.tags.add(new Tag({name: "Some tag: " + i}));
+                t.tags.add(new Tag({name: "Another tag: " + i}));
+                persistence.add(t);
+              }
+              persistence.flush(function() {
+                  persistence.dumpToJson(function(dumps) {
+                      persistence.reset(function() {
+                          persistence.schemaSync(function() {
+                              persistence.loadFromJson(dumps, function() {
+                                  Task.all().list(function(tasks) {
+                                      equals(tasks.length, 10, "tasks restored successfully");
+                                      tasks[0].tags.list(function(tags) {
+                                          equals(tags.length, 2, "tags restored successfully");
+                                          start();
+                                        });
+                                    });
+                                });
+                            });
                         });
                     });
                 });
@@ -576,4 +612,107 @@ $(document).ready(function(){
             });
         });
     });
+
+  module("Events");
+
+  asyncTest("all collection", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              var allTasks = Task.all();
+              var changesDetected = 0;
+              allTasks.addEventListener('change', function() {
+                  changesDetected++;
+                });
+              for(var i = 0; i < 10; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = i % 2 === 0;
+                Task.all().add(task);
+              }
+              equals(10, changesDetected, "detected all changes");
+              start();
+            });
+        });
+    });
+
+  asyncTest("filter collection", function() {
+      persistence.reset(function() {
+          persistence.schemaSync(function() {
+              var allTasks = Task.all().filter("done", "=", true);
+              var changesDetected = 0;
+              allTasks.addEventListener('change', function() {
+                  changesDetected++;
+                });
+              for(var i = 0; i < 10; i++) {
+                var task = new Task({name: "Task " + i});
+                task.done = i % 2 === 0;
+                Task.all().add(task);
+              }
+              equals(5, changesDetected, "detected all changes");
+              changesDetected = 0;
+              Task.all().filter("done", "=", true).list(function(results) {
+                  results.forEach(function(r) {
+                      r.done = false;
+                    });
+                  equals(5, changesDetected, "detected filter changes");
+                  start();
+                });
+            });
+        });
+    });
+    
+    
+    
+    module("Indexes");
+    
+    
+    asyncTest("unique indexes", function() {
+        
+        persistence.reset(function() {
+            
+            persistence.schemaSync(function() {
+                
+                var o1 = new UniqueIndexTest({"id1":101,"id2":102,"id3p1":103,"id3p2":104});
+                
+                // id1 is not unique
+                var o2 = new UniqueIndexTest({"id1":101,"id2":202,"id3p1":203,"id3p2":204});
+                
+                //shouldn't work, id2 is unique
+                var o3 = new UniqueIndexTest({"id1":301,"id2":102,"id3p1":303,"id3p2":304});
+                
+                // id3p1 itself is not unique
+                var o4 = new UniqueIndexTest({"id1":401,"id2":402,"id3p1":103,"id3p2":404});
+                
+                //shouldn't work, id3p1+id3p2 are unique
+                var o5 = new UniqueIndexTest({"id1":501,"id2":502,"id3p1":103,"id3p2":104});
+                
+                
+                persistence.add(o1);
+                persistence.add(o2);
+                try {
+                    //persistence.add(o3);
+                } catch (e) {
+                    console.log("err",e);
+                }
+                
+                persistence.add(o4);
+                try {
+                    //persistence.add(o5);
+                } catch (e) {
+                    console.log("err",e);
+                }
+                
+                
+                UniqueIndexTest.all().order("id2",true).list(function(results) {
+                    equals(3,results.length,"skipped 2 duplicate rows");
+                    if (results.length==3) {
+                        equals(102,results[0].id2);
+                        equals(202,results[1].id2);
+                        equals(402,results[2].id2);
+                    }
+                    start();
+                });
+              });
+          });
+      });
+    
 });

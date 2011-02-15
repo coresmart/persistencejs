@@ -1,11 +1,11 @@
-# jquery.persistence.js
+# persistence.jquery.js
 
-`jquery.persistence.js` is a jquery plugin for `persistence.js` that
+`persistence.jquery.js` is a jquery plugin for `persistence.js` that
 allows the usage of jquery notation for crossbrowser-access of
 persistencejs entities.
  
 Example
---------
+-------
 
 Simple example:
 

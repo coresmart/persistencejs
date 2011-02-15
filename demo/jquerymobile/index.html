@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang='en' >
+  <head>
+    <title>jQuery mobile / persistencejs integration</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <link rel="stylesheet" href="http://code.jquery.com/mobile/1.0a2/jquery.mobile-1.0a2.min.css" />
+    <style>
+      .ui-mobile #jqm-home {  background: #e5e5e5 url(assets/jqm-sitebg.png) top center repeat-x; }
+      .ui-mobile #jqm-homeheader { padding: 55px 25px 0; text-align: center }
+      .ui-mobile #jqm-homeheader h1 { margin: 0 0 10px; }
+      .ui-mobile #jqm-homeheader p { margin: 0; }
+      .ui-mobile #jqm-version { text-indent: -99999px; background: url(assets/version.png) top right no-repeat; width: 119px; height: 122px; overflow: hidden; position: absolute; top: 0; right: 0; }
+      .ui-mobile .jqm-themeswitcher { clear: both; margin: 20px 0 0; }
+
+      h2 { margin-top:1.5em; }
+      p code { font-size:1.2em; font-weight:bold; }
+
+      dt { font-weight: bold; margin: 2em 0 .5em; }
+      dt code, dd code { font-size:1.3em; line-height:150%; }
+    </style>
+    <script src="http://code.jquery.com/jquery-1.4.4.min.js"></script>
+    <script src="http://code.jquery.com/mobile/1.0a2/jquery.mobile-1.0a2.min.js"></script>
+    <script src="http://code.google.com/apis/gears/gears_init.js"></script>
+    <script src="../../lib/persistence.js"></script>
+    <script src="../../lib/persistence.store.sql.js"></script>
+    <script src="../../lib/persistence.store.websql.js"></script>
+    <script src="../../lib/persistence.store.memory.js"></script>
+    <script src="../../lib/persistence.jquery.js"></script>
+    <script src="../../lib/persistence.jquery.mobile.js"></script>
+    <script type="text/javascript">
+      if (location.protocol == "file:") {
+        alert("Didn't you read the README ? You need to load this page from a server.");
+      }
+      if (window.openDatabase) {
+        persistence.store.websql.config(persistence, "jquerymobile", 'database', 5 * 1024 * 1024);
+      } else {
+        persistence.store.memory.config(persistence);
+      }
+      persistence.define('Page', {
+        path: "TEXT",
+        data: "TEXT",
+      });
+      
+      persistence.define('Image', {
+        path: "TEXT",
+        data: "TEXT",
+      });
+      
+      persistence.define('Order', {
+        shipping: "TEXT"
+      });
+      
+      persistence.schemaSync();
+
+      $('#reset').click(function() {
+        persistence.reset();
+        persistence.schemaSync();
+        return false;
+      });
+    </script>
+  </head>
+  <body>
+
+    <div data-role="page" data-theme="b" id="jqm-home">
+      <div id="jqm-homeheader">
+        <h1 id="jqm-logo"><img src="assets/jquery-logo.png" alt="jQuery Mobile Framework" width="235" height="61" /></h1>
+        <p>Touch-Optimized Web Framework for Smartphones &amp; Tablets - now with PersistenceJS integration</p>
+        <p id="jqm-version">Alpha Release</p>
+      </div>
+      <div data-role="content">
+        <ul data-role="listview" data-inset="true" data-theme="c" data-dividertheme="b">
+          <li data-role="list-divider">Local persistence demos</li>
+          <li><a href="docs/text.html">Text only</a></li>
+          <li><a href="docs/text_and_images.html">Text and images</a></li>
+          <li><a href="#form_submission">Form submission</a></li>
+        </ul>
+      </div>
+      <a id="reset" href="#" data-role="button" data-theme="c" class="ui-btn-right">Reset DB</a>
+    </div>
+
+    <div data-role="page" id="form_submission">
+      <div data-role="header">
+        <h1>Form submission</h1>
+      </div><!-- /header -->
+      <div data-role="content">
+        <form action="order/form-fake-response.html" method="post">
+          <fieldset>
+            <div data-role="fieldcontain">
+              <label for="shipping" class="select">Formsubmission (GET):</label>
+              <select name="shipping" id="shipping">
+                <option value="Standard shipping">Standard: 7 day</option>
+                <option value="Rush shipping">Rush: 3 days</option>
+                <option value="Express shipping">Express: next day</option>
+                <option value="Overnight shipping">Overnight</option>
+              </select>
+            </div>
+          <button type="submit" data-theme="a">Submit</button>
+        </fieldset>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

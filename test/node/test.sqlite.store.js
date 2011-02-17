@@ -35,7 +35,7 @@ module.exports = {
   add: function(done) {
     task = new Task(session, data);
     session.add(task);
-    session.flush(function(result, err) {
+    session.flush(function(err, result) {
       assert.ifError(err);
       done();
     });
@@ -55,7 +55,7 @@ module.exports = {
   },
   remove: function(done) {
     session.remove(task);
-    session.flush(function(result, err) {
+    session.flush(function(err, result) {
       assert.ifError(err);
       Task.findBy(session, 'id', task.id, function(task) {
         assert.equal(task, null);

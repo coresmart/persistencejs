@@ -26,7 +26,7 @@ function removeDb() {
 }
 
 module.exports = {
- init: function(done) {
+  init: function(done) {
     removeDb();
     session = persistenceStore.getSession(function () {
       session.schemaSync(done);

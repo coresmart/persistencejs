@@ -1,6 +1,11 @@
 {
   "name": "persistencejs",
-  "version": "0.2.5",
+  "description": "Asynchronous database mapper for both client side and server side",
+  "keywords": [ "database", "orm", "mysql" ],
+  "version": "0.2.5-mh",
+  "repository" : { "type" : "git",
+                   "url" : "https://github.com/zefhemel/persistencejs.git"
+                 },
   "engine": "node >=0.2.0",
   "author": "Zef Hemel",
   "directories": {"lib": "./lib"},

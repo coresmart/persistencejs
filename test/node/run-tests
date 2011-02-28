@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+
+var exec = require('child_process').exec
+  , node
+  , config
+  , args = process.argv.splice(2)
+  , fs = require('fs')
+  ;
+
+//process.env.NODE_ENV = 'test';
+var run = function(adaptor, cb) {
+  cb = cb || function(){};
+  if (adaptor) {
+    console.log('------------------------------------');
+    console.log('Run Test: ' + adaptor);
+    console.log('------------------------------------');
+  }
+  switch (adaptor) {
+    case 'mysql':
+      config = {
+        adaptor: 'mysql',
+        database: 'nodejs_mysql',
+        host: 'localhost',
+        port: 3306,
+        user: 'root',
+        password: ''
+      };
+      break;
+    case 'sqlite':
+      config = {
+        adaptor: 'sqlite',
+        database: __dirname + '/test.db'
+      };
+      break;
+    case 'memory':
+      config = {
+        adaptor: 'memory',
+        database: 'test'
+      };
+      break;
+    default:
+      run('memory', function(){
+        run('mysql', function() {
+          run('sqlite', function() {
+          });
+        });
+      });
+      // console.error('NOTICE: Specify database adaptor');
+      // console.error('$ ./run-tests [mysql|sqlite|memory]');
+      return;
+  };
+  
+  fs.writeFileSync('config.json', JSON.stringify(config));
+  node = exec('node test.persistence.js', cb);
+
+  node.stdout.on('data', function(data) {
+    console.log(data.replace(/[\s\r\n]+$/, ''));
+  });
+
+  node.stderr.on('data', function(data) {
+    console.error(data.replace(/[\s\r\n]+$/, ''));
+  });
+
+  process.on('SIGINT', function() {
+    node.kill();
+  });
+};
+
+run(args[0]);

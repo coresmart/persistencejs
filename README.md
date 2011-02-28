@@ -67,7 +67,7 @@ The execution of the first statement could take half a second, during
 which the browser doesn't do anything else. By contrast, the
 asynchronous version looks as follows:
 
-    db.query("SELECT * FROM Table", function(results) {
+    db.query("SELECT * FROM Table", function(err, results) {
       for(...) { ... }
     });
 
@@ -76,7 +76,7 @@ result being available and that while the database is processing the
 query, the execution of the Javascript continues. To make this clear,
 consider the following program:
     
-    db.query("SELECT * FROM Table", function(results) {
+    db.query("SELECT * FROM Table", function(err, results) {
       console.log("hello");
     });
     console.log("world");
@@ -260,7 +260,7 @@ optional.
 
     persistence.schemaSync();
     // or
-    persistence.schemaSync(function(tx) { 
+    persistence.schemaSync(function(err, tx) { 
       // tx is the transaction object of the transaction that was
       // automatically started
     });
@@ -330,7 +330,7 @@ through the `QueryCollection` API that will be discussed later:
 
     task.tags.add(tag);
     tasks.tags.remove(tag)l
-    tasks.tags.list(tx, function(allTags) { console.log(allTags); });
+    tasks.tags.list(tx, function(err, allTags) { console.log(allTags); });
 
 Persisting/removing objects
 ---------------------------
@@ -361,7 +361,7 @@ callback function as arguments. A new transaction can be started using
 `persistence.transaction`:
     
     persistence.transaction(function(tx) {
-      persistence.flush(tx, function() {
+      persistence.flush(tx, function(err) {
         alert('Done flushing!');
       });
     });
@@ -372,7 +372,7 @@ automatically. For instance:
 
     persistence.flush();
     // or, with callback
-    persistence.flush(function() {
+    persistence.flush(function(err) {
       alert('Done flushing');
     });
 
@@ -393,7 +393,7 @@ The library supports two kinds of dumping and restoring data.
 dump of a database. Naturally, it is adviced to only do this with
 smaller databases. Example:
 
-    persistence.dump(tx, [Task, Category], function(dump) {
+    persistence.dump(tx, [Task, Category], function(err, dump) {
       console.log(dump);
     });
 
@@ -409,7 +409,7 @@ The dump format is:
 `persistence.load` is used to restore the dump produced by
 `persistence.dump`. Usage:
 
-    persistence.load(tx, dumpObj, function() {
+    persistence.load(tx, dumpObj, function(err) {
       alert('Dump restored!');
     });
 
@@ -556,8 +556,8 @@ Example:
 
     var allTasks = Task.all().filter("done", '=', true).prefetch("category").order("name", false).limit(10);
         
-    allTasks.list(null, function (results) {
-        results.forEach(function (r) {
+    allTasks.list(null, function(err, results) {
+        results.forEach(function(r) {
             console.log(r.name)
             window.task = r;
         });
@@ -653,7 +653,7 @@ Defining your data model is done in exactly the same way as regular `persistence
 
 A `schemaSync` is typically performed as follows:
 
-    session.schemaSync(tx, function() {
+    session.schemaSync(tx, function(err) {
       ...
     });
 
@@ -668,7 +668,7 @@ need to reference the `Session` again:
     ...
     session.add(t);
 
-    session.flush(tx, function() {
+    session.flush(tx, function(err) {
       ...
     });
 
@@ -679,7 +679,7 @@ Query collections work the same way as in regular `persistence.js`
 with the exception of the `Entity.all()` method that now also requires
 a `Session` to be passed to it:
 
-    Task.all(session).filter('done', '=', true).list(tx, function(tasks) {
+    Task.all(session).filter('done', '=', true).list(tx, function(err, tasks) {
       ...
     });
 

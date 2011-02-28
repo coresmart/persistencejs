@@ -7,7 +7,7 @@ var persistenceStore = require('../../lib/persistence.store.mysql');
 var persistenceSync = require('../../lib/persistence.sync.server');
 
 // Database configuration
-persistenceStore.config(persistence, 'localhost', 3306, 'partialsync', 'psyncuser', 'psyncpass');
+persistenceStore.config(persistence, 'localhost', 3306, 'synctest', 'test', 'test');
 
 // Switch off query logging:
 //persistence.db.log = false;
@@ -53,7 +53,7 @@ StudentClass.enableSync();
 
 var app = express.createServer(
   connect.bodyDecoder(), 
-  connect.staticProvider('.'),
+  connect.staticProvider('../browser'),
   function(req, res, next) {
     var end = res.end;
 
@@ -168,6 +168,6 @@ app.post('/studentclassUpdates/:teacher_id',  function(req, res) {
 });  
 
 
-app.listen(80);
+app.listen(8888);
 
 console.log('Server running at http://127.0.0.1:80');

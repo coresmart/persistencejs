@@ -49,9 +49,11 @@ $(document).ready(function(){
 
   module("Setup");
 
-  asyncTest("setting up database", 1, function() {
-      persistence.schemaSync(function(tx){
+  asyncTest("setting up database", 2, function() {
+      persistence.schemaSync(function(err, tx){
+          console.log(err);
           ok(true, 'schemaSync called callback function');
+          ok(!err, 'without an error');
           start();
         });
     });
@@ -115,9 +117,11 @@ $(document).ready(function(){
   asyncTest("Empty object persistence", function() {
       var t1 = new Task();
       persistence.add(t1);
-      persistence.flush(function() {
+      persistence.flush(function(err) {
           //persistence.clean();
-          Task.all().one(function(t1db) {
+          ok(!err, 'no error on flush');
+          Task.all().one(function(err, t1db) {
+              ok(!err, 'no error message');
               equals(t1db.id, t1.id, "TEXT properties default to ''");
               equals(t1db.name, "", "TEXT properties default to ''");
               equals(t1db.done, false, "BOOL properties default to false");
@@ -142,9 +146,11 @@ $(document).ready(function(){
           metaData: meta
         });
       persistence.add(t1);
-      persistence.flush(function() {
+      persistence.flush(function(err) {
+          ok(!err, 'no error on flush');
           persistence.clean();
-          Task.all().one(function(t1db) {
+          Task.all().one(function(err, t1db) {
+              ok(!err, 'no error');
               equals(t1db.name, 'Task 1', "Persistence of TEXT properties");
               equals(t1db.done, false, "Persistence of BOOL properties");
               equals(t1db.counter, 7, "Persistence of INT properties");
@@ -166,13 +172,16 @@ $(document).ready(function(){
         persistence.add(t);
         counter++;
       }
-      persistence.flush(function() {
-          Task.all().order('counter', true).list(function(results) {
+      persistence.flush(function(err) {
+          ok(!err, 'no error');
+          Task.all().order('counter', true).list(function(err, results) {
+              ok(!err, 'no error');
               for(var i = 0; i < 25; i++) {
                 ok(results[i] === objs[i], 'Cache works OK');
               }
               //persistence.clean(); // Clean out local cache
-              Task.all().order('counter', true).list(function(results) {
+              Task.all().order('counter', true).list(function(err, results) {
+                  ok(!err, 'no error');
                   for(var i = 0; i < 25; i++) {
                     ok(results[i].id === objs[i].id, 'Retrieving from DB ok');
                   }
@@ -185,7 +194,8 @@ $(document).ready(function(){
   asyncTest("One-to-many", function() {
       var p = new Project({name: "Some project"});
       persistence.add(p);
-      p.tasks.list(function(tasks) {
+      p.tasks.list(function(err, tasks) {
+          ok(!err, 'no error');
           equals(tasks.length, 0, "Initially, no tasks");
           var task1 = new Task({name: "Do dishes"});
           var task2 = new Task({name: "Laundry"});
@@ -194,7 +204,8 @@ $(document).ready(function(){
           p.tasks.add(task1);
           task2.project = p;
 
-          p.tasks.order('name', true).list(function(tasks) {
+          p.tasks.order('name', true).list(function(err, tasks) {
+              ok(!err, 'no error');
               equals(tasks.length, 2, "Now two tasks");
               equals(tasks[0].id, task1.id, "Right tasks");
               equals(tasks[1].id, task2.id, "Right tasks");
@@ -206,20 +217,24 @@ $(document).ready(function(){
   asyncTest("Many-to-many", function() {
       var t = new Task({name: "Some task"});
       persistence.add(t);
-      t.tags.list(function(tags) {
+      t.tags.list(function(err, tags) {
+          ok(!err, 'no error');
           equals(tags.length, 0, "Initially, no tags");
           var tag1 = new Tag({name: "important"});
           var tag2 = new Tag({name: "today"});
           t.tags.add(tag1);
           t.tags.add(tag2);
-          t.tags.list(function(tags) {
+          t.tags.list(function(err, tags) {
+              ok(!err, 'no error');
               equals(tags.length, 2, "2 tags added");
               var oneTag = tags[0];
-              oneTag.tasks.list(function(tagTasks) {
+              oneTag.tasks.list(function(err, tagTasks) {
+                  ok(!err, 'no error');
                   equals(tagTasks.length, 1, "Tag has one task");
                   equals(tagTasks[0].id, t.id, "Correct task");
                   oneTag.tasks.remove(tagTasks[0]);
-                  t.tags.count(function(cnt) {
+                  t.tags.count(function(err, cnt) {
+                      ok(!err, 'no error');
                       equals(cnt, 1, "Tag removed task, task has only one tag left");
                       start();
                     });
@@ -243,15 +258,20 @@ $(document).ready(function(){
       t.counter = i;
       coll.add(t);
     }
-    coll.list(function(results) {
+    coll.list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 25, "Count items in collection");
-        coll.filter("counter", ">", 10).list(function(results) {
+        coll.filter("counter", ">", 10).list(function(err, results) {
+            ok(!err, 'no error');
             equals(results.length, 14, "> filter test");
-            coll.filter("counter", "in", [0, 1, 2]).list(function(results) {
+            coll.filter("counter", "in", [0, 1, 2]).list(function(err, results) {
+                ok(!err, 'no error');
                 equals(results.length, 3, "'in' filter test");
-                coll.filter("counter", "not in", [0, 1]).list(function(results) {
+                coll.filter("counter", "not in", [0, 1]).list(function(err, results) {
+                    ok(!err, 'no error');
                     equals(results.length, 23, "'not in' filter test");
-                    coll.filter("counter", "!=", 0).list(function(results) {
+                    coll.filter("counter", "!=", 0).list(function(err, results) {
+                        ok(!err, 'no error');
                         equals(results.length, 24, "'!=' filter test");
                         callback();
                       });
@@ -267,17 +287,23 @@ $(document).ready(function(){
       var t = new Task({name: alphabet[i]});
       coll.add(t);
     }
-    coll.list(function(results) {
+    coll.list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 26, "Count items in collection");
-        coll.filter("name", "=", 'a').list(function(results) {
+        coll.filter("name", "=", 'a').list(function(err, results) {
+            ok(!err, 'no error');
             equals(results.length, 1, "= filter test");
-            coll.filter("name", "!=", 'a').list(function(results) {
+            coll.filter("name", "!=", 'a').list(function(err, results) {
+                ok(!err, 'no error');
                 equals(results.length, 25, "!= filter test");
-                coll.filter("name", ">", 'm').list(function(results) {
+                coll.filter("name", ">", 'm').list(function(err, results) {
+                    ok(!err, 'no error');
                     equals(results.length, 12, "> filter test");
-                    coll.filter("name", "in", ["a", "b"]).list(function(results) {
+                    coll.filter("name", "in", ["a", "b"]).list(function(err, results) {
+                        ok(!err, 'no error');
                         equals(results.length, 2, "'in' filter test");
-                        coll.filter("name", "not in", ["q", "x"]).list(function(results) {
+                        coll.filter("name", "not in", ["q", "x"]).list(function(err, results) {
+                            ok(!err, 'no error');
                             equals(results.length, 24, "'not in' filter test");
                             callback();
                           });
@@ -293,15 +319,20 @@ $(document).ready(function(){
       var t = new Task({name: "Task " + i, done: i % 2 === 0});
       coll.add(t);
     }
-    coll.list(function(results) {
+    coll.list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 24, "Count items in collection");
-        coll.filter("done", "=", true).list(function(results) {
+        coll.filter("done", "=", true).list(function(err, results) {
+            ok(!err, 'no error');
             equals(results.length, 12, "= filter test");
-            coll.filter("done", "=", false).list(function(results) {
+            coll.filter("done", "=", false).list(function(err, results) {
+                ok(!err, 'no error');
                 equals(results.length, 12, "= filter test");
-                coll.filter("done", "!=", true).list(function(results) {
+                coll.filter("done", "!=", true).list(function(err, results) {
+                    ok(!err, 'no error');
                     equals(results.length, 12, "'!=' filter test");
-                    coll.filter("done", "!=", false).list(function(results) {
+                    coll.filter("done", "!=", false).list(function(err, results) {
+                        ok(!err, 'no error');
                         equals(results.length, 12, "'!=' filter test");
                         callback();
                       });
@@ -324,13 +355,17 @@ $(document).ready(function(){
       var t = new Task({name: "Task " + i, dateAdded: dateInDays(i)});
       coll.add(t);
     }
-    coll.list(function(results) {
+    coll.list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 24, "Count items in collection");
-        coll.filter("dateAdded", "=", dateInDays(1)).list(function(results) {
+        coll.filter("dateAdded", "=", dateInDays(1)).list(function(err, results) {
+            ok(!err, 'no error');
             equals(results.length, 1, "= filter test");
-            coll.filter("dateAdded", "!=", dateInDays(1)).list(function(results) {
+            coll.filter("dateAdded", "!=", dateInDays(1)).list(function(err, results) {
+                ok(!err, 'no error');
                 equals(results.length, 23, "!= filter test");
-                coll.filter("dateAdded", ">", dateInDays(12)).list(function(results) {
+                coll.filter("dateAdded", ">", dateInDays(12)).list(function(err, results) {
+                    ok(!err, 'no error');
                     equals(results.length, 11, "> filter test");
                     start();
                   });
@@ -409,12 +444,14 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order('counter', true).list(function(results) {
+    coll.order('counter', true).list(function(err, results) {
+        ok(!err, 'no error');
         for(var i = 0; i < 24; i++) {
           equals(results[i].id, tasks[i].id, "order check, ascending");
         }
         tasks.reverse();
-        coll.order('counter', false).list(function(results) {
+        coll.order('counter', false).list(function(err, results) {
+            ok(!err, 'no error');
             for(var i = 0; i < 24; i++) {
               equals(results[i].id, tasks[i].id, "order check, descending");
             }
@@ -438,12 +475,12 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order('dateAdded', true).list(function(results) {
+    coll.order('dateAdded', true).list(function(err, results) {
         for(var i = 0; i < 24; i++) {
           equals(results[i].id, tasks[i].id, "order check, ascending");
         }
         tasks.reverse();
-        coll.order('dateAdded', false).list(function(results) {
+        coll.order('dateAdded', false).list(function(err, results) {
             for(var i = 0; i < 24; i++) {
               equals(results[i].id, tasks[i].id, "order check, descending");
             }
@@ -481,7 +518,8 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order("counter", true).limit(5).list(function(results) {
+    coll.order("counter", true).limit(5).list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 5, "Result length check");
         for(var i = 0; i < 5; i++) {
           equals(results[i].id, tasks[i].id, "limit check");
@@ -497,7 +535,8 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order("counter", true).skip(5).limit(5).list(function(results) {
+    coll.order("counter", true).skip(5).limit(5).list(function(err, results) {
+        ok(!err, 'no error');
         equals(results.length, 5, "Result length check");
         for(var i = 5; i < 10; i++) {
           equals(results[i-5].id, tasks[i].id, "skip check");
@@ -527,8 +566,8 @@ $(document).ready(function(){
   module("Dumping/restoring");
 
   asyncTest("Full dump/restore", function() {
-      persistence.reset(function() {
-          persistence.schemaSync(function() {
+      persistence.reset(function(err) {
+          persistence.schemaSync(function(err) {
               for(var i = 0; i < 10; i++) {
                 var t = new Task({name: "Task " + i, dateAdded: new Date()});
                 t.tags.add(new Tag({name: "Some tag: " + i}));
@@ -536,13 +575,17 @@ $(document).ready(function(){
                 persistence.add(t);
               }
               persistence.flush(function() {
-                  persistence.dumpToJson(function(dumps) {
+                  persistence.dumpToJson(function(err, dumps) {
+                      ok(!err, 'no error');
                       persistence.reset(function() {
                           persistence.schemaSync(function() {
-                              persistence.loadFromJson(dumps, function() {
-                                  Task.all().list(function(tasks) {
+                              persistence.loadFromJson(dumps, function(err) {
+                                  ok(!err, 'no error');
+                                  Task.all().list(function(err, tasks) {
+                                      ok(!err, 'no error');
                                       equals(tasks.length, 10, "tasks restored successfully");
-                                      tasks[0].tags.list(function(tags) {
+                                      tasks[0].tags.list(function(err, tags) {
+                                          ok(!err, 'no error');
                                           equals(tags.length, 2, "tags restored successfully");
                                           start();
                                         });
@@ -573,12 +616,15 @@ $(document).ready(function(){
                 task.tags = new persistence.LocalQueryCollection(tags);
                 project.tasks.add(task);
               }
-              Project.all().selectJSON(['id', 'name', 'tasks.[id,name]', 'tasks.tags.[id, name]'], function(result) {
+              Project.all().selectJSON(['id', 'name', 'tasks.[id,name]', 'tasks.tags.[id, name]'], function(err, result) {
+                  ok(!err, 'no error');
                   persistence.reset(function() {
                       persistence.schemaSync(function() {
-                          Project.fromSelectJSON(result[0], function(obj) {
+                          Project.fromSelectJSON(result[0], function(err, obj) {
+                              ok(!err, 'no error');
                               persistence.add(obj);
-                              Task.all().list(function(tasks) {
+                              Task.all().list(function(err, tasks) {
+                                  ok(!err, 'no error');
                                   equals(tasks.length, 10, "number of restored tasks ok");
                                   tasks.forEach(function(task) {
                                       equals(task.done, false, "done still default value");
@@ -602,9 +648,11 @@ $(document).ready(function(){
                 task.done = i % 2 === 0;
                 persistence.add(task);
               }
-              Task.all().filter("done", "=", true).or(new persistence.PropertyFilter("done", "=", false)).list(function(results) {
+              Task.all().filter("done", "=", true).or(new persistence.PropertyFilter("done", "=", false)).list(function(err, results) {
+                  ok(!err, 'no error');
                   equals(results.length, 10, "right number of results");
-                  Task.all().filter("done", "=", true).and(new persistence.PropertyFilter("done", "=", false)).list(function(results) {
+                  Task.all().filter("done", "=", true).and(new persistence.PropertyFilter("done", "=", false)).list(function(err, results) {
+                      ok(!err, 'no error');
                       equals(results.length, 0, "right number of results");
                       start();
                     });
@@ -649,7 +697,8 @@ $(document).ready(function(){
               }
               equals(5, changesDetected, "detected all changes");
               changesDetected = 0;
-              Task.all().filter("done", "=", true).list(function(results) {
+              Task.all().filter("done", "=", true).list(function(err, results) {
+                  ok(!err, 'no error');
                   results.forEach(function(r) {
                       r.done = false;
                     });
@@ -666,11 +715,8 @@ $(document).ready(function(){
     
     
     asyncTest("unique indexes", function() {
-        
         persistence.reset(function() {
-            
             persistence.schemaSync(function() {
-                
                 var o1 = new UniqueIndexTest({"id1":101,"id2":102,"id3p1":103,"id3p2":104});
                 
                 // id1 is not unique
@@ -702,7 +748,8 @@ $(document).ready(function(){
                 }
                 
                 
-                UniqueIndexTest.all().order("id2",true).list(function(results) {
+                UniqueIndexTest.all().order("id2",true).list(function(err, results) {
+                    ok(!err, 'no error');
                     equals(3,results.length,"skipped 2 duplicate rows");
                     if (results.length==3) {
                         equals(102,results[0].id2);

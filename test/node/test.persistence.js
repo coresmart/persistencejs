@@ -10,6 +10,7 @@
     );
   //persistence.debug = true;
   persistence.debug = false;
+  persistence.temporary = true;
 
   var startTime = new Date().getTime();
 

@@ -1,12 +1,13 @@
-// Run $ node test.persistence.js
+
+// Run $ ./run-tests [mysql|sqlite|memory]
 
 (function(){
   require('./qunit.log');
   var persistence = require('../../lib/persistence').persistence;
-  var persistenceStore = require('../../lib/persistence.store.mysql');
-  //var persistenceStore = require('../../lib/persistence.store.memory');
-  persistenceStore.config(persistence, 'localhost', 3306, 'nodejs_mysql', 'test', 'test');
-
+  var persistenceStore = require('../../lib/persistence.store.config')(
+      persistence,
+      JSON.parse(require('fs').readFileSync('./config.json'))
+    );
   //persistence.debug = true;
   persistence.debug = false;
 

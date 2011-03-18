@@ -42,7 +42,7 @@ $(document).ready(function(){
   Project.hasMany('tasks', Task, 'project');
 
   window.Project = Project;
-  window.Task = Task
+  window.Task = Task;
   window.Project = Project;
   window.UniqueIndexTest = UniqueIndexTest;
 
@@ -369,7 +369,7 @@ $(document).ready(function(){
                     equals(results.length, 11, "> filter test");
                     start();
                   });
-              })
+              });
           });
       });
   }

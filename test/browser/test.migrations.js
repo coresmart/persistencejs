@@ -1,14 +1,15 @@
 function createMigrations(starting, amount, actions){
-  var amount = starting+amount;
+  amount = starting+amount;
   
   for (var i = starting; i < amount; i++) {
     var newActions = {
-     up: actions.up,
+      up: actions.up,
       down: actions.down
     };
     
-    if (actions.createDown)
+    if (actions.createDown) {
       newActions.down = actions.createDown(i);
+    }
     
     if (actions.createUp)
       newActions.up = actions.createUp(i);
@@ -35,15 +36,17 @@ module("Migrator", {
   }
 });
 
-asyncTest("getting and setting db version", 2, function() {
-  Migrator.version(function(v){
+asyncTest("getting and setting db version", 4, function() {
+  Migrator.version(function(err, v){
+    ok(!err, 'no error');
     equals(v, 0, 'initial db version');
   });
   
   var newVersion = 100;
   
   Migrator.setVersion(newVersion, function() {
-    Migrator.version(function(v){
+    Migrator.version(function(err, v){
+      ok(!err, 'no error');
       equals(v, newVersion, 'checking if version was set');
       start();
     });
@@ -67,7 +70,7 @@ asyncTest("migrations scope", 2, function(){
   });
 });
 
-asyncTest("migrating up to some version", 7, function(){
+asyncTest("migrating up to some version", 8, function(){
   var actionsRan = 0;
   var totalActions = 5;
   
@@ -80,14 +83,15 @@ asyncTest("migrating up to some version", 7, function(){
   
   Migrator.migrate(totalActions, function(){
     equals(actionsRan, totalActions, 'actions ran');
-    Migrator.version(function(v){
+    Migrator.version(function(err, v){
+      ok(!err, 'no error');
       equals(v, totalActions, 'version changed to');
       start();
     });
   });
 });
 
-asyncTest("migrating down to some version", 7, function(){
+asyncTest("migrating down to some version", 8, function(){
   var actionsRan = 0;
   var totalActions = 5;
   
@@ -104,7 +108,8 @@ asyncTest("migrating down to some version", 7, function(){
   Migrator.setVersion(totalActions, function(){
     Migrator.migrate(0, function(){
       equals(actionsRan, totalActions, 'actions ran');
-      Migrator.version(function(v){
+      Migrator.version(function(err, v){
+        ok(!err, 'no error');
         equals(v, 0, 'version changed to');
         start();
       });
@@ -112,13 +117,14 @@ asyncTest("migrating down to some version", 7, function(){
   });
 });
 
-asyncTest("migrate to latest", 1, function(){
+asyncTest("migrate to latest", 2, function(){
   var totalActions = 3;
   
   createMigrations(1, totalActions, { up: function() { } });
   
   Migrator.migrate(function() {
-    Migrator.version(function(v){
+    Migrator.version(function(err, v){
+      ok(!err, 'no error');
       equals(v, totalActions, 'latest version');
       start();
     });
@@ -134,8 +140,8 @@ module("Migration", {
     // DROPS ALL TABLES
     var query = "select 'drop table ' || name || ';' AS dropTable from sqlite_master where type = 'table' and name not in ('__WebKitDatabaseInfoTable__', 'schema_version')";
     
-    persistence.transaction(function(tx){
-      tx.executeSql(query, null, function(result){
+    persistence.transaction(function(err, tx){
+      tx.executeSql(query, null, function(err, result){
         var dropTablesSql = [];
         for (var i = 0; i < result.length; i++)
           dropTablesSql.push([result[i].dropTable, null]);
@@ -172,7 +178,7 @@ asyncTest("API", 12, function(){
   m.up(start);
 });
 
-asyncTest("execute", 1, function(){
+asyncTest("execute", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.executeSql('CREATE TABLE test (id INTEGER)');
@@ -181,8 +187,10 @@ asyncTest("execute", 1, function(){
   
   Migrator.migrate(function(){
     var sql = 'select name from sqlite_master where type = "table" and name == "test"';
-    persistence.transaction(function(tx){
-      tx.executeSql(sql, null, function(result){
+    persistence.transaction(function(err, tx){
+      ok(!err, 'no error');
+      tx.executeSql(sql, null, function(err, result){
+        ok(!err, 'no error');
         ok(result.length == 1, 'sql command ran');
         start();
       });
@@ -190,7 +198,7 @@ asyncTest("execute", 1, function(){
   });
 });
 
-asyncTest("createTable", 1, function(){
+asyncTest("createTable", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('testing');
@@ -202,7 +210,7 @@ asyncTest("createTable", 1, function(){
   });
 });
 
-asyncTest("createTable adds id by default", 1, function(){
+asyncTest("createTable adds id by default", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('testing');
@@ -214,7 +222,7 @@ asyncTest("createTable adds id by default", 1, function(){
   });
 });
 
-asyncTest("createTable with text column", 1, function(){
+asyncTest("createTable with text column", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -228,7 +236,7 @@ asyncTest("createTable with text column", 1, function(){
   });
 });
 
-asyncTest("createTable with integer column", 1, function(){
+asyncTest("createTable with integer column", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -242,7 +250,7 @@ asyncTest("createTable with integer column", 1, function(){
   });
 });
 
-asyncTest("createTable with boolean column", 1, function(){
+asyncTest("createTable with boolean column", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -256,7 +264,7 @@ asyncTest("createTable with boolean column", 1, function(){
   });
 });
 
-asyncTest("createTable with date column", 1, function(){
+asyncTest("createTable with date column", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -270,7 +278,7 @@ asyncTest("createTable with date column", 1, function(){
   });
 });
 
-asyncTest("createTable with json column", 1, function(){
+asyncTest("createTable with json column", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -284,7 +292,7 @@ asyncTest("createTable with json column", 1, function(){
   });
 });
 
-asyncTest("addColumn", 1, function(){
+asyncTest("addColumn", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer');
@@ -297,7 +305,7 @@ asyncTest("addColumn", 1, function(){
   });
 });
 
-asyncTest("removeColumn", 2, function(){
+asyncTest("removeColumn", 6, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -313,7 +321,7 @@ asyncTest("removeColumn", 2, function(){
   });
 });
 
-asyncTest("dropTable", 1, function(){
+asyncTest("dropTable", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer');
@@ -326,7 +334,7 @@ asyncTest("dropTable", 1, function(){
   });
 });
 
-asyncTest("addIndex", 1, function(){
+asyncTest("addIndex", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -341,7 +349,7 @@ asyncTest("addIndex", 1, function(){
   });
 });
 
-asyncTest("removeIndex", 1, function(){
+asyncTest("removeIndex", 3, function(){
   Migrator.migration(1, {
     up: function() {
       this.createTable('customer', function(t){
@@ -394,13 +402,14 @@ module("Models", {
   }
 });
 
-asyncTest("Adding and retrieving Entity after migration", 1, function(){
+asyncTest("Adding and retrieving Entity after migration", 2, function(){
   var task = new this.Task({name: 'test'});
   var allTasks = this.Task.all();
   
   persistence.add(task).flush(function() {
     persistence.clean(); delete task;
-    allTasks.list(function(result){
+    allTasks.list(function(err, result){
+      ok(!err, 'no error');
       equals(result.length, 1, 'task found');
       start();
     });
@@ -441,7 +450,7 @@ module("Custom actions", {
 });
 
 
-asyncTest("Running custom actions", 2, function(){
+asyncTest("Running custom actions", 1, function(){
   var user1 = new this.User({userName: 'user1'});
   var user2 = new this.User({userName: 'user2'});
   var allUsers = this.User.all();
@@ -455,7 +464,8 @@ asyncTest("Running custom actions", 2, function(){
       up: function() {
         this.addColumn('User', 'email', 'TEXT');
         this.action(function(tx, nextAction){
-          allUsers.list(tx, function(result){
+          allUsers.list(tx, function(err, result){
+            ok(!err, 'no error');
             result.forEach(function(u){
               u.email = u.userName + '@domain.com';
               persistence.add(u);
@@ -469,8 +479,9 @@ asyncTest("Running custom actions", 2, function(){
   }
   
   function assertUpdated() {
-    allUsers.list(function(result){
+    allUsers.list(function(err, result){
       result.forEach(function(u){
+        ok(!err, 'no error');
         ok(u.email == u.userName + '@domain.com');
       });
       start();

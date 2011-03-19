@@ -1,18 +1,20 @@
 #!/usr/bin/env node
-
-var exec = require('child_process').exec
+var argv = require('optimist').argv
+  , path = require('path')
+  , exec = require('child_process').exec
   , node
   , config
   , args = process.argv.splice(2)
   , fs = require('fs')
+  , tests = [ 'test.persistence.js'
+            ]
   ;
 
-//process.env.NODE_ENV = 'test';
-var run = function(adaptor, cb) {
+var run = function(adaptor, test, cb) {
   cb = cb || function(){};
   if (adaptor) {
     console.log('------------------------------------');
-    console.log('Run Test: ' + adaptor);
+    console.log('Run Test: ' + adaptor + ' - ' + test);
     console.log('------------------------------------');
   }
   switch (adaptor) {
@@ -39,9 +41,9 @@ var run = function(adaptor, cb) {
       };
       break;
     default:
-      run('memory', function(){
-        run('mysql', function() {
-          run('sqlite', function() {
+      run('memory', test, function(){
+        run('mysql', test, function() {
+          run('sqlite', test, function() {
           });
         });
       });
@@ -51,7 +53,7 @@ var run = function(adaptor, cb) {
   };
   
   fs.writeFileSync('config.json', JSON.stringify(config));
-  node = exec('node test.persistence.js', cb);
+  node = exec('node ' + test, cb);
 
   node.stdout.on('data', function(data) {
     console.log(data.replace(/[\s\r\n]+$/, ''));
@@ -66,4 +68,10 @@ var run = function(adaptor, cb) {
   });
 };
 
-run(args[0]);
+var test = __dirname + '/' +args.pop();
+path.exists(test, function(exists) {
+  if (exists) tests = [test];
+  tests.forEach(function(test) {
+    run(argv.a, test);
+  });
+});

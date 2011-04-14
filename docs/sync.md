@@ -25,16 +25,24 @@ your page, you can enable syncing on entities individually:
 The argument passed to `enableSync` is the URI of the sync server
 component.
 
-To initiate a sync, the `EntityName.syncAll(..)` method is used:
+To initiate a sync, the `EntityName.syncAll(..)` method is used. The method signature
+is the following:
+
+    EntityName.syncAll(conflictHandler, successCallback, errorCallback)
+
+successCallback and errorCallback are optional. successCallback occurs after a
+successful sync errorCallback occurs on error (I.E. a non-200 response code).
+
+conflictHandler is called in the event of a conflict between local and remote data:
 
     function conflictHandler(conflicts, updatesToPush, callback) {
-      // Decide what to do the conflicts here, possibly add to updatesToPush
+      // Decide what to do with the conflicts here, possibly add to updatesToPush
       callback();
     }
 
     EntityName.syncAll(conflictHandler, function() {
       alert('Done!');
-    });
+    }, errorHandler);
 
 There are two sample conflict handlers:
 
@@ -47,7 +55,7 @@ For instance:
 
     EntityName.syncAll(persistence.sync.preferLocalConflictHandler, function() {
       alert('Done!');
-    });
+    }, errorCallback);
 
 Note that you are responsible for syncing all entities and that there
 are no database consistencies after a sync, e.g. if you only sync `Task`s that
@@ -114,8 +122,5 @@ Limitations
   does not keep exact changes on a per-property basis, therefore
   conflicts may be introduced that need to be resolved.
 * It does not synchronize many-to-many relationships at this point
-* Error handling is not really implemented, e.g. there's no way to
-  deal with a return from the server other than "status: ok" at this
-  point.
 * There may still be many bugs, I'm not sure.
        

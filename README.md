@@ -218,7 +218,7 @@ Example use:
       metaData: "JSON"
     });
 
-    var Tag = persistence.define('Task', {
+    var Tag = persistence.define('Tag', {
       name: "TEXT"
     });
 

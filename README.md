@@ -337,7 +337,7 @@ Persisting/removing objects
 
 Similar to [hibernate](http://www.hibernate.org), `persistence.js`
 uses a tracking mechanism to determine which objects' changes have to
-be persisted to the datase. All objects retrieved from the database
+be persisted to the database. All objects retrieved from the database
 are automatically tracked for changes. New entities can be tracked to
 be persisted using the `persistence.add` function:
         

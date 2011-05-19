@@ -329,7 +329,7 @@ One-to-many and many-to-many relationships are access and manipulated
 through the `QueryCollection` API that will be discussed later:
 
     task.tags.add(tag);
-    tasks.tags.remove(tag)l
+    tasks.tags.remove(tag);
     tasks.tags.list(tx, function(allTags) { console.log(allTags); });
 
 Persisting/removing objects

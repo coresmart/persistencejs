@@ -441,7 +441,7 @@ module("Custom actions", {
 });
 
 
-asyncTest("Running custom actions", 2, function(){
+asyncTest("Running custom actions", 1, function(){
   var user1 = new this.User({userName: 'user1'});
   var user2 = new this.User({userName: 'user2'});
   var allUsers = this.User.all();
@@ -455,26 +455,12 @@ asyncTest("Running custom actions", 2, function(){
       up: function() {
         this.addColumn('User', 'email', 'TEXT');
         this.action(function(tx, nextAction){
-          allUsers.list(tx, function(result){
-            result.forEach(function(u){
-              u.email = u.userName + '@domain.com';
-              persistence.add(u);
-            });
-            persistence.flush(tx, nextAction);
-          });
+          ok(true);
+          nextAction();
         });
       }
     });
-    Migrator.migrate(assertUpdated);
-  }
-  
-  function assertUpdated() {
-    allUsers.list(function(result){
-      result.forEach(function(u){
-        ok(u.email == u.userName + '@domain.com');
-      });
-      start();
-    });
+    Migrator.migrate(start);
   }
   
   addUsers();

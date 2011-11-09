@@ -115,6 +115,29 @@ The server must expose a resource located at the given URI that responds to:
       {"status": "ok", 
        "now": 1279888110797}
 
+
+Server-side filtering
+-------------------
+
+In certain circumstances, it is not necessary or desired to push all records down to a client. A standard GET URI looks like this:
+    
+    app.get('/taskupdates', function(req, res) {
+      persistenceSync.pushUpdates(req.conn, req.tx, Task, req.query.since, function(updates){
+        res.send(updates);
+      });
+    });
+
+The third parameter in `pushUpdates` is the Entity model. If you wish to filter, simply pass a Query Collection in its place.
+    
+    app.get('/taskupdates', function(req, res) {
+      var taskCollection = Task.all(req.conn).filter('done','=',false);
+      persistenceSync.pushUpdates(req.conn, req.tx, taskCollection, req.query.since, function(updates){
+        res.send(updates);
+      });
+    });
+
+
+
 Limitations
 -----------
 

@@ -1,0 +1,514 @@
+<html>
+	<head>
+		<style>
+			#tasks-table {
+				border-collapse: collapse;
+				float: left;
+				width: 50%;
+			}
+			.remove-task, .remove-note {
+				cursor: pointer;
+			}
+			#tasks-table td, #tasks-table th {
+				border: 1px solid black;
+				padding: 0.5em;
+			}
+			.task-actions {
+				white-space: nowrap;
+			}
+			.task-priority {
+				text-align: right;
+			}
+			#task-form {
+				float: left;
+				margin: -0.5em 0 0 1em;
+			}
+			#task-notes-holder {
+				position: relative;
+				float: left;
+				margin: 0 0 0 1em;
+				width: 35%;
+				border: 1px solid black;
+				background: #eee;
+				padding: 0.5em;
+			}
+			#task-notes-closer {
+				cursor: pointer;
+				text-align: right;
+				position: absolute;
+				top: 2px;
+				right: 2px;
+			}
+			#task-notes {
+				width: 100% !important:
+			}
+			#task-notes td, #task-notes th {
+			}
+			textarea {
+				width: 100%;
+			}
+			.error {
+				color: #a00;
+			}
+			label {
+				font-weight: bold;
+			}
+			label.error {
+				color: #600;
+			}
+			.error input, .error select, .error textarea {
+				background: #fdd;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Tasks</h1>
+		<table id="tasks-table">
+			<thead>
+				<tr>
+					<td></td>
+					<th>Name</th>
+					<th>Priority</th>
+					<th>Due</th>
+					<th><a href="#sync-tasks" class="sync-tasks">Sync</a></th>
+				</tr>
+			</thead>
+			<tfoot>
+				<tr>
+					<td><span class="remove-task">X</span></td>
+					<th colspan="4"><a href="#task-form" class="add-task">Add Task</a></th>
+				</tr>
+			</tfoot>
+			<tbody>
+			</tbody>
+		</table>
+		<div id="task-notes-holder" style="display: none">
+			<span id="task-notes-closer">Close</span>
+			<h2>Notes</h2>
+			<form method="post" action="" id="note-form">
+				<fieldset><legend>Add Note</legend>
+				<label>Note:<textarea name="note_subject"></textarea></label>
+				<input type="submit" value="Save" />
+				<input type="hidden" name="task_id" value="" />
+				</fieldset>
+			</form>
+			<table id="task-notes">
+				<thead>
+					<tr>
+						<td width="5%"></td>
+						<th>Subject</th>
+						<th width="25%">Date</th>
+						<th>Author</th>
+					</tr>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+		</div>
+		<form method="post" action="" id="task-form" style="display: none">
+			<fieldset><legend>Add Task</legend>
+			<p><label>Name <textarea name="task_name" type="text" placeholder="Enter task name" /></textarea></label></p>
+			<p><label>Priority
+			<select type="number" name="task_priority"><option value="-1">(Priority)</option><option value="1">High</option><option value="2">Medium</option><option value="3">Low</option></select>
+			</label></p>
+			<p><label>Due
+			<input name="task_due" type="date" placeholder="mm/dd/yyyy" />
+			</label>
+			<input name="task_function" type="submit" value="Add" />
+			<input type="hidden" name="task_id" value="" />
+			</p>
+			</fieldset>
+		</form>
+		
+		<form method="post" action="" id="login-form" style="display: none;">
+			<fieldset>
+				<legend>Login:</legend>
+				<p>
+					<label>
+						E-mail:
+						<input type="text" name="username" size="30" /> 
+					</label>
+				</p>
+				<p>
+					<label>
+						Password:
+						<input type="password" name="password" size="30" /> 
+					</label>
+				</p>
+				<p>
+					<input type="submit" value="Login" />
+				</p>
+			</fieldset>
+		</form>
+
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+		<script src="{{ STATIC_URL }}js/session.js"></script>
+		<script src="{{ STATIC_URL }}js/persistence.js"></script>
+		<script src="{{ STATIC_URL }}js/persistence.store.sql.js"></script>
+		<script src="{{ STATIC_URL }}js/persistence.store.websql.js"></script>
+		<script src="{{ STATIC_URL }}js/persistence.sync.js"></script>
+		<script src="{{ STATIC_URL }}js/date.js"></script>
+		<script type="text/javascript">
+			var host = "{{ request.get_host }}";
+			var date_format = "M/dd/yyyy";
+			var current_user = null;
+			var session = {};
+			var priorities = {
+				1: "High",
+				2: "Medium",
+				3: "Low"
+			}
+			persistence.store.websql.config(persistence, 'demo.db',
+                                'An example database', 5 * 1024 * 1024);
+			
+			
+			{{ Note.persistence|safe }}
+			{{ User.persistence|safe }}
+			{{ Task.persistence|safe }}
+			Task.hasMany('notes', Note, 'task');
+			User.hasMany('notes', Note, 'user');
+
+			persistence.schemaSync();
+			persistence.flush();
+			
+			function buildURL(baseURL) {
+				var url = baseURL;
+				if (location.host != host || !(document.cookie && document.cookie.length)) {
+					url = "http://" + host + baseURL;
+					if (session && session.session_key_name) {
+						url += "?" + session.session_key_name + "=" + session.session_key;
+					}
+				}
+				return url;
+			}
+
+			function setup() {
+				if ( location.host !== host ) {
+					Session.init({
+						url: buildURL('/sync/session/'),
+						login_form: $("#login-form")
+					}, function () {
+						session = Session.get_session();
+						post_setup();
+					});
+				} else {
+					post_setup();
+				}
+			}
+
+			function post_setup() {
+				if (session && session.user) {
+					User.all().filter("id", "=", session.user.id).count(function (matches){
+						if (matches === 0) {
+							current_user = new User({
+								'id': session.user.username,
+								'username': session.user.username,
+								'first_name': session.user.first_name,
+								'last_name': session.user.last_name,
+								'email': session.user.email
+							});
+							persistence.add(current_user);
+							persistence.flush();
+						} else {
+							User.load(session.user.id, function (record) {
+								current_user = record;
+							});
+						}
+					});
+				}
+				Task.enableSync(buildURL('{{ Task.persistence.url }}'));
+				Note.enableSync(buildURL('{{ Note.persistence.url }}'));
+				User.enableSync(buildURL('{{ User.persistence.url }}'));
+				User.syncAll(persistence.sync.preferRemoteConflictHandler, function (){});
+				SyncTasks(UpdateTasks);
+				SyncNotes();
+			}
+			setup();
+
+			
+			$(".remove-task").live("click", function (e){
+				var $row = $(this).parents('tr'),
+					task_id = $row.attr('rel');
+				Task.load(task_id, function (record) {
+					persistence.remove(record);
+					persistence.flush();
+					UpdateTasks();
+				})
+					
+			});
+			
+			$(".remove-note").live("click", function (e){
+				var $row = $(this).parents('tr'),
+					note_id = $row.attr('rel');
+				Note.load(note_id, function (record) {
+					var task_id = record.task.id;
+					persistence.remove(record);
+					persistence.flush();
+					SyncNotes(function(){
+						UpdateNotes(task_id);
+					});
+				})
+					
+			});
+			
+			$(".edit-task").live("click", function () {
+				var taskform = $("#task-form")[0],
+					$row = $(this).parents('tr'),
+					task_id = $row.attr('rel'), 
+					record = null;
+				$("#task-notes-holder").hide();
+				taskform.task_id.value=task_id;
+				taskform.task_function.value = "Update";
+				record = Task.load(task_id, function (r) {
+					taskform.task_name.value = r.name;
+					taskform.task_due.value = stringifyDate(r.date_due);
+					$(taskform.task_priority).val(r.priority);
+				})
+				$(taskform).find("legend").html("Edit Task").parent().parent().show();
+			});
+			
+			function stringifyDate(obj) {
+				var display_date;
+				try {
+					if (obj && obj.getTime) {
+						display_date = obj.toString(date_format);
+					} else if (obj > 1000000000000) {
+						display_date = new Date(obj).toString(date_format);
+					} else if (obj > 100000000 ) {
+						display_date = new Date(obj * 1000.0).toString(date_format);
+					}
+				} catch (e) {
+					display_date = "None";
+				}
+				return display_date;
+			}
+			
+			function UpdateNotes(task_id) {
+				var $notes = $("#task-notes tbody");
+				$notes.empty();
+				Task.load(task_id, function (record) {
+					record.notes.count(function (count) {
+						if (count==0) {
+							$('<tr><td colspan="3"><em>None</em></td></tr>').appendTo($notes);
+						}
+					});
+					record.notes.prefetch("user").each(function (note) {
+						var $row = $("<tr>").attr('rel', note.id),
+							$remove = $('<td><span class="remove-note">X</span></td>'),
+							$date = $("<td>").html(stringifyDate(note.date_created)).addClass("note-date"),
+							$subject = $("<td>").addClass("note-subject").html(note.subject),
+							$user = $("<td>").addClass("note-user").html(note.user.first_name + ' ' + note.user.last_name);
+						$row.append($remove).append($subject).append($date).append($user);
+						$row.appendTo($notes);
+					});
+				});
+			}
+			
+			$('#task-notes-closer').click(function (){
+				$("#task-notes-holder").hide();
+			})
+			$(".show-notes").live("click", function (){
+				var $notes = $("#task-notes tbody"),
+					$row = $(this).parents('tr'),
+					task_id = $row.attr('rel');
+				$notes.attr('rel', task_id);
+				$("#task-notes-holder").show();
+				$("#note-form").find("input[name='task_id']").val(task_id);
+				$("#note-form").find("input[name='note_subject']").val("");
+				UpdateNotes(task_id);
+			});
+			
+			$(".add-task").click(function () {
+				var taskform = $("#task-form")[0],
+					$row = $(this).parents('tr'),
+					task_id = $row.attr('rel'), 
+					record = null;
+				taskform.task_id.value="";
+				taskform.task_name.value = "";
+				taskform.task_due.value = "";
+				taskform.task_priority.selectedIndex = -1;
+				taskform.task_function.value = "Add";
+				$("#task-notes-holder").hide();
+				$(taskform).find("legend").html("Add Task")
+				$(taskform).show();
+			});
+			
+			function beginValidate(form) {
+				$(form).attr('valid', true);
+			}
+			
+			function formValid(form) {
+				return ($(form).attr('valid').toString() === "true");
+			}
+			
+			function formError(el, msg) {
+				$(el).parent().addClass('error');
+				$(el).after('<div class="error">' + msg + '</div>');
+				$(el.form).attr('valid', false);
+			}
+			
+			$("#note-form").submit(function (event) {
+				var record = null,
+					note_subject = this.note_subject.value;
+				$(this).find('div.error').remove();
+				event.stopPropagation();
+				event.preventDefault();
+				beginValidate(this);
+				if (!note_subject || !note_subject.length) {
+					formError(this.note_subject, "You must enter something for the note.");
+				}
+				if (!formValid(this)) {
+					return false;
+				}
+				Task.load(this.task_id.value, function (task) {
+					record = new Note({
+						subject: note_subject,
+						date_created: new Date(),
+						user: current_user
+					});
+					task.notes.add(record);
+					persistence.flush();
+					SyncNotes(function () {
+						UpdateNotes(task.id);
+					});
+				});
+				return false;
+			})
+
+			$("#task-form").submit(function (event) {
+				var record = null,
+					task_name = this.task_name.value,
+					task_priority = $(this.task_priority).val(),
+					task_due = this.task_due.value;
+				$(this).find('div.error').remove();
+				event.stopPropagation();
+				event.preventDefault();
+
+				beginValidate(this);
+				if (!task_name || !task_name.length) {
+					formError(this.task_name, "You must enter a task name");
+				}
+				if (!task_priority || task_priority < 1) {
+					formError(this.task_priority, "You must choose the task's priority.");
+				}
+				if (task_due && task_due.length) {
+					try {
+						task_due = Date.parse(task_due);
+					} catch (e) {
+					}
+					if (!task_due) {
+						formError(this.task_due, "Please enter a valid date.")
+					}
+				}
+				if (!formValid(this)) {
+					return false;
+				}
+				if (this.task_id.value) {
+					Task.load(this.task_id.value, function (r) {
+						r.name = task_name;
+						r.date_due = task_due;
+						r.priority = task_priority;
+						persistence.flush();
+						var n = new Note({
+							subject: 'Task "' + r.name + '" updated ' + new Date(),
+							date_created: new Date()
+						});
+						r.notes.add(n);
+						persistence.flush();
+						SyncTasks(function () {
+							UpdateTasks();
+							SyncNotes();
+						});
+					});
+				} else {
+					record = new Task({
+						name: task_name,
+						date_due: task_due,
+						priority: task_priority
+					});
+					persistence.add(record);
+					persistence.flush();
+					var n = new Note({
+						subject: 'Created Task: "' + record.name + '" ' + new Date(),
+						date_created: new Date()
+					});
+					record.notes.add(n);
+					persistence.flush();
+					SyncTasks(function () {
+						UpdateTasks();
+						SyncNotes();
+					});
+				}
+				$(this).hide();
+				return false;
+			})
+			
+			function UpdateTasks() {
+				var $tasks = $("#tasks-table tbody");
+				var allTasks = Task.all().order("name");
+				persistence.flush();
+				allTasks.list(null, function (results) {
+					$tasks.empty();
+					results.forEach(function (r) {
+						var $row = $("<tr>").attr('rel', r.id),
+							$remove = $('<td><span class="remove-task">X</span></td>'),
+							$name = $("<td>").addClass("task-name").html(r.name ? r.name : "no name"),
+							$priority = $("<td>").addClass("task-priority").html(r.priority ? priorities[r.priority] : "none"),
+							$due = $("<td>").addClass("task-due"),
+							$action = $('<td><a class="edit-task" href="#task-form">Edit</a> <a class="show-notes" href="#task-notes-holder">Notes</a></td>').addClass("task-actions");
+						$due.html(stringifyDate(r.date_due));
+						$row.append($remove).append($name).append($priority).append($due).append($action);
+						$row.appendTo($tasks);
+					});
+				});
+			}
+
+			function SyncTasks(callback) {
+				if (navigator.onLine) {
+					Task.syncAll(persistence.sync.preferRemoteConflictHandler, function() {
+						persistence.flush();
+						if (callback) {
+							callback();						
+						}
+					}, function (e) {
+						console.log("Error", e);
+						// Error occurred during sync, so just continue to the callback
+						if (callback) {
+							callback();
+						}
+					});
+				} else {
+					// Browser is offline, so we don't sync.
+					callback();
+				}
+			}
+
+			$(".sync-tasks").click(function () {
+				SyncTasks(function (){
+					SyncNotes();
+					UpdateTasks();
+				});
+			});
+
+			function SyncNotes(callback) {
+				if (navigator.onLine) {
+					Note.syncAll(persistence.sync.preferLocalConflictHandler, function() {
+						persistence.flush();
+						if (callback) {
+							callback();
+						}
+					}, function () {
+						if (callback) {
+							callback();
+						}
+					});
+				} else {
+					// Browser is offline, so we don't sync.
+					callback();
+				}
+			}
+			
+
+		</script>
+	</body>
+</html>

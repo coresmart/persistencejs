@@ -1,0 +1,6 @@
+[submodule "repos/persistencejs"]
+	path = repos/persistencejs
+	url = git://github.com/zefhemel/persistencejs.git
+[submodule "repos/datejs"]
+	path = repos/datejs
+	url = git://github.com/datejs/Datejs.git

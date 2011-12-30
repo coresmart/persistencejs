@@ -1,0 +1,28 @@
+Changes
+=======
+
+* Moved all the SQL stuff into persistence.store.sql.js, and WebSQL to
+	persistence.store.websql.js. So, to use a WebSQL browser database you need
+	to include 3 files in your HTML now:
+
+			<script src="persistence.js" type="application/javascript"></script>
+			<script src="persistence.store.sql.js" type="application/javascript"></script>
+			<script src="persistence.store.websql.js" type="application/javascript"></script>
+
+	Then, instead of using `persistence.connect` use:
+
+			persistence.store.websql.config(persistence, 'dbname', 'My db', 5 * 1024 * 1024);
+
+  For node.js and MySQL:
+
+      var persistence = require('./persistence').persistence;
+      var persistenceStore = require('./persistence.store.mysql');
+
+      persistenceStore.config(persistence, 'localhost', 'somedb', 'user', 'pw');
+      var session = persistenceStore.getSession();
+      ...
+      session.close();
+
+* persistence.db.log is now called persistence.debug
+
+v0.1.1: Last version with only one persistence.js file

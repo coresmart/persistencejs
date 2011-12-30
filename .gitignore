@@ -1,2 +1,6 @@
 /.project
 /.pydevproject
+/django_cms.egg-info
+/dist
+/django_persistencejs.egg-info
+/build

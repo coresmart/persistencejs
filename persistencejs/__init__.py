@@ -1,7 +1,10 @@
 # Basic concepts shamelessly stolen from https://github.com/brosner/django-tagging/blob/master/tagging/__init__.py
-from django.conf import settings
 
-from base import PersistentRecord
+VERSION = (2, 1, 0, 'beta3')
+if VERSION[-1] != "final": # pragma: no cover
+    __version__ = '.'.join(map(str, VERSION))
+else: # pragma: no cover
+    __version__ = '.'.join(map(str, VERSION[:-1]))
 
 class AlreadyRegistered(Exception):
     """
@@ -15,32 +18,15 @@ class NotRegistered(Exception):
     """
     pass
 
-
-#class _registry(object):
-#    items = []
-#    
-#    def append(self, item):
-#        self.items.append(item)
-# 
-#    def __contains__(self, model):
-#        for k, v in self.items:
-#            if k == model:
-#                return True
-#        return False
-#    
-#    def get(self, model):
-#        for k, v in self.items:
-#            if k == model:
-#                return (k,v)
-#        raise KeyError(model)
-#
-#registry = _registry()
 registry = []
 
-def register(model, persistence_class=PersistentRecord):
+def register(model, persistence_class=None):
     """
     Sets the given model class up for working with tags.
     """
+    if persistence_class == None:
+        from base import PersistentRecord
+        persistence_class = PersistentRecord
 
     if model in registry:
         raise AlreadyRegistered("The model '%s' has already been "
@@ -50,8 +36,11 @@ def register(model, persistence_class=PersistentRecord):
 
     registry.append(model)
     
-
-if 'django.contrib.auth' in settings.INSTALLED_APPS:
-    from django.contrib.auth.models import User
-    from auth import UserRecord
-    register(User, UserRecord)
+try:
+    from django.conf import settings
+    if 'django.contrib.auth' in settings.INSTALLED_APPS:
+        from django.contrib.auth.models import User
+        from auth import UserRecord
+        register(User, UserRecord)
+except ImportError:
+    pass 

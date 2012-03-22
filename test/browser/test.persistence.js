@@ -423,6 +423,28 @@ $(document).ready(function(){
       });
   }
 
+  function textOrderTests(coll, callback) {
+    var taskNames = ['Task A', 'task b', 'Task C', 'task d'];
+    var tasks = [];
+    for(var i = 0; i < taskNames.length; i++) {
+      var t = new Task({name: taskNames[i]});
+      tasks.push(t);
+      coll.add(t);
+    }
+    coll.order('name', true, true).list(function(results) {
+        var expectedIndices = [0, 2, 1, 3];
+        for(var i = 0; i < tasks.length; i++) {
+          equals(results[i].id, tasks[expectedIndices[i]].id, "order check, ascending, case sensitive");
+        }
+        coll.order('name', true, false).list(function(results) {
+            for(var i = 0; i < tasks.length; i++) {
+              equals(results[i].id, tasks[i].id, "order check, ascending, case insensitive");
+            }
+            callback();
+          });
+      });
+  }
+
   function dateOrderTests(coll, callback) {
     var now = new Date();
 
@@ -461,6 +483,17 @@ $(document).ready(function(){
   asyncTest("Local INT order", function() {
       var coll = new persistence.LocalQueryCollection();
       intOrderTests(coll, start);
+    });
+
+  asyncTest("Database TEXT order", function() {
+      var p = new Project({name: "My project"});
+      persistence.add(p);
+      textOrderTests(p.tasks, start);
+    });
+
+  asyncTest("Local TEXT order", function() {
+      var coll = new persistence.LocalQueryCollection();
+      textOrderTests(coll, start);
     });
 
   asyncTest("Database DATE order", function() {

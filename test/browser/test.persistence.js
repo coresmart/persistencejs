@@ -228,6 +228,24 @@ $(document).ready(function(){
         });
     });
 
+  asyncTest("Many-to-many with local changes", function() {
+      var t = new Task({name: "Some task"});
+      persistence.add(t);
+      t.tags.list(function(tags) {
+          equals(tags.length, 0, "Initially, no tags");
+          var tag1 = new Tag({name: "important"});
+          var tag2 = new Tag({name: "today"});
+          t.tags.add(tag1);
+          t.tags.add(tag2);
+          t.tags.remove(tag1);
+          t.tags.list(function(tags) {
+              equals(tags.length, 1, "2 tags added, 1 removed");
+              equals(tags[0].id, tag2.id, "Correct tag left");
+              start();
+            });
+        });
+    });
+
   module("Query collections", {
       setup: function() {
         stop();

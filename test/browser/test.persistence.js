@@ -182,6 +182,39 @@ $(document).ready(function(){
         });
     });
 
+  asyncTest("Removing objects", function() {
+      var originalTasks = [];
+      var counter = 0;
+      for(var i = 0; i < 25; i++) {
+        var t = new Task({name: "Task " + i});
+        t.counter = counter;
+        originalTasks.push(t);
+        persistence.add(t);
+        counter++;
+      }
+      for(var i = 0; i < 5; i++) {
+        persistence.remove(originalTasks[i]);
+      }
+      Task.all().order('counter', true).list(function(tasks) {
+          equals(tasks.length, 20, 'Correct count after removing local objects');
+          for(var i = 5; i < 25; i++) {
+            equals(tasks[i - 5].id, originalTasks[i].id, 'Correct objects after removing local objects');
+          }
+
+          for(var i = 5; i < 10; i++) {
+            persistence.remove(originalTasks[i]);
+          }
+          Task.all().order('counter', true).list(function(tasks) {
+              equals(tasks.length, 15, 'Correct count after removing persisted objects');
+              for(var i = 10; i < 25; i++) {
+                equals(tasks[i - 10].id, originalTasks[i].id, 'Correct objects after removing persisted objects');
+              }
+
+              start();
+            });
+        });
+    });
+
   asyncTest("One-to-many", function() {
       var p = new Project({name: "Some project"});
       persistence.add(p);

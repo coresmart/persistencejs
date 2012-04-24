@@ -532,12 +532,15 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order("counter", true).limit(5).list(function(results) {
-        equals(results.length, 5, "Result length check");
-        for(var i = 0; i < 5; i++) {
-          equals(results[i].id, tasks[i].id, "limit check");
-        }
-        start();
+    coll.order("counter", true).limit(5).count(function(count) {
+        equals(count, 5, "Count check");
+        coll.order("counter", true).limit(5).list(function(results) {
+            equals(results.length, 5, "Result length check");
+            for(var i = 0; i < 5; i++) {
+              equals(results[i].id, tasks[i].id, "limit check");
+            }
+            start();
+          });
       });
   }
 
@@ -548,12 +551,15 @@ $(document).ready(function(){
       tasks.push(t);
       coll.add(t);
     }
-    coll.order("counter", true).skip(5).limit(5).list(function(results) {
-        equals(results.length, 5, "Result length check");
-        for(var i = 5; i < 10; i++) {
-          equals(results[i-5].id, tasks[i].id, "skip check");
-        }
-        start();
+    coll.order("counter", true).skip(5).limit(5).count(function(count) {
+        equals(count, 5, "Count check");
+        coll.order("counter", true).skip(5).limit(5).list(function(results) {
+            equals(results.length, 5, "Result length check");
+            for(var i = 5; i < 10; i++) {
+              equals(results[i-5].id, tasks[i].id, "skip check");
+            }
+            start();
+          });
       });
   }
 

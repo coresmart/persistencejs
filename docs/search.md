@@ -4,6 +4,10 @@ persistence.search.js
 `persistence.js` library that adds full-text search through a simple
 API.
 
+Initialization:
+
+    persistence.search.config(persistence, persistence.store.websql.sqliteDialect);
+
 Example usage:
 
     var Note = persistence.define('Note', {

@@ -585,8 +585,8 @@ Setup
 You need to `require` two modules, the `persistence.js` library itself
 and the MySQL backend module.
 
-    var persistence = require('persistencejs/persistence').persistence;
-    var persistenceStore = require('persistencejs/persistence.store.mysql');
+    var persistence = require('persistencejs');
+    var persistenceStore = persistence.StoreConfig.init(persistence, { adaptor: 'mysql' });
 
 Then, you configure the database settings to use:
 

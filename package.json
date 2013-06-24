@@ -1,6 +1,6 @@
 {
   "name": "persistencejs",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "engine": "node >=0.2.0",
   "author": "Zef Hemel",
   "directories": {"lib": "./lib"}

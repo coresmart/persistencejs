@@ -60,26 +60,32 @@ meantime, the browser can perform other duties.
 
 For instance, a synchronous database call call would look as follows:
 
-    var results = db.query("SELECT * FROM Table");
-    for(...) { ... }
+```javascript
+var results = db.query("SELECT * FROM Table");
+for(...) { ... }
+```
 
 The execution of the first statement could take half a second, during
 which the browser doesn't do anything else. By contrast, the
 asynchronous version looks as follows:
 
-    db.query("SELECT * FROM Table", function(results) {
-      for(...) { ... }
-    });
+```javascript
+db.query("SELECT * FROM Table", function(results) {
+  for(...) { ... }
+});
+```
 
 Note that there will be a delay between the `db.query` call and the
 result being available and that while the database is processing the
 query, the execution of the Javascript continues. To make this clear,
 consider the following program:
     
-    db.query("SELECT * FROM Table", function(results) {
-      console.log("hello");
-    });
-    console.log("world");
+```javascript
+db.query("SELECT * FROM Table", function(results) {
+  console.log("hello");
+});
+console.log("world");
+```
 
 Although one could assume this would print "hello", followed by
 "world", the result will likely be that "world" is printed before
@@ -120,9 +126,11 @@ requires you to copy at least `lib/persistence.js`,
 `lib/persistence.store.sql.js` and `lib/persistence.store.websql.js` to your
 web directory. You can then load them as follows:
 
-    <script src="persistence.js" type="application/javascript"></script>
-    <script src="persistence.store.sql.js" type="application/javascript"></script>
-    <script src="persistence.store.websql.js" type="application/javascript"></script>
+```html
+<script src="persistence.js" type="application/javascript"></script>
+<script src="persistence.store.sql.js" type="application/javascript"></script>
+<script src="persistence.store.websql.js" type="application/javascript"></script>
+```
 
 If you want to use the in-memory store (in combination with
 `localStorage`) you also need the `persistence.store.memory.js`
@@ -136,7 +144,9 @@ You need to explicitly configure the data store you want to use,
 configuration of the data store is store-specific. The WebSQL store
 (which includes Google Gears support) is configured as follows:
 
-    persistence.store.websql.config(persistence, 'yourdbname', 'A database description', 5 * 1024 * 1024);
+```javascript
+persistence.store.websql.config(persistence, 'yourdbname', 'A database description', 5 * 1024 * 1024);
+```
 
 The first argument is always supposed to be `persistence`. The second
 in your database name (it will create it if it does not already exist,
@@ -163,15 +173,19 @@ If you're going to use the in-memory store, you can configure it as follows:
 
 Then, if desired, current data can be loaded from the localStorage using:
 
-    persistence.loadFromLocalStorage(function() {
-      alert("All data loaded!");
-    });
+```javascript
+persistence.loadFromLocalStorage(function() {
+  alert("All data loaded!");
+});
+```
 
 And saved using:
 
-    persistence.saveToLocalStorage(function() {
-      alert("All data saved!");
-    });
+```javascript
+persistence.saveToLocalStorage(function() {
+  alert("All data saved!");
+});
+```
 
 Drawbacks of the in-memory store:
 
@@ -207,20 +221,22 @@ types are (but any SQLite type is supported):
 
 Example use:
     
-    var Task = persistence.define('Task', {
-      name: "TEXT",
-      description: "TEXT",
-      done: "BOOL"
-    });
+```javascript
+var Task = persistence.define('Task', {
+  name: "TEXT",
+  description: "TEXT",
+  done: "BOOL"
+});
 
-    var Category = persistence.define('Category', {
-      name: "TEXT",
-      metaData: "JSON"
-    });
+var Category = persistence.define('Category', {
+  name: "TEXT",
+  metaData: "JSON"
+});
 
-    var Tag = persistence.define('Tag', {
-      name: "TEXT"
-    });
+var Tag = persistence.define('Tag', {
+  name: "TEXT"
+});
+```
 
 The returned values are constructor functions and can be used to
 create new instances of these entities later.
@@ -228,21 +244,27 @@ create new instances of these entities later.
 It is possible to create indexes on one or more columns using
 `EntityName.index`, for instance:
 
-    Task.index('done');
-    Task.index(['done', 'name']);
+```javascript
+Task.index('done');
+Task.index(['done', 'name']);
+```
 
 These indexes can also be used to impose unique constraints :
 
-    Task.index(['done', 'name'],{unique:true});
+```javascript
+Task.index(['done', 'name'],{unique:true});
+```
 
 Relationships between entities are defined using the constructor
 function's `hasMany` call:
 
-    // This defines a one-to-many relationship:
-    Category.hasMany('tasks', Task, 'category');
-    // These two definitions define a many-to-many relationship
-    Task.hasMany('tags', Tag, 'tasks');
-    Tag.hasMany('tasks', Task, 'tags');
+```javascript
+// This defines a one-to-many relationship:
+Category.hasMany('tasks', Task, 'category');
+// These two definitions define a many-to-many relationship
+Task.hasMany('tags', Tag, 'tasks');
+Tag.hasMany('tasks', Task, 'tags');
+```
         
 The first statement defines a `tasks` relationship on category objects
 containing a `QueryCollection` (see the section on query collections
@@ -258,12 +280,14 @@ function (with a newly created transaction as an argument), that is called
 when the schema synchronization has completed, the callback is
 optional.
 
-    persistence.schemaSync();
-    // or
-    persistence.schemaSync(function(tx) { 
-      // tx is the transaction object of the transaction that was
-      // automatically started
-    });
+```javascript
+persistence.schemaSync();
+// or
+persistence.schemaSync(function(tx) { 
+  // tx is the transaction object of the transaction that was
+  // automatically started
+});
+```
 
 There is also a migrations plugin you can check out, documentation can be found
 in [persistence.migrations.docs.md](migrations/persistence.migrations.docs.md) file.
@@ -276,25 +300,31 @@ You can also define mix-ins and apply them to entities of the model.
 A mix-in definition is similar to an entity definition, except using
 `defineMixin` rather than just `define`. For example:
 
-    var Annotatable = persistence.defineMixin('Annotatable', {
-      lastAnnotated: "DATE"
-    });
+```javascript
+var Annotatable = persistence.defineMixin('Annotatable', {
+  lastAnnotated: "DATE"
+});
+```
 
 You can define relationships between mix-in and entities. For example:
 
-    // A normal entity
-    var Note = persistence.define('Note', {
-      text: "TEXT"
-    });
-  
-    // relationship between a mix-in and a normal entity
-    Annotatable.hasMany('notes', Note, 'annotated');
+```javascript
+// A normal entity
+var Note = persistence.define('Note', {
+  text: "TEXT"
+});
+
+// relationship between a mix-in and a normal entity
+Annotatable.hasMany('notes', Note, 'annotated');
+```
 
 Once you have defined a mix-in, you can apply it to any entity of your model, 
 with the `Entity.is(mixin)` method. For example:
 
-    Project.is(Annotatable);
-    Task.is(Annotatable);
+```javascript
+Project.is(Annotatable);
+Task.is(Annotatable);
+```
     
 Now, your `Project` and `Task` entities have an additional `lastAnnotated` property.
 They also have a one to many relationship called `notes` to the `Note` entity. 
@@ -316,21 +346,27 @@ New objects can be instantiated with the constructor functions.
 Optionally, an object with initial property values can be passed as
 well, or the properties may be set later:
 
-    var task = new Task();
-    var category = new Category({name: "My category"});
-    category.metaData = {rating: 5};
-    var tag = new Tag();
-    tag.name = "work";
+```javascript
+var task = new Task();
+var category = new Category({name: "My category"});
+category.metaData = {rating: 5};
+var tag = new Tag();
+tag.name = "work";
+```
 
 Many-to-one relationships are accessed using their specified name, e.g.:
-    task.category = category;
+```javascript
+task.category = category;
+```
 
 One-to-many and many-to-many relationships are access and manipulated
 through the `QueryCollection` API that will be discussed later:
 
-    task.tags.add(tag);
-    tasks.tags.remove(tag);
-    tasks.tags.list(tx, function(allTags) { console.log(allTags); });
+```javascript
+task.tags.add(tag);
+tasks.tags.remove(tag);
+tasks.tags.list(tx, function(allTags) { console.log(allTags); });
+```
 
 Persisting/removing objects
 ---------------------------
@@ -340,41 +376,49 @@ uses a tracking mechanism to determine which objects' changes have to
 be persisted to the database. All objects retrieved from the database
 are automatically tracked for changes. New entities can be tracked to
 be persisted using the `persistence.add` function:
-        
-    var c = new Category({name: "Main category"});
-    persistence.add(c);
-    for ( var i = 0; i < 5; i++) {
-      var t = new Task();
-      t.name = 'Task ' + i;
-      t.done = i % 2 == 0;
-      t.category = c;
-      persistence.add(t);
-    }
+       
+```javascript 
+var c = new Category({name: "Main category"});
+persistence.add(c);
+for ( var i = 0; i < 5; i++) {
+  var t = new Task();
+  t.name = 'Task ' + i;
+  t.done = i % 2 == 0;
+  t.category = c;
+  persistence.add(t);
+}
+```
 
 Objects can also be removed from the database:
 
-    persistence.remove(c);
+```javascript
+persistence.remove(c);
+```
 
 All changes made to tracked objects can be flushed to the database by
 using `persistence.flush`, which takes a transaction object and
 callback function as arguments. A new transaction can be started using
 `persistence.transaction`:
     
-    persistence.transaction(function(tx) {
-      persistence.flush(tx, function() {
-        alert('Done flushing!');
-      });
-    });
+```javascript
+persistence.transaction(function(tx) {
+  persistence.flush(tx, function() {
+    alert('Done flushing!');
+  });
+});
+```
 
 For convenience, it is also possible to not specify a transaction or
 callback, in that case a new transaction will be started
 automatically. For instance:
 
-    persistence.flush();
-    // or, with callback
-    persistence.flush(function() {
-      alert('Done flushing');
-    });
+```javascript
+persistence.flush();
+// or, with callback
+persistence.flush(function() {
+  alert('Done flushing');
+});
+```
 
 Note that when no callback is defined, the flushing still happens
 asynchronously.
@@ -393,9 +437,11 @@ The library supports two kinds of dumping and restoring data.
 dump of a database. Naturally, it is adviced to only do this with
 smaller databases. Example:
 
-    persistence.dump(tx, [Task, Category], function(dump) {
-      console.log(dump);
-    });
+```javascript
+persistence.dump(tx, [Task, Category], function(dump) {
+  console.log(dump);
+});
+```
 
 The `tx` is left out, a new transaction will be started for the
 operation. If the second argument is left out, `dump` defaults
@@ -403,15 +449,19 @@ to dumping _all_ defined entities.
 
 The dump format is:
     
-    {"entity-name": [list of instances],
-     ...}
+```javascript
+{"entity-name": [list of instances],
+ ...}
+```
 
 `persistence.load` is used to restore the dump produced by
 `persistence.dump`. Usage:
 
-    persistence.load(tx, dumpObj, function() {
-      alert('Dump restored!');
-    });
+```javascript
+persistence.load(tx, dumpObj, function() {
+  alert('Dump restored!');
+});
+```
 
 The `tx` argument can be left out to automatically start a new
 transaction. Note that `persistence.load` does not empty the database
@@ -554,14 +604,16 @@ Query collections are returned by:
 
 Example:
 
-    var allTasks = Task.all().filter("done", '=', true).prefetch("category").order("name", false).limit(10);
-        
-    allTasks.list(null, function (results) {
-        results.forEach(function (r) {
-            console.log(r.name)
-            window.task = r;
-        });
+```javascript
+var allTasks = Task.all().filter("done", '=', true).prefetch("category").order("name", false).limit(10);
+    
+allTasks.list(null, function (results) {
+    results.forEach(function (r) {
+        console.log(r.name)
+        window.task = r;
     });
+});
+```
 
 Using persistence.js on the server
 ==================================
@@ -585,26 +637,34 @@ Setup
 You need to `require` two modules, the `persistence.js` library itself
 and the MySQL backend module.
 
-    var persistence = require('persistencejs');
-    var persistenceStore = persistence.StoreConfig.init(persistence, { adaptor: 'mysql' });
+```javascript
+var persistence = require('persistencejs');
+var persistenceStore = persistence.StoreConfig.init(persistence, { adaptor: 'mysql' });
+```
 
 Then, you configure the database settings to use:
 
-    persistenceStore.config(persistence, 'localhost', 3306, 'dbname', 'username', 'password');
+```javascript
+persistenceStore.config(persistence, 'localhost', 3306, 'dbname', 'username', 'password');
+```
 
 Subsequently, for every connection you handle (assuming you're
 building a sever), you call the `persistenceStore.getSession()`
 method:
 
-    var session = persistenceStore.getSession();
+```javascript
+var session = persistenceStore.getSession();
+```
 
 This session is what you pass around, typically together with a
 transaction object. Note that currently you can only have one
 transaction open per session and transactions cannot be nested.
 
-    session.transaction(function(tx) {
-      ...
-    });
+```javascript
+session.transaction(function(tx) {
+  ...
+});
+```
 
 Commit and Rollback
 -------------------
@@ -620,22 +680,24 @@ You can then use the following two methods to control the transaction:
 
 Typical code will look like:
  
-    session.transaction(true, function(tx) {
-      // create/update/delete objects
-      modifyThings(session, tx, function(err, result) {
-        if (err) {
-          // something went wrong
-          tx.rollback(session, function() {
-            console.log('changes have been rolled back: ' + ex.message);
-          });
-        }
-        else {
-          // success
-          tx.commit(session, function() {
-            console.log('changes have been committed: ' result);
-        });
+```javascript
+session.transaction(true, function(tx) {
+  // create/update/delete objects
+  modifyThings(session, tx, function(err, result) {
+    if (err) {
+      // something went wrong
+      tx.rollback(session, function() {
+        console.log('changes have been rolled back: ' + ex.message);
       });
+    }
+    else {
+      // success
+      tx.commit(session, function() {
+        console.log('changes have been committed: ' result);
     });
+  });
+});
+```
 
 Explicit commit and rollback is only supported on MySQL (server side) 
 for now.
@@ -645,17 +707,21 @@ Defining your data model
 
 Defining your data model is done in exactly the same way as regular `persistence.js`:
 
-    var Task = persistence.define('Task', {
-      name: "TEXT",
-      description: "TEXT",
-      done: "BOOL"
-    });
+```javascript
+var Task = persistence.define('Task', {
+  name: "TEXT",
+  description: "TEXT",
+  done: "BOOL"
+});
+```
 
 A `schemaSync` is typically performed as follows:
 
-    session.schemaSync(tx, function() {
-      ...
-    });
+```javascript
+session.schemaSync(tx, function() {
+  ...
+});
+```
 
 Creating and manipulating objects
 ---------------------------------
@@ -664,13 +730,15 @@ Creating and manipulating objects is done much the same way as with
 regular `persistence.js`, except that in the entity's constructor you
 need to reference the `Session` again:
 
-    var t = new Task(session);
-    ...
-    session.add(t);
+```javascript
+var t = new Task(session);
+...
+session.add(t);
 
-    session.flush(tx, function() {
-      ...
-    });
+session.flush(tx, function() {
+  ...
+});
+```
 
 Query collections
 -----------------
@@ -679,16 +747,20 @@ Query collections work the same way as in regular `persistence.js`
 with the exception of the `Entity.all()` method that now also requires
 a `Session` to be passed to it:
 
-    Task.all(session).filter('done', '=', true).list(tx, function(tasks) {
-      ...
-    });
+```javascript
+Task.all(session).filter('done', '=', true).list(tx, function(tasks) {
+  ...
+});
+```
 
 Closing the session
 -------------------
 
 After usage, you need to close your session:
 
-    session.close();
+```javascript
+session.close();
+```
 
 Bugs and Contributions
 ======================

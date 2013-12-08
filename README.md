@@ -109,7 +109,7 @@ lacks `__defineGetter__` and `__defineSetter__` support, which
 Setting up
 ----------
 
-Using `bower`:
+* Using `bower`:
 
 ```shell
 bower install persistence
@@ -129,7 +129,7 @@ If you want to use the in-memory store (in combination with
 `localStorage`) you also need the `persistence.store.memory.js`
 included.
 
-Using directly from source:
+* Using directly from source:
 
     git clone git://github.com/zefhemel/persistencejs.git
 

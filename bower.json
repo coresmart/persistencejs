@@ -1,0 +1,32 @@
+{
+  "name": "persistence",
+  "main": "./lib/persistence.js",
+  "version": "0.3.0",
+  "_release": "0.3.0",
+  "_target": "~0.3.0",
+  "_source": "git://github.com/zefhemel/persistencejs.git",
+  "homepage": "http://persistencejs.org",
+  "authors": [
+    "Zef Hemel <zef@zef.me>",
+    "Fabio Rehm <fgrehm@gmail.com>",
+    "Lukas Berns",
+    "Roberto Saccon <rsaccon@gmail.com>",
+    "Wilker Lúcio <wilkerlucio@gmail.com>",
+    "Bruno Jouhier <bjouhier@gmail.com>",
+    "Robin Wenglewski <robin@wenglewski.de>",
+    "Matthias Hochgatterer <matthias.hochgatterer@gmail.com>",
+    "Chris Chua <chris.sirhc@gmail.com>",
+    "Mike Smullin <mike@smullindesign.com>",
+    "Masahiro Hayashi <hayashi.masahiro@gmail.com>",
+    "Mick Staugaard <mick@staugaard.com>",
+    "Shane Tomlinson <set117@gmail.com>",
+    "Eugene Ware <eugene.ware@nextharbour.com>"
+  ],
+  "description": "An asynchronous Javascript database mapper library. You can use it in the browser, as well on the server (and you can share data models between them).",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "test"
+  ]
+}

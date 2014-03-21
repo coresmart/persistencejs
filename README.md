@@ -150,6 +150,23 @@ in your database name (it will create it if it does not already exist,
 the third is a description for you database, the last argument is the
 maximum size of your database in bytes (5MB in this example).
 
+## Setting up for Cordova with SQLitePlugin/WebSQL
+
+Use following if you want to use `persistencejs` in a [Cordova](https://cordova.apache.org/) mobile app and you plan to use the [Cordova SQLitePlugin](https://github.com/brodysoft/Cordova-SQLitePlugin):
+
+    persistence.store.cordovasql.config(
+      persistence,
+      'yourdbname',
+      '0.0.1',                // DB version
+      'My database',          // DB display name
+      5 * 1024 * 1024,        // DB size
+      0                       // SQLitePlugin Background processing disabled
+    );
+
+For more information on the SQLitePlugin background processing please refer to the [SQLitePlugin](https://github.com/brodysoft/Cordova-SQLitePlugin) readme.
+
+The Cordova support in `persistencejs` will try to work with the [SQLitePlugin](https://github.com/brodysoft/Cordova-SQLitePlugin) if it is loaded; if not it will automatically fall back to [WebSQL](http://docs.phonegap.com/en/edge/cordova_storage_storage.md.html#Storage).
+
 The in-memory store
 ---------------------------------------
 

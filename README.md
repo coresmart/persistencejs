@@ -290,7 +290,7 @@ optional.
     });
 
 There is also a migrations plugin you can check out, documentation can be found
-in [persistence.migrations.docs.md](docs/migrations.md) file.
+in [docs/migrations.md](docs/migrations.md) file.
 
 Mix-ins
 -------

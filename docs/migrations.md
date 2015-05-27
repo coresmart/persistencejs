@@ -35,7 +35,7 @@ fix bad data in the database or populate new fields:
         this.addColumn('User', 'email', 'TEXT');
 
         // You can execute some raw SQL
-        this.execute('UPDATE User SET email = username + "@domain.com"');
+        this.executeSql('UPDATE User SET email = username + "@domain.com"');
 
         // OR 
 

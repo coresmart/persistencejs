@@ -159,13 +159,18 @@ Use following if you want to use `persistencejs` in a [Cordova](https://cordova.
       'yourdbname',
       '0.0.1',                // DB version
       'My database',          // DB display name
-      5 * 1024 * 1024,        // DB size
-      0                       // SQLitePlugin Background processing disabled
+      5 * 1024 * 1024,        // DB size (WebSQL fallback only)
+      0,                      // SQLitePlugin Background processing disabled
+      2                       // DB location (iOS only), 0 (default): Documents, 1: Library, 2: Library/LocalDatabase
+                              //   0: iTunes + iCloud, 1: NO iTunes + iCloud, 2: NO iTunes + NO iCloud
+                              //   More information at https://github.com/litehelpers/Cordova-sqlite-storage#opening-a-database
     );
 
 For more information on the SQLitePlugin background processing please refer to the [SQLitePlugin](https://github.com/brodysoft/Cordova-SQLitePlugin) readme.
 
 The Cordova support in `persistencejs` will try to work with the [SQLitePlugin](https://github.com/brodysoft/Cordova-SQLitePlugin) if it is loaded; if not it will automatically fall back to [WebSQL](http://docs.phonegap.com/en/edge/cordova_storage_storage.md.html#Storage).
+
+Please note that to use Cordova store, you must use the master branch, because it is not included up to release v0.3.0.
 
 The in-memory store
 ---------------------------------------

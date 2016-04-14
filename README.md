@@ -121,9 +121,9 @@ Add a `<script>` to your `index.html`:
 `websql` stores both depend on the `sql` store. A typical setup requires you to add at least
 `lib/persistence.js`, `lib/persistence.store.sql.js` and `lib/persistence.store.websql.js` as follows:
 
-    <script src="/bower_components/persistencejs/lib/persistence.js"></script>
-    <script src="/bower_components/persistencejs/lib/persistence.store.sql.js"></script>
-    <script src="/bower_components/persistencejs/lib/persistence.store.websql.js"></script>
+    <script src="/bower_components/persistence/lib/persistence.js"></script>
+    <script src="/bower_components/persistence/lib/persistence.store.sql.js"></script>
+    <script src="/bower_components/persistence/lib/persistence.store.websql.js"></script>
 
 If you want to use the in-memory store (in combination with
 `localStorage`) you also need the `persistence.store.memory.js`

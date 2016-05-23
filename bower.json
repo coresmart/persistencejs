@@ -4,7 +4,7 @@
   "version": "0.3.1",
   "_release": "0.3.1",
   "_target": "~0.3.1",
-  "_source": "https://github.com/vermi0ffh/persistencejs.git",
+  "_source": "git://github.com/vermi0ffh/persistencejs.git",
   "homepage": "http://persistencejs.org",
   "authors": [
     "Zef Hemel <zef@zef.me>",

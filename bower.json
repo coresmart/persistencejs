@@ -1,10 +1,10 @@
 {
   "name": "persistence",
   "main": "./lib/persistence.js",
-  "version": "0.3.0",
-  "_release": "0.3.0",
-  "_target": "~0.3.0",
-  "_source": "git://github.com/zefhemel/persistencejs.git",
+  "version": "0.3.1",
+  "_release": "0.3.1",
+  "_target": "~0.3.1",
+  "_source": "https://github.com/vermi0ffh/persistencejs.git",
   "homepage": "http://persistencejs.org",
   "authors": [
     "Zef Hemel <zef@zef.me>",

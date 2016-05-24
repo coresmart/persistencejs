@@ -463,11 +463,11 @@ all
   optional and only required when `persistence.js` is used in
   multi-session mode.
 * `EntityName.load([session], [tx], id, callback)` loads an particular
-  object from the database by id or returns `null` if it has not been
-  found.
+  object from the database by id. The callback function is called with the found object or
+  `null` if it has not been found.
 * `EntityName.findBy([session], [tx], property, value, callback)` searches
   for a particular object based on a property value (this is assumed to
-  be unique), the callback function is called with the found object or
+  be unique). The callback function is called with the found object or
   `null` if it has not been found.
 * `EntityName.index([col1, col2, ..., colN], options)` creates an index on a column
   of a combination of columns, for faster searching. If options.unique is true,
